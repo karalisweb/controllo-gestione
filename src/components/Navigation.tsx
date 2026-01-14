@@ -10,6 +10,7 @@ import {
   CreditCard,
   Settings,
   Target,
+  User,
 } from "lucide-react";
 
 const navItems = [
@@ -36,7 +37,7 @@ export function Navigation() {
           </Link>
         </div>
 
-        <div className="flex items-center space-x-1">
+        <div className="flex items-center space-x-1 flex-1">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
@@ -58,6 +59,19 @@ export function Navigation() {
             );
           })}
         </div>
+
+        <Link
+          href="/profile"
+          className={cn(
+            "flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+            pathname === "/profile"
+              ? "bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted"
+          )}
+        >
+          <User className="h-4 w-4" />
+          <span>Profilo</span>
+        </Link>
       </div>
     </nav>
   );
