@@ -241,6 +241,38 @@ export const forecastItems = sqliteTable("forecast_items", {
   deletedAt: integer("deleted_at", { mode: "timestamp" }),
 });
 
+// Utenti per autenticazione
+export const users = sqliteTable("users", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  email: text("email").notNull().unique(),
+  passwordHash: text("password_hash").notNull(),
+  name: text("name"),
+  role: text("role", { enum: ["admin", "user", "viewer"] }).default("user"),
+
+  // 2FA
+  totpSecret: text("totp_secret"),
+  totpEnabled: integer("totp_enabled", { mode: "boolean" }).default(false),
+
+  // Stato account
+  isActive: integer("is_active", { mode: "boolean" }).default(true),
+  lastLoginAt: integer("last_login_at", { mode: "timestamp" }),
+  failedLoginAttempts: integer("failed_login_attempts").default(0),
+  lockedUntil: integer("locked_until", { mode: "timestamp" }),
+
+  createdAt: integer("created_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
+});
+
+// Backup codes per 2FA
+export const backupCodes = sqliteTable("backup_codes", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id").references(() => users.id),
+  codeHash: text("code_hash").notNull(),
+  used: integer("used", { mode: "boolean" }).default(false),
+  usedAt: integer("used_at", { mode: "timestamp" }),
+  createdAt: integer("created_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
+});
+
 // Types per le tabelle
 export type Category = typeof categories.$inferSelect;
 export type NewCategory = typeof categories.$inferInsert;
@@ -283,3 +315,9 @@ export type NewSalesInstallment = typeof salesInstallments.$inferInsert;
 
 export type ForecastItem = typeof forecastItems.$inferSelect;
 export type NewForecastItem = typeof forecastItems.$inferInsert;
+
+export type User = typeof users.$inferSelect;
+export type NewUser = typeof users.$inferInsert;
+
+export type BackupCode = typeof backupCodes.$inferSelect;
+export type NewBackupCode = typeof backupCodes.$inferInsert;
