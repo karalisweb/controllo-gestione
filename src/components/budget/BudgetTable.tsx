@@ -550,7 +550,7 @@ export function BudgetTable({
 
           <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
             <Table>
-              <TableHeader className="sticky top-0 bg-white z-10">
+              <TableHeader className="sticky top-0 bg-background z-10">
                 <TableRow>
                   <TableHead className="w-[100px]">DATA</TableHead>
                   <TableHead className="w-[140px]">TIPOLOGIA</TableHead>

@@ -575,7 +575,7 @@ export function ForecastTable({
           {/* Vista Desktop - Tabella */}
           <div className="hidden sm:block overflow-x-auto max-h-[600px] overflow-y-auto border rounded-lg">
             <Table>
-              <TableHeader className="sticky top-0 bg-white z-10">
+              <TableHeader className="sticky top-0 bg-background z-10">
                 <TableRow>
                   <TableHead className="w-[100px]">Data</TableHead>
                   <TableHead className="w-[120px]">Tipo</TableHead>

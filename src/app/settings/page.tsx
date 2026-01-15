@@ -312,17 +312,17 @@ export default function SettingsPage() {
                 {costCenters.map((center) => (
                   <div
                     key={center.id}
-                    className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg border"
+                    className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-lg border"
                   >
                     <div
-                      className="w-3 h-3 rounded-full"
+                      className="w-3 h-3 rounded-full shrink-0"
                       style={{ backgroundColor: center.color || "#6b7280" }}
                     />
-                    <span className="font-medium">{center.name}</span>
+                    <span className="font-medium text-foreground">{center.name}</span>
                     <span className="text-sm text-muted-foreground">
                       ({center.expectedExpensesCount || 0} voci)
                     </span>
-                    <span className="text-sm font-mono text-red-600">
+                    <span className="text-sm font-mono text-red-500 dark:text-red-400">
                       {formatCurrency(center.totalExpected || 0)}
                     </span>
                     <Button
@@ -501,7 +501,7 @@ export default function SettingsPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="sticky left-0 bg-white z-10">Spesa</TableHead>
+                      <TableHead className="sticky left-0 bg-background z-10">Spesa</TableHead>
                       {MONTHS.map((month, idx) => (
                         <TableHead key={idx} className="text-center min-w-[80px]">
                           {month}
@@ -519,7 +519,7 @@ export default function SettingsPage() {
                       .sort((a, b) => b.annualAmount - a.annualAmount)
                       .map((expense) => (
                       <TableRow key={expense.id}>
-                        <TableCell className="sticky left-0 bg-white z-10">
+                        <TableCell className="sticky left-0 bg-background z-10">
                           <div className="font-medium text-sm">{expense.name}</div>
                           {expense.costCenter && (
                             <div className="flex items-center gap-1 mt-0.5">
@@ -552,8 +552,8 @@ export default function SettingsPage() {
                       </TableRow>
                     ))}
                     {/* Riga totali per mese */}
-                    <TableRow className="bg-gray-50 font-bold">
-                      <TableCell className="sticky left-0 bg-gray-50 z-10">TOTALE</TableCell>
+                    <TableRow className="bg-muted font-bold">
+                      <TableCell className="sticky left-0 bg-muted z-10">TOTALE</TableCell>
                       {MONTHS.map((_, monthIdx) => {
                         const month = monthIdx + 1;
                         const monthTotal = expectedExpenses.reduce((sum, exp) => {
@@ -629,17 +629,17 @@ export default function SettingsPage() {
                 {revenueCenters.map((center) => (
                   <div
                     key={center.id}
-                    className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg border"
+                    className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-lg border"
                   >
                     <div
-                      className="w-3 h-3 rounded-full"
+                      className="w-3 h-3 rounded-full shrink-0"
                       style={{ backgroundColor: center.color || "#6b7280" }}
                     />
-                    <span className="font-medium">{center.name}</span>
+                    <span className="font-medium text-foreground">{center.name}</span>
                     <span className="text-sm text-muted-foreground">
                       ({center.expectedIncomesCount || 0} clienti)
                     </span>
-                    <span className="text-sm font-mono text-green-600">
+                    <span className="text-sm font-mono text-green-500 dark:text-green-400">
                       {formatCurrency(center.totalExpected || 0)}
                     </span>
                     <Button
@@ -813,7 +813,7 @@ export default function SettingsPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="sticky left-0 bg-white z-10">Cliente</TableHead>
+                      <TableHead className="sticky left-0 bg-background z-10">Cliente</TableHead>
                       {MONTHS.map((month, idx) => (
                         <TableHead key={idx} className="text-center min-w-[80px]">
                           {month}
@@ -831,7 +831,7 @@ export default function SettingsPage() {
                       .sort((a, b) => b.annualAmount - a.annualAmount)
                       .map((income) => (
                       <TableRow key={income.id}>
-                        <TableCell className="sticky left-0 bg-white z-10">
+                        <TableCell className="sticky left-0 bg-background z-10">
                           <div className="font-medium text-sm">{income.clientName}</div>
                           {income.revenueCenter && (
                             <div className="flex items-center gap-1 mt-0.5">
@@ -864,8 +864,8 @@ export default function SettingsPage() {
                       </TableRow>
                     ))}
                     {/* Riga totali per mese */}
-                    <TableRow className="bg-gray-50 font-bold">
-                      <TableCell className="sticky left-0 bg-gray-50 z-10">TOTALE</TableCell>
+                    <TableRow className="bg-muted font-bold">
+                      <TableCell className="sticky left-0 bg-muted z-10">TOTALE</TableCell>
                       {MONTHS.map((_, monthIdx) => {
                         const month = monthIdx + 1;
                         const monthTotal = expectedIncomes.reduce((sum, inc) => {
