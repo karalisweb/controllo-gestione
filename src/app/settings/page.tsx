@@ -20,9 +20,15 @@ import { ExpectedExpenseForm } from "@/components/settings/ExpectedExpenseForm";
 import { MobileHeader } from "@/components/MobileHeader";
 import { formatCurrency } from "@/lib/utils/currency";
 import type { CostCenter, RevenueCenter, ExpectedIncome, ExpectedExpense } from "@/types";
-import { Plus, Edit2, Trash2, AlertTriangle, ChevronRight } from "lucide-react";
+import { Plus, Edit2, Trash2, AlertTriangle, ChevronRight, ChevronLeft } from "lucide-react";
 
 const MONTHS = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"];
+const QUARTERS = [
+  { label: "Q1", months: [0, 1, 2], monthNames: ["Gen", "Feb", "Mar"] },
+  { label: "Q2", months: [3, 4, 5], monthNames: ["Apr", "Mag", "Giu"] },
+  { label: "Q3", months: [6, 7, 8], monthNames: ["Lug", "Ago", "Set"] },
+  { label: "Q4", months: [9, 10, 11], monthNames: ["Ott", "Nov", "Dic"] },
+];
 
 const FREQUENCY_LABELS: Record<string, string> = {
   monthly: "Mensile",
@@ -223,6 +229,8 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("cost");
   const [expenseView, setExpenseView] = useState<"aggregate" | "monthly">("aggregate");
   const [incomeView, setIncomeView] = useState<"aggregate" | "monthly">("aggregate");
+  const [expenseQuarter, setExpenseQuarter] = useState(0); // 0-3 per Q1-Q4
+  const [incomeQuarter, setIncomeQuarter] = useState(0);
 
   // Form state
   const [costFormOpen, setCostFormOpen] = useState(false);
@@ -597,7 +605,116 @@ export default function SettingsPage() {
             ) : (
               /* Vista Mensile */
               <Card>
-                <div className="overflow-x-auto">
+                {/* Mobile: Vista Trimestrale */}
+                <div className="sm:hidden">
+                  {/* Navigazione Trimestre */}
+                  <div className="flex items-center justify-between p-3 border-b">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setExpenseQuarter(Math.max(0, expenseQuarter - 1))}
+                      disabled={expenseQuarter === 0}
+                      className="h-8 w-8 p-0"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <div className="flex gap-1">
+                      {QUARTERS.map((q, idx) => (
+                        <Button
+                          key={q.label}
+                          variant={expenseQuarter === idx ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setExpenseQuarter(idx)}
+                          className="h-7 px-3 text-xs"
+                        >
+                          {q.label}
+                        </Button>
+                      ))}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setExpenseQuarter(Math.min(3, expenseQuarter + 1))}
+                      disabled={expenseQuarter === 3}
+                      className="h-8 w-8 p-0"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  {/* Tabella Trimestrale */}
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="text-xs w-[100px]">Spesa</TableHead>
+                          {QUARTERS[expenseQuarter].monthNames.map((month) => (
+                            <TableHead key={month} className="text-center text-xs w-[70px]">
+                              {month}
+                            </TableHead>
+                          ))}
+                          <TableHead className="text-right text-xs w-[70px]">Tot. Q</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {expensesWithAnnual.map((expense) => {
+                          const quarterMonths = QUARTERS[expenseQuarter].months;
+                          const quarterTotal = quarterMonths.reduce((sum, mIdx) => {
+                            if (expense.monthlyOccurrences?.includes(mIdx + 1)) return sum + expense.amount;
+                            return sum;
+                          }, 0);
+                          return (
+                            <TableRow key={expense.id}>
+                              <TableCell className="text-xs p-2">
+                                <div className="font-medium truncate max-w-[90px]">{expense.name}</div>
+                              </TableCell>
+                              {quarterMonths.map((mIdx) => {
+                                const hasExpense = expense.monthlyOccurrences?.includes(mIdx + 1);
+                                return (
+                                  <TableCell key={mIdx} className="text-center text-xs p-1">
+                                    {hasExpense ? (
+                                      <span className="font-mono text-red-600 dark:text-red-400">{formatCurrency(expense.amount)}</span>
+                                    ) : "-"}
+                                  </TableCell>
+                                );
+                              })}
+                              <TableCell className="text-right font-mono text-red-600 dark:text-red-400 font-bold text-xs p-1">
+                                {quarterTotal > 0 ? formatCurrency(quarterTotal) : "-"}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                        <TableRow className="bg-muted font-bold">
+                          <TableCell className="text-xs p-2">TOTALE</TableCell>
+                          {QUARTERS[expenseQuarter].months.map((mIdx) => {
+                            const monthTotal = expectedExpenses.reduce((sum, exp) => {
+                              if (exp.monthlyOccurrences?.includes(mIdx + 1)) return sum + exp.amount;
+                              return sum;
+                            }, 0);
+                            return (
+                              <TableCell key={mIdx} className="text-center font-mono text-red-600 dark:text-red-400 text-xs p-1">
+                                {formatCurrency(monthTotal)}
+                              </TableCell>
+                            );
+                          })}
+                          <TableCell className="text-right font-mono text-red-600 dark:text-red-400 text-xs p-1">
+                            {formatCurrency(
+                              QUARTERS[expenseQuarter].months.reduce((sum, mIdx) => {
+                                return sum + expectedExpenses.reduce((mSum, exp) => {
+                                  if (exp.monthlyOccurrences?.includes(mIdx + 1)) return mSum + exp.amount;
+                                  return mSum;
+                                }, 0);
+                              }, 0)
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+
+                {/* Desktop: Vista 12 mesi */}
+                <div className="hidden sm:block overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -829,7 +946,116 @@ export default function SettingsPage() {
             ) : (
               /* Vista Mensile */
               <Card>
-                <div className="overflow-x-auto">
+                {/* Mobile: Vista Trimestrale */}
+                <div className="sm:hidden">
+                  {/* Navigazione Trimestre */}
+                  <div className="flex items-center justify-between p-3 border-b">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setIncomeQuarter(Math.max(0, incomeQuarter - 1))}
+                      disabled={incomeQuarter === 0}
+                      className="h-8 w-8 p-0"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <div className="flex gap-1">
+                      {QUARTERS.map((q, idx) => (
+                        <Button
+                          key={q.label}
+                          variant={incomeQuarter === idx ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setIncomeQuarter(idx)}
+                          className="h-7 px-3 text-xs"
+                        >
+                          {q.label}
+                        </Button>
+                      ))}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setIncomeQuarter(Math.min(3, incomeQuarter + 1))}
+                      disabled={incomeQuarter === 3}
+                      className="h-8 w-8 p-0"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  {/* Tabella Trimestrale */}
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="text-xs w-[100px]">Cliente</TableHead>
+                          {QUARTERS[incomeQuarter].monthNames.map((month) => (
+                            <TableHead key={month} className="text-center text-xs w-[70px]">
+                              {month}
+                            </TableHead>
+                          ))}
+                          <TableHead className="text-right text-xs w-[70px]">Tot. Q</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {incomesWithAnnual.map((income) => {
+                          const quarterMonths = QUARTERS[incomeQuarter].months;
+                          const quarterTotal = quarterMonths.reduce((sum, mIdx) => {
+                            if (income.monthlyOccurrences?.includes(mIdx + 1)) return sum + income.amount;
+                            return sum;
+                          }, 0);
+                          return (
+                            <TableRow key={income.id}>
+                              <TableCell className="text-xs p-2">
+                                <div className="font-medium truncate max-w-[90px]">{income.clientName}</div>
+                              </TableCell>
+                              {quarterMonths.map((mIdx) => {
+                                const hasIncome = income.monthlyOccurrences?.includes(mIdx + 1);
+                                return (
+                                  <TableCell key={mIdx} className="text-center text-xs p-1">
+                                    {hasIncome ? (
+                                      <span className="font-mono text-green-600 dark:text-green-400">{formatCurrency(income.amount)}</span>
+                                    ) : "-"}
+                                  </TableCell>
+                                );
+                              })}
+                              <TableCell className="text-right font-mono text-green-600 dark:text-green-400 font-bold text-xs p-1">
+                                {quarterTotal > 0 ? formatCurrency(quarterTotal) : "-"}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                        <TableRow className="bg-muted font-bold">
+                          <TableCell className="text-xs p-2">TOTALE</TableCell>
+                          {QUARTERS[incomeQuarter].months.map((mIdx) => {
+                            const monthTotal = expectedIncomes.reduce((sum, inc) => {
+                              if (inc.monthlyOccurrences?.includes(mIdx + 1)) return sum + inc.amount;
+                              return sum;
+                            }, 0);
+                            return (
+                              <TableCell key={mIdx} className="text-center font-mono text-green-600 dark:text-green-400 text-xs p-1">
+                                {formatCurrency(monthTotal)}
+                              </TableCell>
+                            );
+                          })}
+                          <TableCell className="text-right font-mono text-green-600 dark:text-green-400 text-xs p-1">
+                            {formatCurrency(
+                              QUARTERS[incomeQuarter].months.reduce((sum, mIdx) => {
+                                return sum + expectedIncomes.reduce((mSum, inc) => {
+                                  if (inc.monthlyOccurrences?.includes(mIdx + 1)) return mSum + inc.amount;
+                                  return mSum;
+                                }, 0);
+                              }, 0)
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+
+                {/* Desktop: Vista 12 mesi */}
+                <div className="hidden sm:block overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
