@@ -308,7 +308,55 @@ export default function SettingsPage() {
               </Button>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-wrap gap-2">
+              {/* Vista Mobile - Grid verticale */}
+              <div className="sm:hidden grid grid-cols-2 gap-2">
+                {costCenters.map((center) => (
+                  <div
+                    key={center.id}
+                    className="flex flex-col p-2 bg-muted/50 rounded-lg border"
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <div
+                        className="w-3 h-3 rounded-full shrink-0"
+                        style={{ backgroundColor: center.color || "#6b7280" }}
+                      />
+                      <span className="font-medium text-foreground text-sm truncate">{center.name}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">
+                        ({center.expectedExpensesCount || 0} voci)
+                      </span>
+                      <span className="text-xs font-mono text-red-500 dark:text-red-400">
+                        {formatCurrency(center.totalExpected || 0)}
+                      </span>
+                    </div>
+                    <div className="flex justify-end gap-1 mt-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => {
+                          setEditingCostCenter(center);
+                          setCostFormOpen(true);
+                        }}
+                      >
+                        <Edit2 className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-red-500 hover:text-red-700"
+                        onClick={() => handleDeleteCostCenter(center.id)}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Vista Desktop - Flex wrap */}
+              <div className="hidden sm:flex flex-wrap gap-2">
                 {costCenters.map((center) => (
                   <div
                     key={center.id}
@@ -346,12 +394,13 @@ export default function SettingsPage() {
                     </Button>
                   </div>
                 ))}
-                {costCenters.length === 0 && (
-                  <p className="text-sm text-muted-foreground">
-                    Nessun centro di costo. Crea Telefonia, Software, Collaboratori, ecc...
-                  </p>
-                )}
               </div>
+
+              {costCenters.length === 0 && (
+                <p className="text-sm text-muted-foreground">
+                  Nessun centro di costo. Crea Telefonia, Software, Collaboratori, ecc...
+                </p>
+              )}
             </CardContent>
           </Card>
 
@@ -625,7 +674,55 @@ export default function SettingsPage() {
               </Button>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-wrap gap-2">
+              {/* Vista Mobile - Grid verticale */}
+              <div className="sm:hidden grid grid-cols-2 gap-2">
+                {revenueCenters.map((center) => (
+                  <div
+                    key={center.id}
+                    className="flex flex-col p-2 bg-muted/50 rounded-lg border"
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <div
+                        className="w-3 h-3 rounded-full shrink-0"
+                        style={{ backgroundColor: center.color || "#6b7280" }}
+                      />
+                      <span className="font-medium text-foreground text-sm truncate">{center.name}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">
+                        ({center.expectedIncomesCount || 0} clienti)
+                      </span>
+                      <span className="text-xs font-mono text-green-500 dark:text-green-400">
+                        {formatCurrency(center.totalExpected || 0)}
+                      </span>
+                    </div>
+                    <div className="flex justify-end gap-1 mt-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => {
+                          setEditingRevenueCenter(center);
+                          setRevenueFormOpen(true);
+                        }}
+                      >
+                        <Edit2 className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-red-500 hover:text-red-700"
+                        onClick={() => handleDeleteRevenueCenter(center.id)}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Vista Desktop - Flex wrap */}
+              <div className="hidden sm:flex flex-wrap gap-2">
                 {revenueCenters.map((center) => (
                   <div
                     key={center.id}
@@ -663,12 +760,13 @@ export default function SettingsPage() {
                     </Button>
                   </div>
                 ))}
-                {revenueCenters.length === 0 && (
-                  <p className="text-sm text-muted-foreground">
-                    Nessun centro di ricavo. Crea Siti Web, Marketing, Domini, Licenze...
-                  </p>
-                )}
               </div>
+
+              {revenueCenters.length === 0 && (
+                <p className="text-sm text-muted-foreground">
+                  Nessun centro di ricavo. Crea Siti Web, Marketing, Domini, Licenze...
+                </p>
+              )}
             </CardContent>
           </Card>
 
