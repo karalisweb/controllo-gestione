@@ -20,22 +20,22 @@ import { ExpectedExpenseForm } from "@/components/settings/ExpectedExpenseForm";
 import { MobileHeader } from "@/components/MobileHeader";
 import { formatCurrency } from "@/lib/utils/currency";
 import type { CostCenter, RevenueCenter, ExpectedIncome, ExpectedExpense } from "@/types";
-import { Plus, Edit2, Trash2, AlertTriangle } from "lucide-react";
+import { Plus, Edit2, Trash2, AlertTriangle, ChevronRight } from "lucide-react";
 
 const MONTHS = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"];
 
 const FREQUENCY_LABELS: Record<string, string> = {
   monthly: "Mensile",
-  quarterly: "Trimestrale",
-  semiannual: "Semestrale",
+  quarterly: "Trim.",
+  semiannual: "Sem.",
   annual: "Annuale",
   one_time: "Una tantum",
 };
 
 const RELIABILITY_COLORS: Record<string, string> = {
-  high: "bg-green-100 text-green-800",
-  medium: "bg-yellow-100 text-yellow-800",
-  low: "bg-red-100 text-red-800",
+  high: "bg-green-500/20 text-green-400 border-green-500/50",
+  medium: "bg-yellow-500/20 text-yellow-400 border-yellow-500/50",
+  low: "bg-red-500/20 text-red-400 border-red-500/50",
 };
 
 const PRIORITY_LABELS: Record<string, string> = {
@@ -46,11 +46,173 @@ const PRIORITY_LABELS: Record<string, string> = {
 };
 
 const PRIORITY_COLORS: Record<string, string> = {
-  essential: "bg-red-100 text-red-800",
-  important: "bg-orange-100 text-orange-800",
-  investment: "bg-blue-100 text-blue-800",
-  normal: "bg-gray-100 text-gray-800",
+  essential: "bg-red-500/20 text-red-400 border-red-500/50",
+  important: "bg-orange-500/20 text-orange-400 border-orange-500/50",
+  investment: "bg-blue-500/20 text-blue-400 border-blue-500/50",
+  normal: "bg-gray-500/20 text-gray-400 border-gray-500/50",
 };
+
+// === COMPONENTI MOBILE ===
+
+// Card per singola spesa (mobile)
+function ExpenseCard({
+  expense,
+  onEdit,
+  onDelete,
+}: {
+  expense: ExpectedExpense & { annualAmount: number };
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <div className="p-3 border-b border-border last:border-b-0">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <p className="font-medium text-sm text-foreground truncate">{expense.name}</p>
+          <div className="flex items-center gap-2 mt-1 flex-wrap">
+            {expense.costCenter && (
+              <div className="flex items-center gap-1">
+                <div
+                  className="w-2 h-2 rounded-full shrink-0"
+                  style={{ backgroundColor: expense.costCenter.color || "#6b7280" }}
+                />
+                <span className="text-xs text-muted-foreground">{expense.costCenter.name}</span>
+              </div>
+            )}
+            <span className="text-xs text-muted-foreground">
+              {FREQUENCY_LABELS[expense.frequency]}
+            </span>
+            {expense.priority && expense.priority !== "normal" && (
+              <Badge variant="outline" className={`text-xs px-1.5 py-0 ${PRIORITY_COLORS[expense.priority]}`}>
+                {expense.priority === "essential" && <AlertTriangle className="h-2.5 w-2.5 mr-0.5" />}
+                {PRIORITY_LABELS[expense.priority]}
+              </Badge>
+            )}
+          </div>
+        </div>
+        <div className="text-right shrink-0">
+          <div className="font-mono text-sm font-bold text-red-500 dark:text-red-400">
+            {formatCurrency(expense.annualAmount)}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {formatCurrency(expense.amount)}/mese
+          </div>
+        </div>
+      </div>
+      <div className="flex justify-end gap-1 mt-2">
+        <Button variant="ghost" size="sm" className="h-7 px-2" onClick={onEdit}>
+          <Edit2 className="h-3.5 w-3.5" />
+        </Button>
+        <Button variant="ghost" size="sm" className="h-7 px-2 text-red-500" onClick={onDelete}>
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// Card per singolo incasso (mobile)
+function IncomeCard({
+  income,
+  onEdit,
+  onDelete,
+}: {
+  income: ExpectedIncome & { annualAmount: number };
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <div className="p-3 border-b border-border last:border-b-0">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <p className="font-medium text-sm text-foreground truncate">{income.clientName}</p>
+          <div className="flex items-center gap-2 mt-1 flex-wrap">
+            {income.revenueCenter && (
+              <div className="flex items-center gap-1">
+                <div
+                  className="w-2 h-2 rounded-full shrink-0"
+                  style={{ backgroundColor: income.revenueCenter.color || "#6b7280" }}
+                />
+                <span className="text-xs text-muted-foreground">{income.revenueCenter.name}</span>
+              </div>
+            )}
+            <span className="text-xs text-muted-foreground">
+              {FREQUENCY_LABELS[income.frequency]}
+            </span>
+            <Badge variant="outline" className={`text-xs px-1.5 py-0 ${RELIABILITY_COLORS[income.reliability || "high"]}`}>
+              {income.reliability === "high" ? "Alta" : income.reliability === "low" ? "Bassa" : "Media"}
+            </Badge>
+          </div>
+        </div>
+        <div className="text-right shrink-0">
+          <div className="font-mono text-sm font-bold text-green-500 dark:text-green-400">
+            {formatCurrency(income.annualAmount)}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {formatCurrency(income.amount)}/mese
+          </div>
+        </div>
+      </div>
+      <div className="flex justify-end gap-1 mt-2">
+        <Button variant="ghost" size="sm" className="h-7 px-2" onClick={onEdit}>
+          <Edit2 className="h-3.5 w-3.5" />
+        </Button>
+        <Button variant="ghost" size="sm" className="h-7 px-2 text-red-500" onClick={onDelete}>
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// Card per centro di costo/ricavo (mobile)
+function CenterCard({
+  name,
+  color,
+  count,
+  countLabel,
+  amount,
+  isExpense,
+  onEdit,
+  onDelete,
+}: {
+  name: string;
+  color: string;
+  count: number;
+  countLabel: string;
+  amount: number;
+  isExpense: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <div className="flex items-center justify-between p-2.5 bg-muted/30 rounded-lg border border-border">
+      <div className="flex items-center gap-2 min-w-0 flex-1">
+        <div
+          className="w-3 h-3 rounded-full shrink-0"
+          style={{ backgroundColor: color }}
+        />
+        <div className="min-w-0">
+          <p className="font-medium text-sm text-foreground truncate">{name}</p>
+          <p className="text-xs text-muted-foreground">
+            {count} {countLabel}
+          </p>
+        </div>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <span className={`font-mono text-sm font-bold ${isExpense ? "text-red-500 dark:text-red-400" : "text-green-500 dark:text-green-400"}`}>
+          {formatCurrency(amount)}
+        </span>
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onEdit}>
+          <Edit2 className="h-3.5 w-3.5" />
+        </Button>
+        <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500" onClick={onDelete}>
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 export default function SettingsPage() {
   const [costCenters, setCostCenters] = useState<CostCenter[]>([]);
@@ -82,18 +244,10 @@ export default function SettingsPage() {
         fetch("/api/expected-incomes?year=2026"),
       ]);
 
-      if (costRes.ok) {
-        setCostCenters(await costRes.json());
-      }
-      if (expenseRes.ok) {
-        setExpectedExpenses(await expenseRes.json());
-      }
-      if (revenueRes.ok) {
-        setRevenueCenters(await revenueRes.json());
-      }
-      if (incomesRes.ok) {
-        setExpectedIncomes(await incomesRes.json());
-      }
+      if (costRes.ok) setCostCenters(await costRes.json());
+      if (expenseRes.ok) setExpectedExpenses(await expenseRes.json());
+      if (revenueRes.ok) setRevenueCenters(await revenueRes.json());
+      if (incomesRes.ok) setExpectedIncomes(await incomesRes.json());
     } finally {
       setLoading(false);
     }
@@ -103,7 +257,7 @@ export default function SettingsPage() {
     fetchData();
   }, [fetchData]);
 
-  // Cost Center handlers
+  // Handlers
   const handleCreateCostCenter = async (data: Partial<CostCenter>) => {
     const res = await fetch("/api/cost-centers", {
       method: "POST",
@@ -127,13 +281,11 @@ export default function SettingsPage() {
   };
 
   const handleDeleteCostCenter = async (id: number) => {
-    if (!confirm("Sei sicuro di voler eliminare questo centro di costo?")) return;
-    const res = await fetch(`/api/cost-centers/${id}`, { method: "DELETE" });
-    if (!res.ok) throw new Error("Errore nell'eliminazione");
+    if (!confirm("Eliminare questo centro di costo?")) return;
+    await fetch(`/api/cost-centers/${id}`, { method: "DELETE" });
     await fetchData();
   };
 
-  // Expected Expense handlers
   const handleCreateExpense = async (data: Partial<ExpectedExpense>) => {
     const res = await fetch("/api/expected-expenses", {
       method: "POST",
@@ -157,13 +309,11 @@ export default function SettingsPage() {
   };
 
   const handleDeleteExpense = async (id: number) => {
-    if (!confirm("Sei sicuro di voler eliminare questa spesa prevista?")) return;
-    const res = await fetch(`/api/expected-expenses/${id}`, { method: "DELETE" });
-    if (!res.ok) throw new Error("Errore nell'eliminazione");
+    if (!confirm("Eliminare questa spesa?")) return;
+    await fetch(`/api/expected-expenses/${id}`, { method: "DELETE" });
     await fetchData();
   };
 
-  // Revenue Center handlers
   const handleCreateRevenueCenter = async (data: Partial<RevenueCenter>) => {
     const res = await fetch("/api/revenue-centers", {
       method: "POST",
@@ -187,13 +337,11 @@ export default function SettingsPage() {
   };
 
   const handleDeleteRevenueCenter = async (id: number) => {
-    if (!confirm("Sei sicuro di voler eliminare questo centro di ricavo?")) return;
-    const res = await fetch(`/api/revenue-centers/${id}`, { method: "DELETE" });
-    if (!res.ok) throw new Error("Errore nell'eliminazione");
+    if (!confirm("Eliminare questo centro di ricavo?")) return;
+    await fetch(`/api/revenue-centers/${id}`, { method: "DELETE" });
     await fetchData();
   };
 
-  // Expected Income handlers
   const handleCreateIncome = async (data: Partial<ExpectedIncome>) => {
     const res = await fetch("/api/expected-incomes", {
       method: "POST",
@@ -217,17 +365,26 @@ export default function SettingsPage() {
   };
 
   const handleDeleteIncome = async (id: number) => {
-    if (!confirm("Sei sicuro di voler eliminare questo incasso previsto?")) return;
-    const res = await fetch(`/api/expected-incomes/${id}`, { method: "DELETE" });
-    if (!res.ok) throw new Error("Errore nell'eliminazione");
+    if (!confirm("Eliminare questo incasso?")) return;
+    await fetch(`/api/expected-incomes/${id}`, { method: "DELETE" });
     await fetchData();
   };
 
-  // Calcola totali
+  // Calcoli
   const totalExpectedExpenses = costCenters.reduce((sum, c) => sum + (c.totalExpected || 0), 0);
   const totalSpent = costCenters.reduce((sum, c) => sum + (c.spent || 0), 0);
   const totalExpectedIncomes = revenueCenters.reduce((sum, c) => sum + (c.totalExpected || 0), 0);
   const totalCollected = revenueCenters.reduce((sum, c) => sum + (c.collected || 0), 0);
+
+  // Spese con importo annuale
+  const expensesWithAnnual = expectedExpenses
+    .map((e) => ({ ...e, annualAmount: e.amount * (e.monthlyOccurrences?.length || 0) }))
+    .sort((a, b) => b.annualAmount - a.annualAmount);
+
+  // Incassi con importo annuale
+  const incomesWithAnnual = expectedIncomes
+    .map((i) => ({ ...i, annualAmount: i.amount * (i.monthlyOccurrences?.length || 0) }))
+    .sort((a, b) => b.annualAmount - a.annualAmount);
 
   if (loading) {
     return (
@@ -241,19 +398,21 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen pb-20">
       <MobileHeader title="Piano Annuale" />
 
-      <div className="p-4 lg:p-6">
-        <div className="mb-6">
-          <h1 className="text-xl lg:text-2xl font-bold">Piano Annuale</h1>
-          <p className="text-xs lg:text-sm text-muted-foreground">
+      <div className="p-3 sm:p-4 lg:p-6 space-y-4">
+        {/* Header */}
+        <div>
+          <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-foreground">Piano Annuale</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">
             Gestisci spese, incassi e budget annuale
           </p>
         </div>
 
+        {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-4 w-full sm:w-auto grid grid-cols-2 sm:flex">
+          <TabsList className="w-full grid grid-cols-2">
             <TabsTrigger value="cost" className="text-xs sm:text-sm">
               Spese ({expectedExpenses.length})
             </TabsTrigger>
@@ -262,733 +421,473 @@ export default function SettingsPage() {
             </TabsTrigger>
           </TabsList>
 
-        {/* SPESE PREVISTE */}
-        <TabsContent value="cost">
-          {/* Riepilogo */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Totale Spese Previste</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-red-600">
+          {/* === TAB SPESE === */}
+          <TabsContent value="cost" className="space-y-4 mt-4">
+            {/* Riepilogo Spese - 3 box */}
+            <div className="grid grid-cols-3 gap-2 sm:gap-4">
+              <Card className="p-3 sm:p-4">
+                <p className="text-xs text-muted-foreground mb-1">Totale Spese</p>
+                <p className="text-base sm:text-xl font-bold font-mono text-red-500 dark:text-red-400">
                   {formatCurrency(totalExpectedExpenses)}
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Speso Finora</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
+                </p>
+              </Card>
+              <Card className="p-3 sm:p-4">
+                <p className="text-xs text-muted-foreground mb-1">Speso</p>
+                <p className="text-base sm:text-xl font-bold font-mono text-foreground">
                   {formatCurrency(totalSpent)}
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Rimanente</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className={`text-2xl font-bold ${totalExpectedExpenses - totalSpent >= 0 ? "text-green-600" : "text-red-600"}`}>
+                </p>
+              </Card>
+              <Card className="p-3 sm:p-4">
+                <p className="text-xs text-muted-foreground mb-1">Rimanente</p>
+                <p className={`text-base sm:text-xl font-bold font-mono ${totalExpectedExpenses - totalSpent >= 0 ? "text-green-500" : "text-red-500"}`}>
                   {formatCurrency(totalExpectedExpenses - totalSpent)}
+                </p>
+              </Card>
+            </div>
+
+            {/* Centri di Costo */}
+            <Card>
+              <CardHeader className="p-3 sm:p-4 pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base sm:text-lg">Centri di Costo</CardTitle>
+                  <Button size="sm" variant="outline" onClick={() => setCostFormOpen(true)} className="h-8 text-xs">
+                    <Plus className="h-3.5 w-3.5 mr-1" />
+                    Aggiungi
+                  </Button>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Centri di Costo (Aggregatori) */}
-          <Card className="mb-6">
-            <CardHeader className="pb-2 flex flex-row items-center justify-between">
-              <CardTitle className="text-lg">Centri di Costo</CardTitle>
-              <Button size="sm" variant="outline" onClick={() => setCostFormOpen(true)}>
-                <Plus className="h-4 w-4 mr-1" />
-                Aggiungi
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {/* Vista Mobile - Grid verticale */}
-              <div className="sm:hidden grid grid-cols-2 gap-2">
-                {costCenters.map((center) => (
-                  <div
-                    key={center.id}
-                    className="flex flex-col p-2 bg-muted/50 rounded-lg border"
-                  >
-                    <div className="flex items-center gap-2 mb-1">
-                      <div
-                        className="w-3 h-3 rounded-full shrink-0"
-                        style={{ backgroundColor: center.color || "#6b7280" }}
-                      />
-                      <span className="font-medium text-foreground text-sm truncate">{center.name}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">
-                        ({center.expectedExpensesCount || 0} voci)
-                      </span>
-                      <span className="text-xs font-mono text-red-500 dark:text-red-400">
-                        {formatCurrency(center.totalExpected || 0)}
-                      </span>
-                    </div>
-                    <div className="flex justify-end gap-1 mt-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={() => {
-                          setEditingCostCenter(center);
-                          setCostFormOpen(true);
-                        }}
-                      >
-                        <Edit2 className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 text-red-500 hover:text-red-700"
-                        onClick={() => handleDeleteCostCenter(center.id)}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Vista Desktop - Flex wrap */}
-              <div className="hidden sm:flex flex-wrap gap-2">
-                {costCenters.map((center) => (
-                  <div
-                    key={center.id}
-                    className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-lg border"
-                  >
-                    <div
-                      className="w-3 h-3 rounded-full shrink-0"
-                      style={{ backgroundColor: center.color || "#6b7280" }}
-                    />
-                    <span className="font-medium text-foreground">{center.name}</span>
-                    <span className="text-sm text-muted-foreground">
-                      ({center.expectedExpensesCount || 0} voci)
-                    </span>
-                    <span className="text-sm font-mono text-red-500 dark:text-red-400">
-                      {formatCurrency(center.totalExpected || 0)}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={() => {
+              </CardHeader>
+              <CardContent className="p-3 sm:p-4 pt-0 space-y-2">
+                {costCenters.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-4 text-center">
+                    Nessun centro di costo
+                  </p>
+                ) : (
+                  costCenters.map((center) => (
+                    <CenterCard
+                      key={center.id}
+                      name={center.name}
+                      color={center.color || "#6b7280"}
+                      count={center.expectedExpensesCount || 0}
+                      countLabel="voci"
+                      amount={center.totalExpected || 0}
+                      isExpense={true}
+                      onEdit={() => {
                         setEditingCostCenter(center);
                         setCostFormOpen(true);
                       }}
-                    >
-                      <Edit2 className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 text-red-500 hover:text-red-700"
-                      onClick={() => handleDeleteCostCenter(center.id)}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                ))}
+                      onDelete={() => handleDeleteCostCenter(center.id)}
+                    />
+                  ))
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Controlli Vista + Aggiungi Spesa */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="flex gap-1">
+                <Button
+                  variant={expenseView === "aggregate" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setExpenseView("aggregate")}
+                  className="text-xs h-8 flex-1 sm:flex-none"
+                >
+                  Lista
+                </Button>
+                <Button
+                  variant={expenseView === "monthly" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setExpenseView("monthly")}
+                  className="text-xs h-8 flex-1 sm:flex-none"
+                >
+                  Mensile
+                </Button>
               </div>
-
-              {costCenters.length === 0 && (
-                <p className="text-sm text-muted-foreground">
-                  Nessun centro di costo. Crea Telefonia, Software, Collaboratori, ecc...
-                </p>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Sotto-tab Vista Aggregata / Vista Mensile */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex gap-2">
-              <Button
-                variant={expenseView === "aggregate" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setExpenseView("aggregate")}
-              >
-                Vista Aggregata
-              </Button>
-              <Button
-                variant={expenseView === "monthly" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setExpenseView("monthly")}
-              >
-                Vista Mensile
+              <Button size="sm" onClick={() => setExpenseFormOpen(true)} className="h-8 text-xs">
+                <Plus className="h-3.5 w-3.5 mr-1" />
+                Nuova Spesa
               </Button>
             </div>
-            <Button onClick={() => setExpenseFormOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Nuova Spesa Prevista
-            </Button>
-          </div>
 
-          {expenseView === "aggregate" ? (
-            /* Vista Aggregata - Tabella spese */
-            <Card>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Centro</TableHead>
-                    <TableHead className="text-right">Importo</TableHead>
-                    <TableHead className="text-right">Importo Annuale</TableHead>
-                    <TableHead>Frequenza</TableHead>
-                    <TableHead className="text-center">Giorno</TableHead>
-                    <TableHead>Periodo</TableHead>
-                    <TableHead>Priorità</TableHead>
-                    <TableHead className="text-right">Azioni</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {[...expectedExpenses]
-                    .map((expense) => ({
-                      ...expense,
-                      annualAmount: expense.amount * (expense.monthlyOccurrences?.length || 0),
-                    }))
-                    .sort((a, b) => b.annualAmount - a.annualAmount)
-                    .map((expense) => {
-                    const annualAmount = expense.annualAmount;
-
-                    return (
-                    <TableRow key={expense.id}>
-                      <TableCell>
-                        <div className="font-medium">{expense.name}</div>
-                        {expense.notes && (
-                          <p className="text-xs text-muted-foreground">{expense.notes}</p>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {expense.costCenter ? (
-                          <div className="flex items-center gap-1">
-                            <div
-                              className="w-2 h-2 rounded-full"
-                              style={{ backgroundColor: expense.costCenter.color || "#6b7280" }}
-                            />
-                            <span className="text-sm">{expense.costCenter.name}</span>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-gray-400">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-red-600">
-                        {formatCurrency(expense.amount)}
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-red-600 font-bold">
-                        {formatCurrency(annualAmount)}
-                      </TableCell>
-                      <TableCell>
-                        {FREQUENCY_LABELS[expense.frequency] || expense.frequency}
-                      </TableCell>
-                      <TableCell className="text-center">{expense.expectedDay}</TableCell>
-                      <TableCell>
-                        {(() => {
-                          const formatDate = (d: string) => {
-                            const [y, m] = d.split("-");
-                            return `${MONTHS[parseInt(m) - 1]} ${y.slice(2)}`;
-                          };
-                          const start = formatDate(expense.startDate);
-                          const end = expense.endDate ? formatDate(expense.endDate) : null;
-                          if (!end) return <span className="text-xs">Da {start}</span>;
-                          return <span className="text-xs">{start} → {end}</span>;
-                        })()}
-                      </TableCell>
-                      <TableCell>
-                        {expense.priority && expense.priority !== "normal" ? (
-                          <Badge className={PRIORITY_COLORS[expense.priority]}>
-                            {expense.priority === "essential" && <AlertTriangle className="h-3 w-3 mr-1" />}
-                            {PRIORITY_LABELS[expense.priority]}
-                          </Badge>
-                        ) : (
-                          <span className="text-xs text-gray-400">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setEditingExpense(expense);
-                              setExpenseFormOpen(true);
-                            }}
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-red-500 hover:text-red-700"
-                            onClick={() => handleDeleteExpense(expense.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                    );
-                  })}
-                  {expectedExpenses.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
-                        Nessuna spesa prevista configurata
-                      </TableCell>
-                    </TableRow>
+            {/* Lista Spese */}
+            {expenseView === "aggregate" ? (
+              <Card className="overflow-hidden">
+                {/* Mobile: Cards */}
+                <div className="sm:hidden max-h-[400px] overflow-y-auto">
+                  {expensesWithAnnual.length === 0 ? (
+                    <p className="text-sm text-muted-foreground py-8 text-center">
+                      Nessuna spesa configurata
+                    </p>
+                  ) : (
+                    expensesWithAnnual.map((expense) => (
+                      <ExpenseCard
+                        key={expense.id}
+                        expense={expense}
+                        onEdit={() => {
+                          setEditingExpense(expense);
+                          setExpenseFormOpen(true);
+                        }}
+                        onDelete={() => handleDeleteExpense(expense.id)}
+                      />
+                    ))
                   )}
-                </TableBody>
-              </Table>
-            </Card>
-          ) : (
-            /* Vista Mensile - Tabella con mesi come colonne */
-            <Card>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="sticky left-0 bg-background z-10">Spesa</TableHead>
-                      {MONTHS.map((month, idx) => (
-                        <TableHead key={idx} className="text-center min-w-[80px]">
-                          {month}
-                        </TableHead>
-                      ))}
-                      <TableHead className="text-right font-bold">Totale</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {[...expectedExpenses]
-                      .map((expense) => ({
-                        ...expense,
-                        annualAmount: expense.amount * (expense.monthlyOccurrences?.length || 0),
-                      }))
-                      .sort((a, b) => b.annualAmount - a.annualAmount)
-                      .map((expense) => (
-                      <TableRow key={expense.id}>
-                        <TableCell className="sticky left-0 bg-background z-10">
-                          <div className="font-medium text-sm">{expense.name}</div>
-                          {expense.costCenter && (
-                            <div className="flex items-center gap-1 mt-0.5">
-                              <div
-                                className="w-2 h-2 rounded-full"
-                                style={{ backgroundColor: expense.costCenter.color || "#6b7280" }}
-                              />
-                              <span className="text-xs text-muted-foreground">{expense.costCenter.name}</span>
+                </div>
+
+                {/* Desktop: Tabella */}
+                <div className="hidden sm:block overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>Centro</TableHead>
+                        <TableHead className="text-right">Importo</TableHead>
+                        <TableHead className="text-right">Annuale</TableHead>
+                        <TableHead>Freq.</TableHead>
+                        <TableHead>Priorità</TableHead>
+                        <TableHead className="text-right">Azioni</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {expensesWithAnnual.map((expense) => (
+                        <TableRow key={expense.id}>
+                          <TableCell className="font-medium">{expense.name}</TableCell>
+                          <TableCell>
+                            {expense.costCenter ? (
+                              <div className="flex items-center gap-1">
+                                <div
+                                  className="w-2 h-2 rounded-full"
+                                  style={{ backgroundColor: expense.costCenter.color || "#6b7280" }}
+                                />
+                                <span className="text-sm">{expense.costCenter.name}</span>
+                              </div>
+                            ) : "-"}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-red-600">
+                            {formatCurrency(expense.amount)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-red-600 font-bold">
+                            {formatCurrency(expense.annualAmount)}
+                          </TableCell>
+                          <TableCell>{FREQUENCY_LABELS[expense.frequency]}</TableCell>
+                          <TableCell>
+                            {expense.priority && expense.priority !== "normal" ? (
+                              <Badge className={PRIORITY_COLORS[expense.priority]}>
+                                {PRIORITY_LABELS[expense.priority]}
+                              </Badge>
+                            ) : "-"}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-1">
+                              <Button variant="ghost" size="sm" onClick={() => {
+                                setEditingExpense(expense);
+                                setExpenseFormOpen(true);
+                              }}>
+                                <Edit2 className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm" className="text-red-500" onClick={() => handleDeleteExpense(expense.id)}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
                             </div>
-                          )}
-                        </TableCell>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </Card>
+            ) : (
+              /* Vista Mensile */
+              <Card>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="sticky left-0 bg-background z-10 min-w-[120px]">Spesa</TableHead>
+                        {MONTHS.map((month, idx) => (
+                          <TableHead key={idx} className="text-center min-w-[70px] text-xs">
+                            {month}
+                          </TableHead>
+                        ))}
+                        <TableHead className="text-right font-bold min-w-[80px]">Tot.</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {expensesWithAnnual.map((expense) => (
+                        <TableRow key={expense.id}>
+                          <TableCell className="sticky left-0 bg-background z-10">
+                            <div className="text-xs font-medium truncate max-w-[100px]">{expense.name}</div>
+                          </TableCell>
+                          {MONTHS.map((_, monthIdx) => {
+                            const hasExpense = expense.monthlyOccurrences?.includes(monthIdx + 1);
+                            return (
+                              <TableCell key={monthIdx} className="text-center text-xs p-1">
+                                {hasExpense ? (
+                                  <span className="font-mono text-red-600">{formatCurrency(expense.amount)}</span>
+                                ) : "-"}
+                              </TableCell>
+                            );
+                          })}
+                          <TableCell className="text-right font-mono text-red-600 font-bold text-xs">
+                            {formatCurrency(expense.annualAmount)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      <TableRow className="bg-muted font-bold">
+                        <TableCell className="sticky left-0 bg-muted z-10 text-xs">TOTALE</TableCell>
                         {MONTHS.map((_, monthIdx) => {
-                          const month = monthIdx + 1;
-                          const hasExpense = expense.monthlyOccurrences?.includes(month);
+                          const monthTotal = expectedExpenses.reduce((sum, exp) => {
+                            if (exp.monthlyOccurrences?.includes(monthIdx + 1)) return sum + exp.amount;
+                            return sum;
+                          }, 0);
                           return (
-                            <TableCell key={monthIdx} className="text-center">
-                              {hasExpense ? (
-                                <span className="text-sm font-mono text-red-600">
-                                  {formatCurrency(expense.amount)}
-                                </span>
-                              ) : (
-                                <span className="text-gray-300">-</span>
-                              )}
+                            <TableCell key={monthIdx} className="text-center font-mono text-red-600 text-xs p-1">
+                              {formatCurrency(monthTotal)}
                             </TableCell>
                           );
                         })}
-                        <TableCell className="text-right font-mono text-red-600 font-bold">
-                          {formatCurrency(expense.annualAmount)}
+                        <TableCell className="text-right font-mono text-red-600 text-xs">
+                          {formatCurrency(totalExpectedExpenses)}
                         </TableCell>
                       </TableRow>
-                    ))}
-                    {/* Riga totali per mese */}
-                    <TableRow className="bg-muted font-bold">
-                      <TableCell className="sticky left-0 bg-muted z-10">TOTALE</TableCell>
-                      {MONTHS.map((_, monthIdx) => {
-                        const month = monthIdx + 1;
-                        const monthTotal = expectedExpenses.reduce((sum, exp) => {
-                          if (exp.monthlyOccurrences?.includes(month)) {
-                            return sum + exp.amount;
-                          }
-                          return sum;
-                        }, 0);
-                        return (
-                          <TableCell key={monthIdx} className="text-center font-mono text-red-600">
-                            {formatCurrency(monthTotal)}
-                          </TableCell>
-                        );
-                      })}
-                      <TableCell className="text-right font-mono text-red-600">
-                        {formatCurrency(totalExpectedExpenses)}
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </div>
-            </Card>
-          )}
-        </TabsContent>
+                    </TableBody>
+                  </Table>
+                </div>
+              </Card>
+            )}
+          </TabsContent>
 
-        {/* INCASSI PREVISTI */}
-        <TabsContent value="revenue">
-          {/* Riepilogo */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Totale Previsto Annuale</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">
+          {/* === TAB INCASSI === */}
+          <TabsContent value="revenue" className="space-y-4 mt-4">
+            {/* Riepilogo Incassi - 3 box */}
+            <div className="grid grid-cols-3 gap-2 sm:gap-4">
+              <Card className="p-3 sm:p-4">
+                <p className="text-xs text-muted-foreground mb-1">Totale Previsto</p>
+                <p className="text-base sm:text-xl font-bold font-mono text-green-500 dark:text-green-400">
                   {formatCurrency(totalExpectedIncomes)}
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Incassato Finora</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
+                </p>
+              </Card>
+              <Card className="p-3 sm:p-4">
+                <p className="text-xs text-muted-foreground mb-1">Incassato</p>
+                <p className="text-base sm:text-xl font-bold font-mono text-foreground">
                   {formatCurrency(totalCollected)}
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Da Incassare</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-orange-600">
+                </p>
+              </Card>
+              <Card className="p-3 sm:p-4">
+                <p className="text-xs text-muted-foreground mb-1">Da Incassare</p>
+                <p className="text-base sm:text-xl font-bold font-mono text-orange-500">
                   {formatCurrency(totalExpectedIncomes - totalCollected)}
+                </p>
+              </Card>
+            </div>
+
+            {/* Centri di Ricavo */}
+            <Card>
+              <CardHeader className="p-3 sm:p-4 pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base sm:text-lg">Centri di Ricavo</CardTitle>
+                  <Button size="sm" variant="outline" onClick={() => setRevenueFormOpen(true)} className="h-8 text-xs">
+                    <Plus className="h-3.5 w-3.5 mr-1" />
+                    Aggiungi
+                  </Button>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Centri di Ricavo (Aggregatori) */}
-          <Card className="mb-6">
-            <CardHeader className="pb-2 flex flex-row items-center justify-between">
-              <CardTitle className="text-lg">Centri di Ricavo</CardTitle>
-              <Button size="sm" variant="outline" onClick={() => setRevenueFormOpen(true)}>
-                <Plus className="h-4 w-4 mr-1" />
-                Aggiungi
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {/* Vista Mobile - Grid verticale */}
-              <div className="sm:hidden grid grid-cols-2 gap-2">
-                {revenueCenters.map((center) => (
-                  <div
-                    key={center.id}
-                    className="flex flex-col p-2 bg-muted/50 rounded-lg border"
-                  >
-                    <div className="flex items-center gap-2 mb-1">
-                      <div
-                        className="w-3 h-3 rounded-full shrink-0"
-                        style={{ backgroundColor: center.color || "#6b7280" }}
-                      />
-                      <span className="font-medium text-foreground text-sm truncate">{center.name}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">
-                        ({center.expectedIncomesCount || 0} clienti)
-                      </span>
-                      <span className="text-xs font-mono text-green-500 dark:text-green-400">
-                        {formatCurrency(center.totalExpected || 0)}
-                      </span>
-                    </div>
-                    <div className="flex justify-end gap-1 mt-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={() => {
-                          setEditingRevenueCenter(center);
-                          setRevenueFormOpen(true);
-                        }}
-                      >
-                        <Edit2 className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 text-red-500 hover:text-red-700"
-                        onClick={() => handleDeleteRevenueCenter(center.id)}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Vista Desktop - Flex wrap */}
-              <div className="hidden sm:flex flex-wrap gap-2">
-                {revenueCenters.map((center) => (
-                  <div
-                    key={center.id}
-                    className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-lg border"
-                  >
-                    <div
-                      className="w-3 h-3 rounded-full shrink-0"
-                      style={{ backgroundColor: center.color || "#6b7280" }}
-                    />
-                    <span className="font-medium text-foreground">{center.name}</span>
-                    <span className="text-sm text-muted-foreground">
-                      ({center.expectedIncomesCount || 0} clienti)
-                    </span>
-                    <span className="text-sm font-mono text-green-500 dark:text-green-400">
-                      {formatCurrency(center.totalExpected || 0)}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={() => {
+              </CardHeader>
+              <CardContent className="p-3 sm:p-4 pt-0 space-y-2">
+                {revenueCenters.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-4 text-center">
+                    Nessun centro di ricavo
+                  </p>
+                ) : (
+                  revenueCenters.map((center) => (
+                    <CenterCard
+                      key={center.id}
+                      name={center.name}
+                      color={center.color || "#6b7280"}
+                      count={center.expectedIncomesCount || 0}
+                      countLabel="clienti"
+                      amount={center.totalExpected || 0}
+                      isExpense={false}
+                      onEdit={() => {
                         setEditingRevenueCenter(center);
                         setRevenueFormOpen(true);
                       }}
-                    >
-                      <Edit2 className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 text-red-500 hover:text-red-700"
-                      onClick={() => handleDeleteRevenueCenter(center.id)}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                ))}
+                      onDelete={() => handleDeleteRevenueCenter(center.id)}
+                    />
+                  ))
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Controlli Vista + Aggiungi Incasso */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="flex gap-1">
+                <Button
+                  variant={incomeView === "aggregate" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setIncomeView("aggregate")}
+                  className="text-xs h-8 flex-1 sm:flex-none"
+                >
+                  Lista
+                </Button>
+                <Button
+                  variant={incomeView === "monthly" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setIncomeView("monthly")}
+                  className="text-xs h-8 flex-1 sm:flex-none"
+                >
+                  Mensile
+                </Button>
               </div>
-
-              {revenueCenters.length === 0 && (
-                <p className="text-sm text-muted-foreground">
-                  Nessun centro di ricavo. Crea Siti Web, Marketing, Domini, Licenze...
-                </p>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Sotto-tab Vista Aggregata / Vista Mensile */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex gap-2">
-              <Button
-                variant={incomeView === "aggregate" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setIncomeView("aggregate")}
-              >
-                Vista Aggregata
-              </Button>
-              <Button
-                variant={incomeView === "monthly" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setIncomeView("monthly")}
-              >
-                Vista Mensile
+              <Button size="sm" onClick={() => setIncomeFormOpen(true)} className="h-8 text-xs">
+                <Plus className="h-3.5 w-3.5 mr-1" />
+                Nuovo Incasso
               </Button>
             </div>
-            <Button onClick={() => setIncomeFormOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Nuovo Incasso Previsto
-            </Button>
-          </div>
 
-          {incomeView === "aggregate" ? (
-            /* Vista Aggregata - Tabella incassi */
-            <Card>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Centro</TableHead>
-                    <TableHead className="text-right">Importo</TableHead>
-                    <TableHead className="text-right">Importo Annuale</TableHead>
-                    <TableHead>Frequenza</TableHead>
-                    <TableHead className="text-center">Giorno</TableHead>
-                    <TableHead>Periodo</TableHead>
-                    <TableHead>Affidabilità</TableHead>
-                    <TableHead className="text-right">Azioni</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {[...expectedIncomes]
-                    .map((income) => ({
-                      ...income,
-                      annualAmount: income.amount * (income.monthlyOccurrences?.length || 0),
-                    }))
-                    .sort((a, b) => b.annualAmount - a.annualAmount)
-                    .map((income) => {
-                    const annualAmount = income.annualAmount;
-
-                    return (
-                    <TableRow key={income.id}>
-                      <TableCell>
-                        <div className="font-medium">{income.clientName}</div>
-                        {income.notes && (
-                          <p className="text-xs text-muted-foreground">{income.notes}</p>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {income.revenueCenter ? (
-                          <div className="flex items-center gap-1">
-                            <div
-                              className="w-2 h-2 rounded-full"
-                              style={{ backgroundColor: income.revenueCenter.color || "#6b7280" }}
-                            />
-                            <span className="text-sm">{income.revenueCenter.name}</span>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-gray-400">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-green-600">
-                        {formatCurrency(income.amount)}
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-green-600 font-bold">
-                        {formatCurrency(annualAmount)}
-                      </TableCell>
-                      <TableCell>
-                        {FREQUENCY_LABELS[income.frequency] || income.frequency}
-                      </TableCell>
-                      <TableCell className="text-center">{income.expectedDay}</TableCell>
-                      <TableCell>
-                        {(() => {
-                          const formatDate = (d: string) => {
-                            const [y, m] = d.split("-");
-                            return `${MONTHS[parseInt(m) - 1]} ${y.slice(2)}`;
-                          };
-                          const start = formatDate(income.startDate);
-                          const end = income.endDate ? formatDate(income.endDate) : null;
-                          if (!end) return <span className="text-xs">Da {start}</span>;
-                          return <span className="text-xs">{start} → {end}</span>;
-                        })()}
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={RELIABILITY_COLORS[income.reliability || "high"]}>
-                          {income.reliability === "high" ? "Alta" : income.reliability === "low" ? "Bassa" : "Media"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setEditingIncome(income);
-                              setIncomeFormOpen(true);
-                            }}
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-red-500 hover:text-red-700"
-                            onClick={() => handleDeleteIncome(income.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                    );
-                  })}
-                  {expectedIncomes.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
-                        Nessun incasso previsto configurato
-                      </TableCell>
-                    </TableRow>
+            {/* Lista Incassi */}
+            {incomeView === "aggregate" ? (
+              <Card className="overflow-hidden">
+                {/* Mobile: Cards */}
+                <div className="sm:hidden max-h-[400px] overflow-y-auto">
+                  {incomesWithAnnual.length === 0 ? (
+                    <p className="text-sm text-muted-foreground py-8 text-center">
+                      Nessun incasso configurato
+                    </p>
+                  ) : (
+                    incomesWithAnnual.map((income) => (
+                      <IncomeCard
+                        key={income.id}
+                        income={income}
+                        onEdit={() => {
+                          setEditingIncome(income);
+                          setIncomeFormOpen(true);
+                        }}
+                        onDelete={() => handleDeleteIncome(income.id)}
+                      />
+                    ))
                   )}
-                </TableBody>
-              </Table>
-            </Card>
-          ) : (
-            /* Vista Mensile - Tabella con mesi come colonne */
-            <Card>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="sticky left-0 bg-background z-10">Cliente</TableHead>
-                      {MONTHS.map((month, idx) => (
-                        <TableHead key={idx} className="text-center min-w-[80px]">
-                          {month}
-                        </TableHead>
-                      ))}
-                      <TableHead className="text-right font-bold">Totale</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {[...expectedIncomes]
-                      .map((income) => ({
-                        ...income,
-                        annualAmount: income.amount * (income.monthlyOccurrences?.length || 0),
-                      }))
-                      .sort((a, b) => b.annualAmount - a.annualAmount)
-                      .map((income) => (
-                      <TableRow key={income.id}>
-                        <TableCell className="sticky left-0 bg-background z-10">
-                          <div className="font-medium text-sm">{income.clientName}</div>
-                          {income.revenueCenter && (
-                            <div className="flex items-center gap-1 mt-0.5">
-                              <div
-                                className="w-2 h-2 rounded-full"
-                                style={{ backgroundColor: income.revenueCenter.color || "#6b7280" }}
-                              />
-                              <span className="text-xs text-muted-foreground">{income.revenueCenter.name}</span>
+                </div>
+
+                {/* Desktop: Tabella */}
+                <div className="hidden sm:block overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Cliente</TableHead>
+                        <TableHead>Centro</TableHead>
+                        <TableHead className="text-right">Importo</TableHead>
+                        <TableHead className="text-right">Annuale</TableHead>
+                        <TableHead>Freq.</TableHead>
+                        <TableHead>Affidabilità</TableHead>
+                        <TableHead className="text-right">Azioni</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {incomesWithAnnual.map((income) => (
+                        <TableRow key={income.id}>
+                          <TableCell className="font-medium">{income.clientName}</TableCell>
+                          <TableCell>
+                            {income.revenueCenter ? (
+                              <div className="flex items-center gap-1">
+                                <div
+                                  className="w-2 h-2 rounded-full"
+                                  style={{ backgroundColor: income.revenueCenter.color || "#6b7280" }}
+                                />
+                                <span className="text-sm">{income.revenueCenter.name}</span>
+                              </div>
+                            ) : "-"}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-green-600">
+                            {formatCurrency(income.amount)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-green-600 font-bold">
+                            {formatCurrency(income.annualAmount)}
+                          </TableCell>
+                          <TableCell>{FREQUENCY_LABELS[income.frequency]}</TableCell>
+                          <TableCell>
+                            <Badge className={RELIABILITY_COLORS[income.reliability || "high"]}>
+                              {income.reliability === "high" ? "Alta" : income.reliability === "low" ? "Bassa" : "Media"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-1">
+                              <Button variant="ghost" size="sm" onClick={() => {
+                                setEditingIncome(income);
+                                setIncomeFormOpen(true);
+                              }}>
+                                <Edit2 className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm" className="text-red-500" onClick={() => handleDeleteIncome(income.id)}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
                             </div>
-                          )}
-                        </TableCell>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </Card>
+            ) : (
+              /* Vista Mensile */
+              <Card>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="sticky left-0 bg-background z-10 min-w-[120px]">Cliente</TableHead>
+                        {MONTHS.map((month, idx) => (
+                          <TableHead key={idx} className="text-center min-w-[70px] text-xs">
+                            {month}
+                          </TableHead>
+                        ))}
+                        <TableHead className="text-right font-bold min-w-[80px]">Tot.</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {incomesWithAnnual.map((income) => (
+                        <TableRow key={income.id}>
+                          <TableCell className="sticky left-0 bg-background z-10">
+                            <div className="text-xs font-medium truncate max-w-[100px]">{income.clientName}</div>
+                          </TableCell>
+                          {MONTHS.map((_, monthIdx) => {
+                            const hasIncome = income.monthlyOccurrences?.includes(monthIdx + 1);
+                            return (
+                              <TableCell key={monthIdx} className="text-center text-xs p-1">
+                                {hasIncome ? (
+                                  <span className="font-mono text-green-600">{formatCurrency(income.amount)}</span>
+                                ) : "-"}
+                              </TableCell>
+                            );
+                          })}
+                          <TableCell className="text-right font-mono text-green-600 font-bold text-xs">
+                            {formatCurrency(income.annualAmount)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      <TableRow className="bg-muted font-bold">
+                        <TableCell className="sticky left-0 bg-muted z-10 text-xs">TOTALE</TableCell>
                         {MONTHS.map((_, monthIdx) => {
-                          const month = monthIdx + 1;
-                          const hasIncome = income.monthlyOccurrences?.includes(month);
+                          const monthTotal = expectedIncomes.reduce((sum, inc) => {
+                            if (inc.monthlyOccurrences?.includes(monthIdx + 1)) return sum + inc.amount;
+                            return sum;
+                          }, 0);
                           return (
-                            <TableCell key={monthIdx} className="text-center">
-                              {hasIncome ? (
-                                <span className="text-sm font-mono text-green-600">
-                                  {formatCurrency(income.amount)}
-                                </span>
-                              ) : (
-                                <span className="text-gray-300">-</span>
-                              )}
+                            <TableCell key={monthIdx} className="text-center font-mono text-green-600 text-xs p-1">
+                              {formatCurrency(monthTotal)}
                             </TableCell>
                           );
                         })}
-                        <TableCell className="text-right font-mono text-green-600 font-bold">
-                          {formatCurrency(income.annualAmount)}
+                        <TableCell className="text-right font-mono text-green-600 text-xs">
+                          {formatCurrency(totalExpectedIncomes)}
                         </TableCell>
                       </TableRow>
-                    ))}
-                    {/* Riga totali per mese */}
-                    <TableRow className="bg-muted font-bold">
-                      <TableCell className="sticky left-0 bg-muted z-10">TOTALE</TableCell>
-                      {MONTHS.map((_, monthIdx) => {
-                        const month = monthIdx + 1;
-                        const monthTotal = expectedIncomes.reduce((sum, inc) => {
-                          if (inc.monthlyOccurrences?.includes(month)) {
-                            return sum + inc.amount;
-                          }
-                          return sum;
-                        }, 0);
-                        return (
-                          <TableCell key={monthIdx} className="text-center font-mono text-green-600">
-                            {formatCurrency(monthTotal)}
-                          </TableCell>
-                        );
-                      })}
-                      <TableCell className="text-right font-mono text-green-600">
-                        {formatCurrency(totalExpectedIncomes)}
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </div>
-            </Card>
-          )}
-        </TabsContent>
-      </Tabs>
+                    </TableBody>
+                  </Table>
+                </div>
+              </Card>
+            )}
+          </TabsContent>
+        </Tabs>
+      </div>
 
       {/* Form modali */}
       <CostCenterForm
@@ -1022,17 +921,16 @@ export default function SettingsPage() {
         editingCenter={editingRevenueCenter}
       />
 
-        <ExpectedIncomeForm
-          open={incomeFormOpen}
-          onOpenChange={(open) => {
-            setIncomeFormOpen(open);
-            if (!open) setEditingIncome(null);
-          }}
-          onSubmit={editingIncome ? handleUpdateIncome : handleCreateIncome}
-          editingIncome={editingIncome}
-          revenueCenters={revenueCenters}
-        />
-      </div>
+      <ExpectedIncomeForm
+        open={incomeFormOpen}
+        onOpenChange={(open) => {
+          setIncomeFormOpen(open);
+          if (!open) setEditingIncome(null);
+        }}
+        onSubmit={editingIncome ? handleUpdateIncome : handleCreateIncome}
+        editingIncome={editingIncome}
+        revenueCenters={revenueCenters}
+      />
     </div>
   );
 }
