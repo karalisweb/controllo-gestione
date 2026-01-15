@@ -82,37 +82,40 @@
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
+  /* Karalisweb Finance Brand - Dark Blue + Gold */
+  --background: oklch(0.15 0.02 250);  /* Slate 900 - main background */
   --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
+  --card: oklch(0.18 0.02 250);  /* Slightly lighter for cards */
   --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
+  --popover: oklch(0.18 0.02 250);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
+  --primary: oklch(0.75 0.12 85);  /* Gold/Amber accent */
+  --primary-foreground: oklch(0.15 0.02 250);
+  --secondary: oklch(0.22 0.02 250);  /* Slate 800 */
   --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
+  --muted: oklch(0.22 0.02 250);
+  --muted-foreground: oklch(0.65 0 0);
+  --accent: oklch(0.75 0.12 85);  /* Gold accent */
+  --accent-foreground: oklch(0.15 0.02 250);
+  --destructive: oklch(0.65 0.2 25);  /* Red for errors */
+  --border: oklch(1 0 0 / 8%);
+  --input: oklch(1 0 0 / 12%);
+  --ring: oklch(0.75 0.12 85);  /* Gold ring */
+  /* Chart colors */
+  --chart-1: oklch(0.75 0.12 85);  /* Gold */
+  --chart-2: oklch(0.55 0.2 160);  /* Teal */
+  --chart-3: oklch(0.65 0.2 25);  /* Red */
+  --chart-4: oklch(0.6 0.18 280);  /* Purple */
+  --chart-5: oklch(0.55 0.15 220);  /* Blue */
+  /* Sidebar */
+  --sidebar: oklch(0.12 0.02 250);  /* Darker sidebar */
+  --sidebar-foreground: oklch(0.7 0 0);
+  --sidebar-primary: oklch(0.75 0.12 85);  /* Gold */
+  --sidebar-primary-foreground: oklch(0.12 0.02 250);
+  --sidebar-accent: oklch(0.18 0.02 250);
   --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar-border: oklch(1 0 0 / 8%);
+  --sidebar-ring: oklch(0.75 0.12 85);
 }
 
 @layer base {

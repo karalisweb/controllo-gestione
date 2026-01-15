@@ -17,6 +17,7 @@ import { CostCenterForm } from "@/components/settings/CostCenterForm";
 import { RevenueCenterForm } from "@/components/settings/RevenueCenterForm";
 import { ExpectedIncomeForm } from "@/components/settings/ExpectedIncomeForm";
 import { ExpectedExpenseForm } from "@/components/settings/ExpectedExpenseForm";
+import { MobileHeader } from "@/components/MobileHeader";
 import { formatCurrency } from "@/lib/utils/currency";
 import type { CostCenter, RevenueCenter, ExpectedIncome, ExpectedExpense } from "@/types";
 import { Plus, Edit2, Trash2, AlertTriangle } from "lucide-react";
@@ -230,7 +231,8 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto py-8">
+      <div className="min-h-screen">
+        <MobileHeader title="Piano Annuale" />
         <div className="flex items-center justify-center h-64">
           <div className="text-muted-foreground">Caricamento...</div>
         </div>
@@ -239,23 +241,26 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">Piano Annuale</h1>
-        <p className="text-muted-foreground">
-          Gestisci spese, incassi e budget annuale
-        </p>
-      </div>
+    <div className="min-h-screen">
+      <MobileHeader title="Piano Annuale" />
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="mb-6">
-          <TabsTrigger value="cost">
-            Spese ({expectedExpenses.length})
-          </TabsTrigger>
-          <TabsTrigger value="revenue">
-            Incassi ({expectedIncomes.length})
-          </TabsTrigger>
-        </TabsList>
+      <div className="p-4 lg:p-6">
+        <div className="mb-6">
+          <h1 className="text-xl lg:text-2xl font-bold">Piano Annuale</h1>
+          <p className="text-xs lg:text-sm text-muted-foreground">
+            Gestisci spese, incassi e budget annuale
+          </p>
+        </div>
+
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="mb-4 w-full sm:w-auto grid grid-cols-2 sm:flex">
+            <TabsTrigger value="cost" className="text-xs sm:text-sm">
+              Spese ({expectedExpenses.length})
+            </TabsTrigger>
+            <TabsTrigger value="revenue" className="text-xs sm:text-sm">
+              Incassi ({expectedIncomes.length})
+            </TabsTrigger>
+          </TabsList>
 
         {/* SPESE PREVISTE */}
         <TabsContent value="cost">
@@ -919,16 +924,17 @@ export default function SettingsPage() {
         editingCenter={editingRevenueCenter}
       />
 
-      <ExpectedIncomeForm
-        open={incomeFormOpen}
-        onOpenChange={(open) => {
-          setIncomeFormOpen(open);
-          if (!open) setEditingIncome(null);
-        }}
-        onSubmit={editingIncome ? handleUpdateIncome : handleCreateIncome}
-        editingIncome={editingIncome}
-        revenueCenters={revenueCenters}
-      />
+        <ExpectedIncomeForm
+          open={incomeFormOpen}
+          onOpenChange={(open) => {
+            setIncomeFormOpen(open);
+            if (!open) setEditingIncome(null);
+          }}
+          onSubmit={editingIncome ? handleUpdateIncome : handleCreateIncome}
+          editingIncome={editingIncome}
+          revenueCenters={revenueCenters}
+        />
+      </div>
     </div>
   );
 }

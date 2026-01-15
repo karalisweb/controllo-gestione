@@ -9,6 +9,7 @@ import { ImportModal } from "@/components/transactions/ImportModal";
 import { SplitCalculator } from "@/components/transactions/SplitCalculator";
 import { QuickTransactionInput } from "@/components/transactions/QuickTransactionInput";
 import { SplitsSummary } from "@/components/transactions/SplitsSummary";
+import { MobileHeader } from "@/components/MobileHeader";
 import { formatCurrency } from "@/lib/utils/currency";
 import type { Category } from "@/types";
 import { Upload, TrendingUp, TrendingDown, Wallet, Plus } from "lucide-react";
@@ -120,7 +121,8 @@ export default function TransactionsPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto py-8">
+      <div className="min-h-screen">
+        <MobileHeader title="Consuntivo" />
         <div className="flex items-center justify-center h-64">
           <div className="text-muted-foreground">Caricamento...</div>
         </div>
@@ -130,7 +132,8 @@ export default function TransactionsPage() {
 
   if (error) {
     return (
-      <div className="container mx-auto py-8">
+      <div className="min-h-screen">
+        <MobileHeader title="Consuntivo" />
         <div className="flex items-center justify-center h-64">
           <div className="text-red-500">Errore: {error}</div>
         </div>
@@ -139,131 +142,126 @@ export default function TransactionsPage() {
   }
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="flex justify-between items-start mb-8">
-        <div>
-          <h1 className="text-3xl font-bold">Consuntivo</h1>
-          <p className="text-muted-foreground">
-            Movimenti reali importati da Qonto
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button onClick={() => setQuickInputOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Nuovo Movimento
-          </Button>
-          <Button variant="outline" onClick={() => setImportOpen(true)}>
-            <Upload className="h-4 w-4 mr-2" />
-            Importa CSV
-          </Button>
-        </div>
-      </div>
+    <div className="min-h-screen">
+      <MobileHeader title="Consuntivo" />
 
-      {/* Riepilogo */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Totale Entrate
-            </CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
+      <div className="p-4 lg:p-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-6">
+          <div>
+            <h1 className="text-xl lg:text-2xl font-bold">Consuntivo</h1>
+            <p className="text-xs lg:text-sm text-muted-foreground">
+              Movimenti reali importati da Qonto
+            </p>
+          </div>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Button onClick={() => setQuickInputOpen(true)} size="sm" className="flex-1 sm:flex-none">
+              <Plus className="h-4 w-4 mr-1 lg:mr-2" />
+              <span className="hidden sm:inline">Nuovo Movimento</span>
+              <span className="sm:hidden">Nuovo</span>
+            </Button>
+            <Button variant="outline" onClick={() => setImportOpen(true)} size="sm" className="flex-1 sm:flex-none">
+              <Upload className="h-4 w-4 mr-1 lg:mr-2" />
+              <span className="hidden sm:inline">Importa CSV</span>
+              <span className="sm:hidden">Importa</span>
+            </Button>
+          </div>
+        </div>
+
+        {/* Riepilogo - Cards compatte su mobile */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+          <Card className="p-3 sm:p-4">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-medium text-muted-foreground">Totale Entrate</span>
+              <TrendingUp className="h-4 w-4 text-green-500" />
+            </div>
+            <div className="text-lg sm:text-2xl font-bold text-green-600">
               {formatCurrency(totalIncome)}
             </div>
             <p className="text-xs text-muted-foreground">
               {transactions.filter((t) => t.amount > 0).length} movimenti
             </p>
-          </CardContent>
-        </Card>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Totale Uscite</CardTitle>
-            <TrendingDown className="h-4 w-4 text-red-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">
+          <Card className="p-3 sm:p-4">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-medium text-muted-foreground">Totale Uscite</span>
+              <TrendingDown className="h-4 w-4 text-red-500" />
+            </div>
+            <div className="text-lg sm:text-2xl font-bold text-red-600">
               {formatCurrency(totalExpense)}
             </div>
             <p className="text-xs text-muted-foreground">
               {transactions.filter((t) => t.amount < 0).length} movimenti
             </p>
-          </CardContent>
-        </Card>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Saldo</CardTitle>
-            <Wallet className="h-4 w-4 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div
-              className={`text-2xl font-bold ${
-                balance >= 0 ? "text-green-600" : "text-red-600"
-              }`}
-            >
+          <Card className="p-3 sm:p-4">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-medium text-muted-foreground">Saldo</span>
+              <Wallet className="h-4 w-4 text-primary" />
+            </div>
+            <div className={`text-lg sm:text-2xl font-bold ${balance >= 0 ? "text-green-600" : "text-red-600"}`}>
               {formatCurrency(balance)}
             </div>
             <p className="text-xs text-muted-foreground">
               Differenza entrate - uscite
             </p>
-          </CardContent>
-        </Card>
-      </div>
+          </Card>
+        </div>
 
-      {/* Riepilogo ripartizioni (bonifici soci + IVA) */}
-      <div className="mb-8">
-        <SplitsSummary />
-      </div>
+        {/* Riepilogo ripartizioni (bonifici soci + IVA) */}
+        <div className="mb-6">
+          <SplitsSummary />
+        </div>
 
-      {/* Lista transazioni */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="all">
-            Tutti ({transactions.length})
-          </TabsTrigger>
-          <TabsTrigger value="income">
-            Entrate ({transactions.filter((t) => t.amount > 0).length})
-          </TabsTrigger>
-          <TabsTrigger value="expense">
-            Uscite ({transactions.filter((t) => t.amount < 0).length})
-          </TabsTrigger>
-        </TabsList>
+        {/* Lista transazioni */}
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="w-full sm:w-auto grid grid-cols-3 sm:flex">
+            <TabsTrigger value="all" className="text-xs sm:text-sm">
+              Tutti ({transactions.length})
+            </TabsTrigger>
+            <TabsTrigger value="income" className="text-xs sm:text-sm">
+              Entrate ({transactions.filter((t) => t.amount > 0).length})
+            </TabsTrigger>
+            <TabsTrigger value="expense" className="text-xs sm:text-sm">
+              Uscite ({transactions.filter((t) => t.amount < 0).length})
+            </TabsTrigger>
+          </TabsList>
 
-        <TabsContent value={activeTab} className="mt-6">
-          <TransactionList
-            transactions={filteredTransactions}
-            categories={categories}
-            onDelete={handleDelete}
-            onUpdateCategory={handleUpdateCategory}
-            onSplit={(tx) => setSplitTransaction(tx)}
-          />
-        </TabsContent>
-      </Tabs>
+          <TabsContent value={activeTab} className="mt-4">
+            <TransactionList
+              transactions={filteredTransactions}
+              categories={categories}
+              onDelete={handleDelete}
+              onUpdateCategory={handleUpdateCategory}
+              onSplit={(tx) => setSplitTransaction(tx)}
+            />
+          </TabsContent>
+        </Tabs>
 
-      {/* Modali */}
-      <ImportModal
-        open={importOpen}
-        onOpenChange={setImportOpen}
-        onImportComplete={fetchData}
-      />
-
-      <QuickTransactionInput
-        open={quickInputOpen}
-        onOpenChange={setQuickInputOpen}
-        onComplete={fetchData}
-      />
-
-      {splitTransaction && (
-        <SplitCalculator
-          transaction={splitTransaction}
-          open={!!splitTransaction}
-          onOpenChange={(open) => !open && setSplitTransaction(null)}
-          onComplete={handleSplitComplete}
+        {/* Modali */}
+        <ImportModal
+          open={importOpen}
+          onOpenChange={setImportOpen}
+          onImportComplete={fetchData}
         />
-      )}
+
+        <QuickTransactionInput
+          open={quickInputOpen}
+          onOpenChange={setQuickInputOpen}
+          onComplete={fetchData}
+        />
+
+        {splitTransaction && (
+          <SplitCalculator
+            transaction={splitTransaction}
+            open={!!splitTransaction}
+            onOpenChange={(open) => !open && setSplitTransaction(null)}
+            onComplete={handleSplitComplete}
+          />
+        )}
+      </div>
     </div>
   );
 }

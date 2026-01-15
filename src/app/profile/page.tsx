@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Navigation } from "@/components/Navigation";
 
 interface User {
   id: number;
@@ -119,9 +118,8 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navigation />
-      <div className="container mx-auto px-4 py-8 max-w-2xl">
+    <div className="min-h-screen">
+      <div className="p-4 lg:p-6 max-w-2xl mx-auto">
         <h1 className="text-2xl font-bold mb-6">Profilo</h1>
 
         {/* Info utente */}
@@ -244,7 +242,7 @@ export default function ProfilePage() {
             </Button>
           </CardContent>
         </Card>
-      </div>
+        </div>
     </div>
   );
 }

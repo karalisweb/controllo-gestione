@@ -2,9 +2,12 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PaymentPlanForm } from "@/components/payment-plans/PaymentPlanForm";
 import { PaymentPlanList } from "@/components/payment-plans/PaymentPlanList";
+import { MobileHeader } from "@/components/MobileHeader";
+import { formatCurrency } from "@/lib/utils/currency";
 import type { PaymentPlan } from "@/types";
 import { Plus } from "lucide-react";
 
@@ -169,7 +172,8 @@ export default function PaymentPlansPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto py-8">
+      <div className="min-h-screen">
+        <MobileHeader title="Piani di Rientro" />
         <div className="flex items-center justify-center h-64">
           <div className="text-muted-foreground">Caricamento...</div>
         </div>
@@ -179,7 +183,8 @@ export default function PaymentPlansPage() {
 
   if (error) {
     return (
-      <div className="container mx-auto py-8">
+      <div className="min-h-screen">
+        <MobileHeader title="Piani di Rientro" />
         <div className="flex items-center justify-center h-64">
           <div className="text-red-500">Errore: {error}</div>
         </div>
@@ -188,92 +193,88 @@ export default function PaymentPlansPage() {
   }
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="flex justify-between items-start mb-8">
-        <div>
-          <h1 className="text-3xl font-bold">Piani di Rientro</h1>
-          <p className="text-muted-foreground">
-            Gestisci i debiti rateizzati con fornitori e creditori
-          </p>
+    <div className="min-h-screen">
+      <MobileHeader title="Piani di Rientro" />
+
+      <div className="p-4 lg:p-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-6">
+          <div>
+            <h1 className="text-xl lg:text-2xl font-bold">Piani di Rientro</h1>
+            <p className="text-xs lg:text-sm text-muted-foreground">
+              Gestisci i debiti rateizzati con fornitori e creditori
+            </p>
+          </div>
+          <Button onClick={() => setFormOpen(true)} size="sm" className="w-full sm:w-auto">
+            <Plus className="h-4 w-4 mr-2" />
+            Nuovo Piano
+          </Button>
         </div>
-        <Button onClick={() => setFormOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nuovo Piano
-        </Button>
+
+        {/* Riepilogo totali - cards compatte */}
+        {activePlans.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+            <Card className="p-3 sm:p-4">
+              <div className="text-xs text-muted-foreground mb-1">Debito Totale</div>
+              <div className="text-lg sm:text-2xl font-bold">
+                {formatCurrency(totalDebt)}
+              </div>
+            </Card>
+            <Card className="p-3 sm:p-4">
+              <div className="text-xs text-muted-foreground mb-1">Già Pagato</div>
+              <div className="text-lg sm:text-2xl font-bold text-green-600">
+                {formatCurrency(totalPaid)}
+              </div>
+            </Card>
+            <Card className="p-3 sm:p-4">
+              <div className="text-xs text-muted-foreground mb-1">Da Pagare</div>
+              <div className="text-lg sm:text-2xl font-bold text-red-600">
+                {formatCurrency(totalRemaining)}
+              </div>
+            </Card>
+          </div>
+        )}
+
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="w-full sm:w-auto grid grid-cols-2 sm:flex">
+            <TabsTrigger value="active" className="text-xs sm:text-sm">
+              Attivi ({activePlans.length})
+            </TabsTrigger>
+            <TabsTrigger value="completed" className="text-xs sm:text-sm">
+              Completati ({completedPlans.length})
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="active" className="mt-4">
+            <PaymentPlanList
+              plans={activePlans}
+              onPayInstallment={handlePayInstallment}
+              onUnpayInstallment={handleUnpayInstallment}
+              onDeletePlan={handleDeletePlan}
+              onEditPlan={handleEditPlan}
+              onUpdateInstallmentDate={handleUpdateInstallmentDate}
+            />
+          </TabsContent>
+
+          <TabsContent value="completed" className="mt-4">
+            <PaymentPlanList
+              plans={completedPlans}
+              onPayInstallment={handlePayInstallment}
+              onUnpayInstallment={handleUnpayInstallment}
+              onDeletePlan={handleDeletePlan}
+              onEditPlan={handleEditPlan}
+              onUpdateInstallmentDate={handleUpdateInstallmentDate}
+            />
+          </TabsContent>
+        </Tabs>
+
+        <PaymentPlanForm
+          open={formOpen}
+          onOpenChange={handleFormClose}
+          editingPlan={editingPlan}
+          onSubmit={handleCreatePlan}
+        />
       </div>
-
-      {/* Riepilogo totali */}
-      {activePlans.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <div className="bg-white rounded-lg border p-4">
-            <div className="text-sm text-muted-foreground">Debito Totale</div>
-            <div className="text-2xl font-bold">
-              {new Intl.NumberFormat("it-IT", {
-                style: "currency",
-                currency: "EUR",
-              }).format(totalDebt / 100)}
-            </div>
-          </div>
-          <div className="bg-white rounded-lg border p-4">
-            <div className="text-sm text-muted-foreground">Già Pagato</div>
-            <div className="text-2xl font-bold text-green-600">
-              {new Intl.NumberFormat("it-IT", {
-                style: "currency",
-                currency: "EUR",
-              }).format(totalPaid / 100)}
-            </div>
-          </div>
-          <div className="bg-white rounded-lg border p-4">
-            <div className="text-sm text-muted-foreground">Da Pagare</div>
-            <div className="text-2xl font-bold text-red-600">
-              {new Intl.NumberFormat("it-IT", {
-                style: "currency",
-                currency: "EUR",
-              }).format(totalRemaining / 100)}
-            </div>
-          </div>
-        </div>
-      )}
-
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="active">
-            Attivi ({activePlans.length})
-          </TabsTrigger>
-          <TabsTrigger value="completed">
-            Completati ({completedPlans.length})
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="active" className="mt-6">
-          <PaymentPlanList
-            plans={activePlans}
-            onPayInstallment={handlePayInstallment}
-            onUnpayInstallment={handleUnpayInstallment}
-            onDeletePlan={handleDeletePlan}
-            onEditPlan={handleEditPlan}
-            onUpdateInstallmentDate={handleUpdateInstallmentDate}
-          />
-        </TabsContent>
-
-        <TabsContent value="completed" className="mt-6">
-          <PaymentPlanList
-            plans={completedPlans}
-            onPayInstallment={handlePayInstallment}
-            onUnpayInstallment={handleUnpayInstallment}
-            onDeletePlan={handleDeletePlan}
-            onEditPlan={handleEditPlan}
-            onUpdateInstallmentDate={handleUpdateInstallmentDate}
-          />
-        </TabsContent>
-      </Tabs>
-
-      <PaymentPlanForm
-        open={formOpen}
-        onOpenChange={handleFormClose}
-        editingPlan={editingPlan}
-        onSubmit={handleCreatePlan}
-      />
     </div>
   );
 }

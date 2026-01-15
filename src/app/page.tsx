@@ -17,6 +17,8 @@ import {
   Loader2,
   Settings,
   RefreshCw,
+  Bell,
+  User,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -144,17 +146,53 @@ export default function Home() {
     );
   }
 
+  // Get greeting based on time of day
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Buongiorno!";
+    if (hour < 18) return "Buon pomeriggio!";
+    return "Buonasera!";
+  };
+
   return (
-    <div className="container mx-auto py-6 px-4 max-w-5xl">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold">Cashflow</h1>
+    <div className="min-h-screen">
+      {/* Mobile Header - visible only on mobile */}
+      <header className="lg:hidden sticky top-0 z-30 bg-sidebar border-b border-sidebar-border">
+        <div className="flex items-center justify-between px-4 h-14">
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#0f172a]">
+              <span className="text-[#d4af37] font-bold text-sm">K</span>
+              <span className="text-[#d4af37] font-medium text-xs -ml-0.5">f</span>
+            </div>
+            <span className="font-semibold text-foreground">Dashboard</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" className="text-muted-foreground">
+              <Bell className="h-5 w-5" />
+            </Button>
+            <Link href="/profile">
+              <Button variant="ghost" size="icon" className="text-muted-foreground">
+                <User className="h-5 w-5" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      <div className="p-4 lg:p-6 max-w-5xl mx-auto">
+        {/* Greeting - Mobile style */}
+        <div className="mb-6">
+          <h1 className="text-xl lg:text-2xl font-bold">{getGreeting()}</h1>
+          <p className="text-sm text-muted-foreground">
+            Ecco il riepilogo di oggi
+          </p>
+        </div>
+
+        {/* Desktop Header Controls */}
+        <div className="hidden lg:flex justify-between items-center mb-6">
           <p className="text-sm text-muted-foreground">
             Cassa attuale: {formatCurrency(data.currentBalance)}
           </p>
-        </div>
-        <div className="flex items-center gap-2">
           <Button
             variant="ghost"
             size="icon"
@@ -164,7 +202,6 @@ export default function Home() {
             <RefreshCw className="h-4 w-4" />
           </Button>
         </div>
-      </div>
 
       {/* Selettore orizzonte temporale */}
       <div className="flex gap-2 mb-6">
@@ -234,7 +271,7 @@ export default function Home() {
       </div>
 
       {/* Link secondari */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <Link href="/transactions">
           <Button variant="ghost" className="w-full justify-start">
             <Calendar className="h-4 w-4 mr-2" />
@@ -295,6 +332,7 @@ export default function Home() {
           </div>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }

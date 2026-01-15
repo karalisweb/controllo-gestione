@@ -2,9 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { ForecastTable } from "@/components/forecast/ForecastTable";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
+import { MobileHeader } from "@/components/MobileHeader";
 
 interface ForecastItem {
   id: number;
@@ -223,7 +221,8 @@ export default function ForecastPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto py-8">
+      <div className="min-h-screen">
+        <MobileHeader title="Previsionale" showBack backHref="/" />
         <div className="flex items-center justify-center h-64">
           <div className="text-muted-foreground">Caricamento...</div>
         </div>
@@ -232,27 +231,28 @@ export default function ForecastPage() {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link href="/">
-            <Button variant="ghost" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Dashboard
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold">Previsionale {currentYear}</h1>
-            <p className="text-sm text-muted-foreground">
-              Gestisci date, importi e piani di rientro
-            </p>
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen">
+      <MobileHeader title="Previsionale" showBack backHref="/" />
 
-      {/* Tabella Previsionale */}
-      <ForecastTable
+      <div className="p-4 lg:p-6 space-y-4">
+        {/* Header Desktop */}
+        <div className="hidden lg:block">
+          <h1 className="text-2xl font-bold">Previsionale {currentYear}</h1>
+          <p className="text-sm text-muted-foreground">
+            Gestisci date, importi e piani di rientro
+          </p>
+        </div>
+
+        {/* Header Mobile */}
+        <div className="lg:hidden">
+          <h1 className="text-lg font-bold">Previsionale {currentYear}</h1>
+          <p className="text-xs text-muted-foreground">
+            Gestisci date, importi e piani di rientro
+          </p>
+        </div>
+
+        {/* Tabella Previsionale */}
+        <ForecastTable
         items={items}
         paymentPlans={paymentPlans}
         costCenters={costCenters}
@@ -262,9 +262,10 @@ export default function ForecastPage() {
         onDelete={handleDelete}
         onMoveToPDR={handleMoveToPDR}
         onAdd={handleAdd}
-        onRefresh={loadData}
-        onGenerate={handleGenerate}
-      />
+          onRefresh={loadData}
+          onGenerate={handleGenerate}
+        />
+      </div>
     </div>
   );
 }

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { Navigation } from "@/components/Navigation";
+import { Sidebar } from "@/components/Sidebar";
+import { MobileNav } from "@/components/MobileNav";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,8 +15,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Karalisweb Finance - Controllo Gestione 2026",
-  description: "Pianificazione finanziaria per l'Agenzia Karalisweb",
+  title: "Finance v2.1 by Karalisweb",
+  description: "Controllo cashflow decisionale - Karalisweb Finance",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({
@@ -24,12 +28,22 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="it">
+    <html lang="it" className="dark">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-background`}
       >
-        <Navigation />
-        <main>{children}</main>
+        <div className="flex min-h-screen">
+          {/* Sidebar - hidden on mobile */}
+          <Sidebar />
+
+          {/* Main content */}
+          <main className="flex-1 lg:ml-64 pb-20 lg:pb-0">
+            {children}
+          </main>
+
+          {/* Mobile bottom navigation */}
+          <MobileNav />
+        </div>
       </body>
     </html>
   );
