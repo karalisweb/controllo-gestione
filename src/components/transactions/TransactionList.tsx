@@ -23,6 +23,114 @@ import { formatDate } from "@/lib/utils/dates";
 import type { Category, CostCenter, RevenueCenter } from "@/types";
 import { Trash2, Calculator, AlertTriangle, ArrowRightLeft } from "lucide-react";
 
+// Componente card per vista mobile
+function TransactionCard({
+  tx,
+  isIncome,
+  isTransfer,
+  currentCenter,
+  extraordinary,
+  loading,
+  onDelete,
+  onSplit,
+}: {
+  tx: TransactionWithCenters;
+  isIncome: boolean;
+  isTransfer: boolean | null | undefined;
+  currentCenter: { id: number | null; name: string | null; color: string | null } | null | undefined;
+  extraordinary: boolean;
+  loading: number | null;
+  onDelete: (id: number) => void;
+  onSplit: (tx: TransactionWithCenters) => void;
+}) {
+  return (
+    <div className={`p-3 border-b last:border-b-0 ${isTransfer ? "bg-purple-50 dark:bg-purple-950/20" : ""}`}>
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          {/* Data e Badge */}
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
+            <span className="font-mono text-xs text-muted-foreground">
+              {formatDate(tx.date)}
+            </span>
+            {isTransfer && (
+              <Badge variant="outline" className="border-purple-500 text-purple-600 text-xs">
+                <ArrowRightLeft className="h-3 w-3 mr-1" />
+                Giroconto
+              </Badge>
+            )}
+            {extraordinary && (
+              <Badge variant="outline" className="border-amber-500 text-amber-600 text-xs">
+                <AlertTriangle className="h-3 w-3 mr-1" />
+                Straord.
+              </Badge>
+            )}
+            {currentCenter && !isTransfer && (
+              <Badge
+                className="text-xs"
+                style={{
+                  backgroundColor: currentCenter.color || "#6b7280",
+                  color: "white",
+                }}
+              >
+                {currentCenter.name}
+              </Badge>
+            )}
+          </div>
+          {/* Descrizione */}
+          <p className="text-sm font-medium truncate">
+            {tx.description || "-"}
+          </p>
+        </div>
+        {/* Importo */}
+        <div className="text-right shrink-0">
+          <span
+            className={`font-mono font-bold text-base ${
+              isTransfer ? "text-purple-600" : isIncome ? "text-green-600" : "text-red-600"
+            }`}
+          >
+            {isIncome ? "+" : ""}
+            {formatCurrency(tx.amount)}
+          </span>
+          {tx.isSplit && (
+            <Badge
+              variant="secondary"
+              className="ml-1 text-xs bg-blue-100 text-blue-800"
+            >
+              Rip.
+            </Badge>
+          )}
+        </div>
+      </div>
+      {/* Azioni */}
+      <div className="flex justify-end gap-2 mt-2">
+        {isIncome && !tx.isSplit && !isTransfer && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs text-blue-600"
+            onClick={() => onSplit(tx)}
+          >
+            <Calculator className="h-3 w-3 mr-1" />
+            Ripartisci
+          </Button>
+        )}
+        {!isTransfer && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs text-red-500"
+            onClick={() => onDelete(tx.id)}
+            disabled={loading === tx.id}
+          >
+            <Trash2 className="h-3 w-3 mr-1" />
+            Elimina
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 interface TransactionWithCenters {
   id: number;
   externalId: string | null;
@@ -135,6 +243,32 @@ export function TransactionList({
 
   return (
     <div className="border rounded-lg overflow-hidden">
+      {/* Vista Mobile - Cards */}
+      <div className="md:hidden">
+        {transactions.map((tx) => {
+          const isIncome = tx.amount > 0;
+          const isTransfer = tx.isTransfer;
+          const currentCenter = isIncome ? tx.revenueCenter : tx.costCenter;
+          const extraordinary = isExtraordinary(tx);
+
+          return (
+            <TransactionCard
+              key={tx.id}
+              tx={tx}
+              isIncome={isIncome}
+              isTransfer={isTransfer}
+              currentCenter={currentCenter}
+              extraordinary={extraordinary || false}
+              loading={loading}
+              onDelete={handleDelete}
+              onSplit={onSplit}
+            />
+          );
+        })}
+      </div>
+
+      {/* Vista Desktop - Tabella */}
+      <div className="hidden md:block">
       <Table>
         <TableHeader>
           <TableRow>
@@ -275,6 +409,7 @@ export function TransactionList({
           })}
         </TableBody>
       </Table>
+      </div>
     </div>
   );
 }

@@ -38,7 +38,98 @@ import {
   X,
   Plus,
   RefreshCw,
+  ChevronRight,
 } from "lucide-react";
+
+// Componente card per vista mobile
+function ForecastCard({
+  item,
+  balance,
+  formatDateDisplay,
+  onDelete,
+  onOpenPDR,
+}: {
+  item: ForecastItem;
+  balance: number;
+  formatDateDisplay: (date: string) => string;
+  onDelete: (id: number) => Promise<void>;
+  onOpenPDR: (id: number) => void;
+}) {
+  return (
+    <div className="p-3 border-b last:border-b-0">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          {/* Data e Centro */}
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
+            <span className="font-mono text-xs text-muted-foreground">
+              {formatDateDisplay(item.date)}
+            </span>
+            {item.type === "expense" && item.costCenter ? (
+              <div className="flex items-center gap-1">
+                <div
+                  className="w-2 h-2 rounded-full"
+                  style={{ backgroundColor: item.costCenter.color || "#666" }}
+                />
+                <span className="text-xs text-muted-foreground">{item.costCenter.name}</span>
+              </div>
+            ) : item.type === "income" && item.revenueCenter ? (
+              <div className="flex items-center gap-1">
+                <div
+                  className="w-2 h-2 rounded-full"
+                  style={{ backgroundColor: item.revenueCenter.color || "#666" }}
+                />
+                <span className="text-xs text-muted-foreground">{item.revenueCenter.name}</span>
+              </div>
+            ) : null}
+            {item.sourceType === "pdr" && (
+              <Badge variant="outline" className="text-xs">PDR</Badge>
+            )}
+          </div>
+          {/* Descrizione */}
+          <p className="text-sm font-medium">{item.description}</p>
+        </div>
+        {/* Importo e Saldo */}
+        <div className="text-right shrink-0">
+          <div
+            className={`font-mono font-bold ${
+              item.type === "income" ? "text-green-600" : "text-red-600"
+            }`}
+          >
+            {item.type === "income" ? "+" : "-"}
+            {formatCurrency(item.amount)}
+          </div>
+          <div className={`font-mono text-xs ${balance >= 0 ? "text-green-700" : "text-red-700"}`}>
+            <ChevronRight className="h-3 w-3 inline" />
+            {formatCurrency(balance)}
+          </div>
+        </div>
+      </div>
+      {/* Azioni */}
+      <div className="flex justify-end gap-2 mt-2">
+        {item.type === "expense" && item.sourceType !== "pdr" && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs text-blue-600"
+            onClick={() => onOpenPDR(item.id)}
+          >
+            <FileStack className="h-3 w-3 mr-1" />
+            PDR
+          </Button>
+        )}
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-7 text-xs text-red-500"
+          onClick={() => onDelete(item.id)}
+        >
+          <Trash2 className="h-3 w-3 mr-1" />
+          Elimina
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 // Types
 interface ForecastItem {
@@ -342,27 +433,29 @@ export function ForecastTable({
       {/* Header con azioni */}
       <Card>
         <CardHeader className="pb-3">
-          <div className="flex flex-row items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
             <CardTitle className="text-lg">Previsionale</CardTitle>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={onGenerate}>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Genera da Piano
+            <div className="flex gap-2 w-full sm:w-auto">
+              <Button variant="outline" size="sm" onClick={onGenerate} className="flex-1 sm:flex-none text-xs sm:text-sm">
+                <RefreshCw className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Genera da Piano</span>
+                <span className="sm:hidden ml-1">Genera</span>
               </Button>
-              <Button size="sm" onClick={() => setAddDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Nuova Voce
+              <Button size="sm" onClick={() => setAddDialogOpen(true)} className="flex-1 sm:flex-none text-xs sm:text-sm">
+                <Plus className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Nuova Voce</span>
+                <span className="sm:hidden ml-1">Nuova</span>
               </Button>
             </div>
           </div>
 
-          {/* Filtri mese */}
-          <div className="flex flex-wrap gap-1 mt-4">
+          {/* Filtri mese - scrollabile su mobile */}
+          <div className="flex gap-1 mt-4 overflow-x-auto pb-2 -mx-2 px-2">
             <Button
               variant={selectedMonth === "all" ? "default" : "outline"}
               size="sm"
               onClick={() => setSelectedMonth("all")}
-              className="text-xs"
+              className="text-xs shrink-0"
             >
               Anno
             </Button>
@@ -372,7 +465,7 @@ export function ForecastTable({
                 variant={selectedMonth === idx + 1 ? "default" : "outline"}
                 size="sm"
                 onClick={() => setSelectedMonth(idx + 1)}
-                className="text-xs px-3"
+                className="text-xs px-2 sm:px-3 shrink-0"
               >
                 {month}
               </Button>
@@ -385,6 +478,7 @@ export function ForecastTable({
               variant={filter === "all" ? "secondary" : "ghost"}
               size="sm"
               onClick={() => setFilter("all")}
+              className="text-xs sm:text-sm"
             >
               Tutto ({filteredItems.length})
             </Button>
@@ -392,6 +486,7 @@ export function ForecastTable({
               variant={filter === "expense" ? "secondary" : "ghost"}
               size="sm"
               onClick={() => setFilter("expense")}
+              className="text-xs sm:text-sm"
             >
               Spese
             </Button>
@@ -399,6 +494,7 @@ export function ForecastTable({
               variant={filter === "income" ? "secondary" : "ghost"}
               size="sm"
               onClick={() => setFilter("income")}
+              className="text-xs sm:text-sm"
             >
               Incassi
             </Button>
@@ -406,8 +502,8 @@ export function ForecastTable({
         </CardHeader>
 
         <CardContent>
-          {/* Riepilogo */}
-          <div className="grid grid-cols-4 gap-4 mb-4 p-3 bg-muted/30 rounded-lg">
+          {/* Riepilogo - Desktop */}
+          <div className="hidden sm:grid grid-cols-4 gap-4 mb-4 p-3 bg-muted/30 rounded-lg">
             <div>
               <div className="text-xs text-muted-foreground">Saldo Iniziale</div>
               <div className={`font-mono font-bold ${monthInitialBalance >= 0 ? "text-green-700" : "text-red-700"}`}>
@@ -434,8 +530,50 @@ export function ForecastTable({
             </div>
           </div>
 
-          {/* Tabella */}
-          <div className="overflow-x-auto max-h-[600px] overflow-y-auto border rounded-lg">
+          {/* Riepilogo - Mobile (compatto) */}
+          <div className="sm:hidden grid grid-cols-3 gap-2 mb-4 p-2 bg-muted/30 rounded-lg text-center">
+            <div>
+              <div className="text-xs text-muted-foreground">Saldo Iniziale</div>
+              <div className={`font-mono text-sm font-bold ${monthInitialBalance >= 0 ? "text-green-700" : "text-red-700"}`}>
+                {formatCurrency(monthInitialBalance)}
+              </div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">Incassi</div>
+              <div className="font-mono text-sm font-bold text-green-600">
+                +{formatCurrency(monthTotals.incomes)}
+              </div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">Spese</div>
+              <div className="font-mono text-sm font-bold text-red-600">
+                -{formatCurrency(monthTotals.expenses)}
+              </div>
+            </div>
+          </div>
+
+          {/* Vista Mobile - Cards */}
+          <div className="sm:hidden border rounded-lg max-h-[500px] overflow-y-auto">
+            {itemsWithBalance.length === 0 ? (
+              <div className="text-center text-muted-foreground py-8 px-4">
+                Nessuna voce. Clicca &quot;Genera da Piano&quot; per popolare il previsionale.
+              </div>
+            ) : (
+              itemsWithBalance.map((item) => (
+                <ForecastCard
+                  key={item.id}
+                  item={item}
+                  balance={item.balance}
+                  formatDateDisplay={formatDateDisplay}
+                  onDelete={onDelete}
+                  onOpenPDR={openPDRDialog}
+                />
+              ))
+            )}
+          </div>
+
+          {/* Vista Desktop - Tabella */}
+          <div className="hidden sm:block overflow-x-auto max-h-[600px] overflow-y-auto border rounded-lg">
             <Table>
               <TableHeader className="sticky top-0 bg-white z-10">
                 <TableRow>
