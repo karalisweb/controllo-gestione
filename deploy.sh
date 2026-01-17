@@ -69,7 +69,7 @@ echo "Pull da GitHub..."
 git pull origin main
 
 echo "Installazione dipendenze..."
-npm install --production
+npm install
 
 echo "Build applicazione..."
 npm run build
