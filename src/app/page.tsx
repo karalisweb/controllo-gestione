@@ -19,6 +19,7 @@ import {
   Wallet,
 } from "lucide-react";
 import Link from "next/link";
+import { AnnualControlTable } from "@/components/dashboard/AnnualControlTable";
 
 interface CashflowData {
   daysUntilDifficulty: number | null;
@@ -416,6 +417,9 @@ export default function Home() {
             </Button>
           </Link>
         </div>
+
+        {/* CONTROLLO DI GESTIONE ANNUALE */}
+        <AnnualControlTable />
       </div>
     </div>
   );
