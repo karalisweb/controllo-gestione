@@ -29,6 +29,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency, eurosToCents, centsToEuros } from "@/lib/utils/currency";
 import { MONTHS_SHORT } from "@/lib/utils/dates";
+import { calculateSplit } from "@/lib/utils/splits";
 import {
   Calendar,
   Pencil,
@@ -39,7 +40,13 @@ import {
   Plus,
   RefreshCw,
   ChevronRight,
+  Calculator,
+  Users,
+  Receipt,
+  Building2,
+  ArrowRight,
 } from "lucide-react";
+import { ForecastSplitPreview } from "./ForecastSplitPreview";
 
 // Componente card per vista mobile
 function ForecastCard({
@@ -48,12 +55,14 @@ function ForecastCard({
   formatDateDisplay,
   onDelete,
   onOpenPDR,
+  onShowSplit,
 }: {
   item: ForecastItem;
   balance: number;
   formatDateDisplay: (date: string) => string;
   onDelete: (id: number) => Promise<void>;
   onOpenPDR: (id: number) => void;
+  onShowSplit: (item: ForecastItem) => void;
 }) {
   return (
     <div className="p-3 border-b last:border-b-0">
@@ -87,6 +96,12 @@ function ForecastCard({
           </div>
           {/* Descrizione */}
           <p className="text-sm font-medium">{item.description}</p>
+          {/* Preview ripartizione compatta per incassi */}
+          {item.type === "income" && (
+            <div className="mt-1">
+              <ForecastSplitPreview amount={item.amount} compact />
+            </div>
+          )}
         </div>
         {/* Importo e Saldo */}
         <div className="text-right shrink-0">
@@ -106,6 +121,17 @@ function ForecastCard({
       </div>
       {/* Azioni */}
       <div className="flex justify-end gap-2 mt-2">
+        {item.type === "income" && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs text-blue-600"
+            onClick={() => onShowSplit(item)}
+          >
+            <Calculator className="h-3 w-3 mr-1" />
+            Ripartizione
+          </Button>
+        )}
         {item.type === "expense" && item.sourceType !== "pdr" && (
           <Button
             variant="outline"
@@ -240,6 +266,11 @@ export function ForecastTable({
 
   // Stati per modale aggiunta
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+
+  // Stati per modale ripartizione
+  const [splitDialogOpen, setSplitDialogOpen] = useState(false);
+  const [splitItem, setSplitItem] = useState<ForecastItem | null>(null);
+
   const [newItemData, setNewItemData] = useState({
     date: new Date().toISOString().split("T")[0],
     description: "",
@@ -354,6 +385,12 @@ export function ForecastTable({
     }
   };
 
+  // Apri modale ripartizione
+  const openSplitDialog = (item: ForecastItem) => {
+    setSplitItem(item);
+    setSplitDialogOpen(true);
+  };
+
   // Apri modale PDR
   const openPDRDialog = (itemId: number) => {
     const item = items.find((i) => i.id === itemId);
@@ -417,15 +454,50 @@ export function ForecastTable({
     }
   };
 
-  // Calcola totali mese
+  // Calcola totali mese incluse ripartizioni
   const monthTotals = useMemo(() => {
-    const incomes = filteredItems
-      .filter((i) => i.type === "income")
-      .reduce((sum, i) => sum + i.amount, 0);
+    const incomeItems = filteredItems.filter((i) => i.type === "income");
+    const incomes = incomeItems.reduce((sum, i) => sum + i.amount, 0);
     const expenses = filteredItems
       .filter((i) => i.type === "expense")
       .reduce((sum, i) => sum + i.amount, 0);
-    return { incomes, expenses, net: incomes - expenses };
+
+    // Calcola ripartizioni aggregate sugli incassi
+    const splitTotals = incomeItems.reduce(
+      (acc, item) => {
+        const split = calculateSplit(item.amount);
+        return {
+          grossAmount: acc.grossAmount + split.grossAmount,
+          netAmount: acc.netAmount + split.netAmount,
+          danielaAmount: acc.danielaAmount + split.danielaAmount,
+          alessioAmount: acc.alessioAmount + split.alessioAmount,
+          agencyAmount: acc.agencyAmount + split.agencyAmount,
+          vatAmount: acc.vatAmount + split.vatAmount,
+        };
+      },
+      {
+        grossAmount: 0,
+        netAmount: 0,
+        danielaAmount: 0,
+        alessioAmount: 0,
+        agencyAmount: 0,
+        vatAmount: 0,
+      }
+    );
+
+    const totaleSoci = splitTotals.danielaAmount + splitTotals.alessioAmount;
+    const totaleBonifico = totaleSoci + splitTotals.vatAmount;
+
+    return {
+      incomes,
+      expenses,
+      net: incomes - expenses,
+      splits: {
+        ...splitTotals,
+        totaleSoci,
+        totaleBonifico,
+      },
+    };
   }, [filteredItems]);
 
   return (
@@ -552,6 +624,88 @@ export function ForecastTable({
             </div>
           </div>
 
+          {/* Riepilogo Ripartizioni Previste */}
+          {monthTotals.splits.grossAmount > 0 && (
+            <div className="mb-4 p-3 bg-indigo-50 dark:bg-indigo-950/30 rounded-lg border border-indigo-200 dark:border-indigo-800">
+              <div className="flex items-center gap-2 mb-3">
+                <Calculator className="h-4 w-4 text-indigo-600" />
+                <span className="text-sm font-medium text-indigo-700 dark:text-indigo-300">
+                  Ripartizioni Previste
+                </span>
+              </div>
+
+              {/* Desktop - Griglia completa */}
+              <div className="hidden sm:grid grid-cols-5 gap-3 text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="h-6 w-6 rounded-full bg-indigo-100 flex items-center justify-center">
+                    <Users className="h-3 w-3 text-indigo-600" />
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground">Soci</div>
+                    <div className="font-mono font-medium text-indigo-600">
+                      {formatCurrency(monthTotals.splits.totaleSoci)}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="h-6 w-6 rounded-full bg-orange-100 flex items-center justify-center">
+                    <Receipt className="h-3 w-3 text-orange-600" />
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground">Fondo IVA</div>
+                    <div className="font-mono font-medium text-orange-600">
+                      {formatCurrency(monthTotals.splits.vatAmount)}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="h-6 w-6 rounded-full bg-purple-100 flex items-center justify-center">
+                    <ArrowRight className="h-3 w-3 text-purple-600" />
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground">Bonifico</div>
+                    <div className="font-mono font-bold text-purple-600">
+                      {formatCurrency(monthTotals.splits.totaleBonifico)}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="h-6 w-6 rounded-full bg-green-100 flex items-center justify-center">
+                    <Building2 className="h-3 w-3 text-green-600" />
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground">Disponibile</div>
+                    <div className="font-mono font-bold text-green-600">
+                      {formatCurrency(monthTotals.splits.agencyAmount)}
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-xs text-muted-foreground">su Incassi Lordi</div>
+                  <div className="font-mono font-medium">
+                    {formatCurrency(monthTotals.splits.grossAmount)}
+                  </div>
+                </div>
+              </div>
+
+              {/* Mobile - Griglia compatta */}
+              <div className="sm:hidden grid grid-cols-2 gap-2 text-sm">
+                <div className="flex items-center justify-between bg-purple-100 dark:bg-purple-900/30 rounded px-2 py-1">
+                  <span className="text-xs text-purple-700 dark:text-purple-300">Bonifico</span>
+                  <span className="font-mono font-bold text-purple-600">
+                    {formatCurrency(monthTotals.splits.totaleBonifico)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between bg-green-100 dark:bg-green-900/30 rounded px-2 py-1">
+                  <span className="text-xs text-green-700 dark:text-green-300">Disponibile</span>
+                  <span className="font-mono font-bold text-green-600">
+                    {formatCurrency(monthTotals.splits.agencyAmount)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Vista Mobile - Cards */}
           <div className="sm:hidden border rounded-lg max-h-[500px] overflow-y-auto">
             {itemsWithBalance.length === 0 ? (
@@ -567,6 +721,7 @@ export function ForecastTable({
                   formatDateDisplay={formatDateDisplay}
                   onDelete={onDelete}
                   onOpenPDR={openPDRDialog}
+                  onShowSplit={openSplitDialog}
                 />
               ))
             )}
@@ -701,6 +856,17 @@ export function ForecastTable({
                       {/* Azioni */}
                       <TableCell>
                         <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {item.type === "income" && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7"
+                              onClick={() => openSplitDialog(item)}
+                              title="Vedi ripartizione"
+                            >
+                              <Calculator className="h-4 w-4 text-blue-600" />
+                            </Button>
+                          )}
                           {item.type === "expense" && item.sourceType !== "pdr" && (
                             <Button
                               size="icon"
@@ -866,13 +1032,21 @@ export function ForecastTable({
             </div>
 
             <div>
-              <label className="text-sm font-medium">Importo</label>
+              <label className="text-sm font-medium">Importo (lordo IVA inclusa)</label>
               <Input
                 value={newItemData.amount}
                 onChange={(e) => setNewItemData({ ...newItemData, amount: e.target.value })}
                 placeholder="Es: 500"
               />
             </div>
+
+            {/* Preview ripartizione per incassi */}
+            {newItemData.type === "income" && newItemData.amount && parseFloat(newItemData.amount.replace(",", ".")) > 0 && (
+              <ForecastSplitPreview
+                amount={parseFloat(newItemData.amount.replace(",", "."))}
+                fromEuros={true}
+              />
+            )}
 
             {newItemData.type === "expense" && (
               <div>
@@ -934,6 +1108,45 @@ export function ForecastTable({
               disabled={!newItemData.description || !newItemData.amount}
             >
               Aggiungi
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Ripartizione */}
+      <Dialog open={splitDialogOpen} onOpenChange={setSplitDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Calculator className="h-5 w-5" />
+              Ripartizione Incasso Previsto
+            </DialogTitle>
+          </DialogHeader>
+
+          {splitItem && (
+            <div className="space-y-4">
+              {/* Info incasso */}
+              <div className="bg-green-50 dark:bg-green-950/30 rounded-lg p-4 border border-green-200 dark:border-green-800">
+                <div className="text-sm text-muted-foreground mb-1">
+                  {formatDateDisplay(splitItem.date)}
+                </div>
+                <div className="font-medium text-lg">{splitItem.description}</div>
+                <div className="text-2xl font-bold text-green-600 mt-2">
+                  {formatCurrency(splitItem.amount)}
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  Importo lordo (IVA inclusa)
+                </div>
+              </div>
+
+              {/* Preview ripartizione completa */}
+              <ForecastSplitPreview amount={splitItem.amount} />
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button onClick={() => setSplitDialogOpen(false)}>
+              Chiudi
             </Button>
           </DialogFooter>
         </DialogContent>
