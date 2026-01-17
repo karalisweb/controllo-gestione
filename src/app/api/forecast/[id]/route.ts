@@ -36,7 +36,7 @@ export async function PATCH(
   const itemId = parseInt(id);
   const body = await request.json();
 
-  const { date, amount, description, notes, reliability, priority } = body;
+  const { date, amount, description, notes, reliability, priority, costCenterId, revenueCenterId } = body;
 
   // Verifica che la voce esista
   const existing = await db
@@ -58,6 +58,8 @@ export async function PATCH(
   if (notes !== undefined) updateData.notes = notes;
   if (reliability !== undefined) updateData.reliability = reliability;
   if (priority !== undefined) updateData.priority = priority;
+  if (costCenterId !== undefined) updateData.costCenterId = costCenterId;
+  if (revenueCenterId !== undefined) updateData.revenueCenterId = revenueCenterId;
 
   const updated = await db
     .update(forecastItems)
