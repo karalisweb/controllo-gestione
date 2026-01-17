@@ -167,17 +167,17 @@ export function AnnualControlTable() {
   const PhaseIcon = phaseInfo.icon;
 
   return (
-    <Card>
+    <Card className="bg-slate-900 border-slate-700">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">Controllo di Gestione Annuale</CardTitle>
+          <CardTitle className="text-lg text-slate-100">Controllo di Gestione Annuale</CardTitle>
           <Select value={selectedYear} onValueChange={setSelectedYear}>
-            <SelectTrigger className="w-[100px]">
+            <SelectTrigger className="w-[100px] bg-slate-800 border-slate-600 text-slate-200">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-slate-800 border-slate-600">
               {yearOptions.map((year) => (
-                <SelectItem key={year} value={year.toString()}>
+                <SelectItem key={year} value={year.toString()} className="text-slate-200 focus:bg-slate-700">
                   {year}
                 </SelectItem>
               ))}
@@ -200,12 +200,12 @@ export function AnnualControlTable() {
             <div className={cn("font-bold", phaseInfo.textColor)}>
               FASE: {phaseInfo.label}
             </div>
-            <div className="text-sm text-muted-foreground">
+            <div className="text-sm text-slate-400">
               {phaseInfo.description}
             </div>
           </div>
           <div className="ml-auto text-right">
-            <div className="text-sm text-muted-foreground">Liquidità attuale</div>
+            <div className="text-sm text-slate-400">Liquidità attuale</div>
             <div className={cn("text-xl font-bold", phaseInfo.textColor)}>
               {formatCurrency(
                 data.monthlyData[data.currentMonth - 1]?.liquidita ||
@@ -219,158 +219,116 @@ export function AnnualControlTable() {
       <CardContent>
         {/* Desktop Table */}
         <div className="hidden md:block overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full">
             <thead>
-              <tr className="border-b">
-                <th className="py-2 px-2 text-left font-medium text-muted-foreground">
+              <tr className="border-b border-slate-700">
+                <th className="py-3 px-3 text-left font-semibold text-slate-200">
                   Voce
                 </th>
                 {MONTHS.map((month, idx) => (
                   <th
                     key={month}
                     className={cn(
-                      "py-2 px-1 text-center font-medium min-w-[70px]",
+                      "py-3 px-2 text-center font-semibold min-w-[80px]",
                       idx + 1 === data.currentMonth
-                        ? "bg-blue-50 text-blue-700"
-                        : "text-muted-foreground"
+                        ? "bg-blue-500/20 text-blue-400"
+                        : "text-slate-300"
                     )}
                   >
                     {month}
                   </th>
                 ))}
-                <th className="py-2 px-2 text-center font-bold bg-gray-100">
-                  TOT
-                </th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="text-base">
               {/* Preventivato */}
-              <tr className="border-b hover:bg-gray-50">
-                <td className="py-2 px-2 font-medium">Preventivato</td>
+              <tr className="border-b border-slate-700/50 hover:bg-slate-800/50">
+                <td className="py-3 px-3 font-medium text-slate-200">Preventivato</td>
                 {data.monthlyData.map((m, idx) => (
                   <td
                     key={m.month}
                     className={cn(
-                      "py-2 px-1 text-center",
-                      idx + 1 === data.currentMonth && "bg-blue-50"
+                      "py-3 px-2 text-center font-mono text-slate-200",
+                      idx + 1 === data.currentMonth && "bg-blue-500/10"
                     )}
                   >
                     {m.preventivato > 0 ? formatCurrency(m.preventivato) : "-"}
                   </td>
                 ))}
-                <td className="py-2 px-2 text-center font-bold bg-gray-100">
-                  {formatCurrency(data.totals.preventivato)}
-                </td>
               </tr>
 
-              {/* Fatturato */}
-              <tr className="border-b hover:bg-gray-50">
-                <td className="py-2 px-2 font-medium">Fatturato</td>
+              {/* Costi Preventivati */}
+              <tr className="border-b border-slate-700/50 hover:bg-slate-800/50">
+                <td className="py-3 px-3 font-medium text-slate-200">- Costi</td>
                 {data.monthlyData.map((m, idx) => (
                   <td
                     key={m.month}
                     className={cn(
-                      "py-2 px-1 text-center",
-                      idx + 1 === data.currentMonth && "bg-blue-50"
+                      "py-3 px-2 text-center font-mono text-red-400",
+                      idx + 1 === data.currentMonth && "bg-blue-500/10"
                     )}
                   >
-                    <div
+                    {m.costiPrevisti > 0 ? `-${formatCurrency(m.costiPrevisti)}` : "-"}
+                  </td>
+                ))}
+              </tr>
+
+              {/* Margine = Preventivato - Costi Preventivati */}
+              <tr className="border-b border-slate-700 hover:bg-slate-800/50 bg-slate-800/30">
+                <td className="py-3 px-3 font-bold text-slate-100">= Margine</td>
+                {data.monthlyData.map((m, idx) => {
+                  const marginePrevisto = m.preventivato - m.costiPrevisti;
+                  return (
+                    <td
+                      key={m.month}
                       className={cn(
-                        m.fatturato > 0 ? "text-green-600" : "text-gray-400"
+                        "py-3 px-2 text-center font-mono font-semibold",
+                        idx + 1 === data.currentMonth && "bg-blue-500/20",
+                        marginePrevisto >= 0 ? "text-green-400" : "text-red-400"
                       )}
                     >
-                      {m.fatturato > 0 ? formatCurrency(m.fatturato) : "-"}
-                    </div>
-                    {m.preventivato > 0 && m.fatturato > 0 && (
-                      <div
-                        className={cn(
-                          "text-xs",
-                          m.deltaFatturato >= 0
-                            ? "text-green-500"
-                            : "text-red-500"
-                        )}
-                      >
-                        {formatPercent(m.deltaFatturatoPercent)}
-                      </div>
-                    )}
-                  </td>
-                ))}
-                <td className="py-2 px-2 text-center font-bold bg-gray-100 text-green-600">
-                  {formatCurrency(data.totals.fatturato)}
-                </td>
-              </tr>
-
-              {/* Costi */}
-              <tr className="border-b hover:bg-gray-50">
-                <td className="py-2 px-2 font-medium">Costi</td>
-                {data.monthlyData.map((m, idx) => (
-                  <td
-                    key={m.month}
-                    className={cn(
-                      "py-2 px-1 text-center text-red-600",
-                      idx + 1 === data.currentMonth && "bg-blue-50"
-                    )}
-                  >
-                    {m.costi > 0 ? `-${formatCurrency(m.costi)}` : "-"}
-                  </td>
-                ))}
-                <td className="py-2 px-2 text-center font-bold bg-gray-100 text-red-600">
-                  -{formatCurrency(data.totals.costi)}
-                </td>
-              </tr>
-
-              {/* Margine */}
-              <tr className="border-b hover:bg-gray-50 bg-gray-50">
-                <td className="py-2 px-2 font-bold">Margine</td>
-                {data.monthlyData.map((m, idx) => (
-                  <td
-                    key={m.month}
-                    className={cn(
-                      "py-2 px-1 text-center font-medium",
-                      idx + 1 === data.currentMonth && "bg-blue-100",
-                      m.margine >= 0 ? "text-green-600" : "text-red-600"
-                    )}
-                  >
-                    {m.fatturato > 0 || m.costi > 0
-                      ? formatCurrency(m.margine)
-                      : "-"}
-                  </td>
-                ))}
-                <td
-                  className={cn(
-                    "py-2 px-2 text-center font-bold bg-gray-200",
-                    data.totals.margine >= 0 ? "text-green-600" : "text-red-600"
-                  )}
-                >
-                  {formatCurrency(data.totals.margine)}
-                </td>
+                      {m.preventivato > 0 || m.costiPrevisti > 0
+                        ? formatCurrency(marginePrevisto)
+                        : "-"}
+                    </td>
+                  );
+                })}
               </tr>
 
               {/* Liquidità */}
-              <tr className="hover:bg-gray-50 bg-blue-50">
-                <td className="py-2 px-2 font-bold text-blue-700">Liquidità</td>
+              <tr className="bg-cyan-500/10">
+                <td className="py-3 px-3 font-bold text-cyan-400">Liquidità</td>
                 {data.monthlyData.map((m, idx) => (
                   <td
                     key={m.month}
                     className={cn(
-                      "py-2 px-1 text-center font-medium",
-                      idx + 1 === data.currentMonth && "bg-blue-100",
-                      m.liquidita >= 0 ? "text-blue-600" : "text-red-600"
+                      "py-3 px-2 text-center font-mono font-bold text-lg",
+                      idx + 1 === data.currentMonth && "bg-cyan-500/20",
+                      m.liquidita >= 0 ? "text-cyan-400" : "text-red-400"
                     )}
                   >
                     {formatCurrency(m.liquidita)}
                   </td>
                 ))}
-                <td
-                  className={cn(
-                    "py-2 px-2 text-center font-bold bg-blue-100",
-                    data.totals.liquiditaFinale >= 0
-                      ? "text-blue-700"
-                      : "text-red-600"
-                  )}
-                >
-                  {formatCurrency(data.totals.liquiditaFinale)}
-                </td>
+              </tr>
+
+              {/* Target Minimo Vendita = Costi + 40% */}
+              <tr className="border-t-2 border-amber-500/30 bg-amber-500/10">
+                <td className="py-3 px-3 font-bold text-amber-400">Target Vendita</td>
+                {data.monthlyData.map((m, idx) => {
+                  const targetMinimo = Math.round(m.costiPrevisti * 1.4);
+                  return (
+                    <td
+                      key={m.month}
+                      className={cn(
+                        "py-3 px-2 text-center font-mono font-bold text-amber-400",
+                        idx + 1 === data.currentMonth && "bg-amber-500/20"
+                      )}
+                    >
+                      {m.costiPrevisti > 0 ? formatCurrency(targetMinimo) : "-"}
+                    </td>
+                  );
+                })}
               </tr>
             </tbody>
           </table>
@@ -378,93 +336,81 @@ export function AnnualControlTable() {
 
         {/* Mobile Cards */}
         <div className="md:hidden space-y-4">
-          {/* Totals Summary */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-lg bg-gray-50 p-3">
-              <div className="text-xs text-muted-foreground">Preventivato</div>
-              <div className="text-lg font-bold">
-                {formatCurrency(data.totals.preventivato)}
-              </div>
-            </div>
-            <div className="rounded-lg bg-green-50 p-3">
-              <div className="text-xs text-muted-foreground">Fatturato</div>
-              <div className="text-lg font-bold text-green-600">
-                {formatCurrency(data.totals.fatturato)}
-              </div>
-            </div>
-            <div className="rounded-lg bg-red-50 p-3">
-              <div className="text-xs text-muted-foreground">Costi</div>
-              <div className="text-lg font-bold text-red-600">
-                -{formatCurrency(data.totals.costi)}
-              </div>
-            </div>
-            <div className="rounded-lg bg-blue-50 p-3">
-              <div className="text-xs text-muted-foreground">Margine</div>
-              <div
-                className={cn(
-                  "text-lg font-bold",
-                  data.totals.margine >= 0 ? "text-green-600" : "text-red-600"
-                )}
-              >
-                {formatCurrency(data.totals.margine)}
-              </div>
-            </div>
-          </div>
-
           {/* Monthly Details (scrollable) */}
           <div className="overflow-x-auto -mx-4 px-4">
-            <div className="flex gap-2" style={{ width: "max-content" }}>
+            <div className="flex gap-3" style={{ width: "max-content" }}>
               {data.monthlyData.map((m, idx) => {
                 const isCurrentMonth = idx + 1 === data.currentMonth;
-                const hasData = m.fatturato > 0 || m.costi > 0;
+                const hasData = m.preventivato > 0 || m.costiPrevisti > 0;
+                const marginePrevisto = m.preventivato - m.costiPrevisti;
+                const targetMinimo = Math.round(m.costiPrevisti * 1.4);
                 return (
                   <div
                     key={m.month}
                     className={cn(
-                      "rounded-lg border p-3 min-w-[120px]",
+                      "rounded-lg border p-4 min-w-[150px]",
                       isCurrentMonth
-                        ? "border-blue-500 bg-blue-50"
-                        : "border-gray-200"
+                        ? "border-blue-500 bg-slate-800"
+                        : "border-slate-700 bg-slate-800/50"
                     )}
                   >
                     <div
                       className={cn(
-                        "text-center font-bold mb-2",
-                        isCurrentMonth ? "text-blue-700" : ""
+                        "text-center font-bold text-lg mb-3",
+                        isCurrentMonth ? "text-blue-400" : "text-slate-200"
                       )}
                     >
                       {MONTHS[idx]}
                     </div>
                     {hasData ? (
-                      <div className="space-y-1 text-xs">
+                      <div className="space-y-2 text-sm">
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Fatt:</span>
-                          <span className="text-green-600">
-                            {formatCurrency(m.fatturato)}
+                          <span className="text-slate-400">Prev:</span>
+                          <span className="font-mono text-slate-200">
+                            {formatCurrency(m.preventivato)}
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Costi:</span>
-                          <span className="text-red-600">
-                            -{formatCurrency(m.costi)}
+                          <span className="text-slate-400">Costi:</span>
+                          <span className="font-mono text-red-400">
+                            -{formatCurrency(m.costiPrevisti)}
                           </span>
                         </div>
-                        <div className="flex justify-between border-t pt-1">
-                          <span className="font-medium">Liq:</span>
+                        <div className="flex justify-between border-t border-slate-700 pt-2">
+                          <span className="font-medium text-slate-300">Marg:</span>
                           <span
                             className={cn(
-                              "font-medium",
+                              "font-mono font-medium",
+                              marginePrevisto >= 0
+                                ? "text-green-400"
+                                : "text-red-400"
+                            )}
+                          >
+                            {formatCurrency(marginePrevisto)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between bg-cyan-500/10 -mx-4 px-4 py-2 mt-2">
+                          <span className="font-bold text-cyan-400">Liq:</span>
+                          <span
+                            className={cn(
+                              "font-mono font-bold",
                               m.liquidita >= 0
-                                ? "text-blue-600"
-                                : "text-red-600"
+                                ? "text-cyan-400"
+                                : "text-red-400"
                             )}
                           >
                             {formatCurrency(m.liquidita)}
                           </span>
                         </div>
+                        <div className="flex justify-between bg-amber-500/10 -mx-4 px-4 py-2 rounded-b-lg">
+                          <span className="font-bold text-amber-400">Target:</span>
+                          <span className="font-mono font-bold text-amber-400">
+                            {formatCurrency(targetMinimo)}
+                          </span>
+                        </div>
                       </div>
                     ) : (
-                      <div className="text-center text-xs text-muted-foreground py-2">
+                      <div className="text-center text-sm text-slate-500 py-4">
                         Nessun dato
                       </div>
                     )}
@@ -476,19 +422,15 @@ export function AnnualControlTable() {
         </div>
 
         {/* Legend */}
-        <div className="mt-4 pt-3 border-t text-xs text-muted-foreground">
-          <div className="flex flex-wrap gap-4">
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded bg-blue-100 border border-blue-300"></div>
+        <div className="mt-4 pt-3 border-t border-slate-700 text-sm text-slate-400">
+          <div className="flex flex-wrap gap-6">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded bg-blue-500/30 border border-blue-500/50"></div>
               <span>Mese corrente</span>
             </div>
-            <div className="flex items-center gap-1">
-              <span className="text-green-600">+%</span>
-              <span>Sopra preventivo</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="text-red-600">-%</span>
-              <span>Sotto preventivo</span>
+            <div className="flex items-center gap-2">
+              <span className="text-amber-400 font-mono font-medium">Target</span>
+              <span>= Costi + 40%</span>
             </div>
           </div>
         </div>

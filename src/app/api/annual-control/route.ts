@@ -50,6 +50,8 @@ export async function GET(request: NextRequest) {
     : 0;
 
   // Calcola dati mensili
+  const currentMonth = new Date().getMonth(); // 0-indexed
+
   const monthlyData = Array.from({ length: 12 }, (_, i) => {
     const month = i + 1;
     const monthStr = month.toString().padStart(2, "0");
@@ -78,28 +80,28 @@ export async function GET(request: NextRequest) {
       .filter((tx) => tx.amount > 0)
       .reduce((sum, tx) => sum + tx.amount, 0);
 
-    // Costi (uscite effettive dal consuntivo - valore assoluto)
-    const costi = Math.abs(
+    // Costi effettivi (uscite effettive dal consuntivo - valore assoluto)
+    const costiEffettivi = Math.abs(
       monthTxs
         .filter((tx) => tx.amount < 0)
         .reduce((sum, tx) => sum + tx.amount, 0)
     );
 
-    // Costi previsti
+    // Costi previsti (dal previsionale)
     const costiPrevisti = monthForecasts
       .filter((f) => f.type === "expense")
       .reduce((sum, f) => sum + f.amount, 0);
 
-    // Margine
-    const margine = fatturato - costi;
+    // Margine previsionale (per la tabella): preventivato - costi previsti
+    const marginePrevisto = preventivato - costiPrevisti;
 
     return {
       month,
       preventivato,
       fatturato,
-      costi,
+      costi: costiEffettivi,
       costiPrevisti,
-      margine,
+      margine: marginePrevisto, // Ora usa il margine previsionale
       // Delta fatturato vs preventivato
       deltaFatturato: fatturato - preventivato,
       deltaFatturatoPercent: preventivato > 0
@@ -108,9 +110,10 @@ export async function GET(request: NextRequest) {
     };
   });
 
-  // Calcola liquidità cumulativa
+  // Calcola liquidità cumulativa basata sui dati previsionali
   let runningBalance = initialBalance;
   const monthlyDataWithLiquidity = monthlyData.map((data) => {
+    // Usa il margine previsionale (preventivato - costi previsti)
     runningBalance += data.margine;
     return {
       ...data,
@@ -119,8 +122,6 @@ export async function GET(request: NextRequest) {
   });
 
   // Calcola fase attuale basata sull'ultima liquidità disponibile
-  // Troviamo l'ultimo mese con dati
-  const currentMonth = new Date().getMonth(); // 0-indexed
   const currentLiquidity = monthlyDataWithLiquidity[currentMonth]?.liquidita || initialBalance;
 
   let phase: "defense" | "attack" | "growth";
