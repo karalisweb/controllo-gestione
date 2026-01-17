@@ -45,6 +45,7 @@ import {
   Receipt,
   Building2,
   ArrowRight,
+  Tag,
 } from "lucide-react";
 import { ForecastSplitPreview } from "./ForecastSplitPreview";
 
@@ -56,6 +57,7 @@ function ForecastCard({
   onDelete,
   onOpenPDR,
   onShowSplit,
+  onChangeCategory,
 }: {
   item: ForecastItem;
   balance: number;
@@ -63,6 +65,7 @@ function ForecastCard({
   onDelete: (id: number) => Promise<void>;
   onOpenPDR: (id: number) => void;
   onShowSplit: (item: ForecastItem) => void;
+  onChangeCategory: (item: ForecastItem) => void;
 }) {
   return (
     <div className="p-3 border-b last:border-b-0">
@@ -74,22 +77,39 @@ function ForecastCard({
               {formatDateDisplay(item.date)}
             </span>
             {item.type === "expense" && item.costCenter ? (
-              <div className="flex items-center gap-1">
+              <div
+                className="flex items-center gap-1 cursor-pointer hover:bg-muted rounded px-1"
+                onClick={() => onChangeCategory(item)}
+              >
                 <div
                   className="w-2 h-2 rounded-full"
                   style={{ backgroundColor: item.costCenter.color || "#666" }}
                 />
                 <span className="text-xs text-muted-foreground">{item.costCenter.name}</span>
+                <Tag className="h-2.5 w-2.5 text-muted-foreground" />
               </div>
             ) : item.type === "income" && item.revenueCenter ? (
-              <div className="flex items-center gap-1">
+              <div
+                className="flex items-center gap-1 cursor-pointer hover:bg-muted rounded px-1"
+                onClick={() => onChangeCategory(item)}
+              >
                 <div
                   className="w-2 h-2 rounded-full"
                   style={{ backgroundColor: item.revenueCenter.color || "#666" }}
                 />
                 <span className="text-xs text-muted-foreground">{item.revenueCenter.name}</span>
+                <Tag className="h-2.5 w-2.5 text-muted-foreground" />
               </div>
-            ) : null}
+            ) : (
+              <Badge
+                variant="outline"
+                className="text-xs cursor-pointer"
+                onClick={() => onChangeCategory(item)}
+              >
+                <Tag className="h-2.5 w-2.5 mr-1" />
+                Categoria
+              </Badge>
+            )}
             {item.sourceType === "pdr" && (
               <Badge variant="outline" className="text-xs">PDR</Badge>
             )}
@@ -249,7 +269,7 @@ export function ForecastTable({
 
   // Stati per editing inline
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [editingField, setEditingField] = useState<"date" | "amount" | null>(null);
+  const [editingField, setEditingField] = useState<"date" | "amount" | "category" | null>(null);
   const [editValue, setEditValue] = useState<string>("");
 
   // Stati per modale PDR
@@ -270,6 +290,11 @@ export function ForecastTable({
   // Stati per modale ripartizione
   const [splitDialogOpen, setSplitDialogOpen] = useState(false);
   const [splitItem, setSplitItem] = useState<ForecastItem | null>(null);
+
+  // Stati per modale cambio categoria (mobile)
+  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
+  const [categoryItem, setCategoryItem] = useState<ForecastItem | null>(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
 
   const [newItemData, setNewItemData] = useState({
     date: new Date().toISOString().split("T")[0],
@@ -339,13 +364,13 @@ export function ForecastTable({
   };
 
   // Inizia editing
-  const startEdit = (id: number, field: "date" | "amount", currentValue: string | number) => {
+  const startEdit = (id: number, field: "date" | "amount" | "category", currentValue: string | number) => {
     setEditingId(id);
     setEditingField(field);
     if (field === "amount") {
       setEditValue(centsToEuros(currentValue as number).toString());
     } else {
-      setEditValue(currentValue as string);
+      setEditValue(currentValue?.toString() || "");
     }
   };
 
@@ -359,6 +384,17 @@ export function ForecastTable({
         await onUpdate(editingId, { amount: newAmount });
       } else if (editingField === "date") {
         await onUpdate(editingId, { date: editValue });
+      } else if (editingField === "category") {
+        const item = items.find((i) => i.id === editingId);
+        if (item?.type === "expense") {
+          await onUpdate(editingId, {
+            costCenterId: editValue ? parseInt(editValue) : null
+          });
+        } else if (item?.type === "income") {
+          await onUpdate(editingId, {
+            revenueCenterId: editValue ? parseInt(editValue) : null
+          });
+        }
       }
     } catch (error) {
       console.error("Errore salvataggio:", error);
@@ -389,6 +425,37 @@ export function ForecastTable({
   const openSplitDialog = (item: ForecastItem) => {
     setSplitItem(item);
     setSplitDialogOpen(true);
+  };
+
+  // Apri modale cambio categoria (mobile)
+  const openCategoryDialog = (item: ForecastItem) => {
+    setCategoryItem(item);
+    setSelectedCategoryId(
+      item.type === "expense"
+        ? (item.costCenterId?.toString() || "")
+        : (item.revenueCenterId?.toString() || "")
+    );
+    setCategoryDialogOpen(true);
+  };
+
+  // Salva cambio categoria (mobile)
+  const saveCategoryChange = async () => {
+    if (!categoryItem) return;
+    try {
+      if (categoryItem.type === "expense") {
+        await onUpdate(categoryItem.id, {
+          costCenterId: selectedCategoryId ? parseInt(selectedCategoryId) : null
+        });
+      } else {
+        await onUpdate(categoryItem.id, {
+          revenueCenterId: selectedCategoryId ? parseInt(selectedCategoryId) : null
+        });
+      }
+      setCategoryDialogOpen(false);
+      setCategoryItem(null);
+    } catch (error) {
+      console.error("Errore cambio categoria:", error);
+    }
   };
 
   // Apri modale PDR
@@ -722,6 +789,7 @@ export function ForecastTable({
                   onDelete={onDelete}
                   onOpenPDR={openPDRDialog}
                   onShowSplit={openSplitDialog}
+                  onChangeCategory={openCategoryDialog}
                 />
               ))
             )}
@@ -782,26 +850,95 @@ export function ForecastTable({
 
                       {/* Tipo/Centro */}
                       <TableCell>
-                        {item.type === "expense" && item.costCenter ? (
-                          <div className="flex items-center gap-2">
-                            <div
-                              className="w-2 h-2 rounded-full flex-shrink-0"
-                              style={{ backgroundColor: item.costCenter.color || "#666" }}
-                            />
-                            <span className="text-xs truncate">{item.costCenter.name}</span>
-                          </div>
-                        ) : item.type === "income" && item.revenueCenter ? (
-                          <div className="flex items-center gap-2">
-                            <div
-                              className="w-2 h-2 rounded-full flex-shrink-0"
-                              style={{ backgroundColor: item.revenueCenter.color || "#666" }}
-                            />
-                            <span className="text-xs truncate">{item.revenueCenter.name}</span>
+                        {editingId === item.id && editingField === "category" ? (
+                          <div className="flex items-center gap-1">
+                            <Select
+                              value={editValue}
+                              onValueChange={(value) => {
+                                setEditValue(value);
+                              }}
+                            >
+                              <SelectTrigger className="h-7 w-[120px] text-xs">
+                                <SelectValue placeholder="Seleziona..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {item.type === "expense" ? (
+                                  <>
+                                    <SelectItem value="none">Nessuno</SelectItem>
+                                    {costCenters.map((cc) => (
+                                      <SelectItem key={cc.id} value={cc.id.toString()}>
+                                        <div className="flex items-center gap-2">
+                                          <div
+                                            className="w-2 h-2 rounded-full"
+                                            style={{ backgroundColor: cc.color || "#666" }}
+                                          />
+                                          {cc.name}
+                                        </div>
+                                      </SelectItem>
+                                    ))}
+                                  </>
+                                ) : (
+                                  <>
+                                    <SelectItem value="none">Nessuno</SelectItem>
+                                    {revenueCenters.map((rc) => (
+                                      <SelectItem key={rc.id} value={rc.id.toString()}>
+                                        <div className="flex items-center gap-2">
+                                          <div
+                                            className="w-2 h-2 rounded-full"
+                                            style={{ backgroundColor: rc.color || "#666" }}
+                                          />
+                                          {rc.name}
+                                        </div>
+                                      </SelectItem>
+                                    ))}
+                                  </>
+                                )}
+                              </SelectContent>
+                            </Select>
+                            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => {
+                              if (editValue === "none") setEditValue("");
+                              saveEdit();
+                            }}>
+                              <Check className="h-3 w-3 text-green-600" />
+                            </Button>
+                            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={cancelEdit}>
+                              <X className="h-3 w-3 text-red-600" />
+                            </Button>
                           </div>
                         ) : (
-                          <Badge variant={item.type === "income" ? "default" : "secondary"} className="text-xs">
-                            {item.type === "income" ? "Incasso" : "Spesa"}
-                          </Badge>
+                          <div
+                            className="cursor-pointer hover:bg-muted px-2 py-1 rounded flex items-center gap-1"
+                            onClick={() => startEdit(
+                              item.id,
+                              "category",
+                              item.type === "expense"
+                                ? (item.costCenterId?.toString() || "")
+                                : (item.revenueCenterId?.toString() || "")
+                            )}
+                          >
+                            {item.type === "expense" && item.costCenter ? (
+                              <div className="flex items-center gap-2">
+                                <div
+                                  className="w-2 h-2 rounded-full flex-shrink-0"
+                                  style={{ backgroundColor: item.costCenter.color || "#666" }}
+                                />
+                                <span className="text-xs truncate">{item.costCenter.name}</span>
+                              </div>
+                            ) : item.type === "income" && item.revenueCenter ? (
+                              <div className="flex items-center gap-2">
+                                <div
+                                  className="w-2 h-2 rounded-full flex-shrink-0"
+                                  style={{ backgroundColor: item.revenueCenter.color || "#666" }}
+                                />
+                                <span className="text-xs truncate">{item.revenueCenter.name}</span>
+                              </div>
+                            ) : (
+                              <Badge variant={item.type === "income" ? "default" : "secondary"} className="text-xs">
+                                {item.type === "income" ? "Incasso" : "Spesa"}
+                              </Badge>
+                            )}
+                            <Tag className="h-3 w-3 opacity-0 group-hover:opacity-50" />
+                          </div>
                         )}
                         {item.sourceType === "pdr" && (
                           <Badge variant="outline" className="text-xs ml-1">PDR</Badge>
@@ -1147,6 +1284,88 @@ export function ForecastTable({
           <DialogFooter>
             <Button onClick={() => setSplitDialogOpen(false)}>
               Chiudi
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Cambio Categoria (Mobile) */}
+      <Dialog open={categoryDialogOpen} onOpenChange={setCategoryDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Tag className="h-5 w-5" />
+              Cambia Categoria
+            </DialogTitle>
+          </DialogHeader>
+
+          {categoryItem && (
+            <div className="space-y-4">
+              {/* Info voce */}
+              <div className="bg-muted/30 rounded-lg p-3 border">
+                <div className="text-sm text-muted-foreground mb-1">
+                  {formatDateDisplay(categoryItem.date)}
+                </div>
+                <div className="font-medium">{categoryItem.description}</div>
+                <div className={`font-mono font-bold mt-1 ${
+                  categoryItem.type === "income" ? "text-green-600" : "text-red-600"
+                }`}>
+                  {categoryItem.type === "income" ? "+" : "-"}
+                  {formatCurrency(categoryItem.amount)}
+                </div>
+              </div>
+
+              {/* Select categoria */}
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  {categoryItem.type === "expense" ? "Centro di Costo" : "Centro di Ricavo"}
+                </label>
+                <Select
+                  value={selectedCategoryId}
+                  onValueChange={setSelectedCategoryId}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleziona categoria..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Nessuna categoria</SelectItem>
+                    {categoryItem.type === "expense" ? (
+                      costCenters.map((cc) => (
+                        <SelectItem key={cc.id} value={cc.id.toString()}>
+                          <div className="flex items-center gap-2">
+                            <div
+                              className="w-3 h-3 rounded-full"
+                              style={{ backgroundColor: cc.color || "#666" }}
+                            />
+                            {cc.name}
+                          </div>
+                        </SelectItem>
+                      ))
+                    ) : (
+                      revenueCenters.map((rc) => (
+                        <SelectItem key={rc.id} value={rc.id.toString()}>
+                          <div className="flex items-center gap-2">
+                            <div
+                              className="w-3 h-3 rounded-full"
+                              style={{ backgroundColor: rc.color || "#666" }}
+                            />
+                            {rc.name}
+                          </div>
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCategoryDialogOpen(false)}>
+              Annulla
+            </Button>
+            <Button onClick={saveCategoryChange}>
+              Salva
             </Button>
           </DialogFooter>
         </DialogContent>

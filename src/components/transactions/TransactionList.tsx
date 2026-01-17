@@ -21,7 +21,14 @@ import {
 import { formatCurrency } from "@/lib/utils/currency";
 import { formatDate } from "@/lib/utils/dates";
 import type { Category, CostCenter, RevenueCenter } from "@/types";
-import { Trash2, Calculator, AlertTriangle, ArrowRightLeft } from "lucide-react";
+import { Trash2, Calculator, AlertTriangle, ArrowRightLeft, Tag } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 // Componente card per vista mobile
 function TransactionCard({
@@ -33,6 +40,7 @@ function TransactionCard({
   loading,
   onDelete,
   onSplit,
+  onChangeCategory,
 }: {
   tx: TransactionWithCenters;
   isIncome: boolean;
@@ -42,6 +50,7 @@ function TransactionCard({
   loading: number | null;
   onDelete: (id: number) => void;
   onSplit: (tx: TransactionWithCenters) => void;
+  onChangeCategory: (tx: TransactionWithCenters) => void;
 }) {
   return (
     <div className={`p-3 border-b last:border-b-0 ${isTransfer ? "bg-purple-50 dark:bg-purple-950/20" : ""}`}>
@@ -64,16 +73,29 @@ function TransactionCard({
                 Straord.
               </Badge>
             )}
-            {currentCenter && !isTransfer && (
-              <Badge
-                className="text-xs"
-                style={{
-                  backgroundColor: currentCenter.color || "#6b7280",
-                  color: "white",
-                }}
-              >
-                {currentCenter.name}
-              </Badge>
+            {!isTransfer && (
+              currentCenter ? (
+                <Badge
+                  className="text-xs cursor-pointer hover:opacity-80"
+                  style={{
+                    backgroundColor: currentCenter.color || "#6b7280",
+                    color: "white",
+                  }}
+                  onClick={() => onChangeCategory(tx)}
+                >
+                  {currentCenter.name}
+                  <Tag className="h-2.5 w-2.5 ml-1" />
+                </Badge>
+              ) : (
+                <Badge
+                  variant="outline"
+                  className="text-xs cursor-pointer"
+                  onClick={() => onChangeCategory(tx)}
+                >
+                  <Tag className="h-2.5 w-2.5 mr-1" />
+                  Categoria
+                </Badge>
+              )
             )}
           </div>
           {/* Descrizione */}
@@ -168,6 +190,11 @@ export function TransactionList({
   const [costCenters, setCostCenters] = useState<CostCenter[]>([]);
   const [revenueCenters, setRevenueCenters] = useState<RevenueCenter[]>([]);
 
+  // Stati per dialog cambio categoria
+  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
+  const [categoryTransaction, setCategoryTransaction] = useState<TransactionWithCenters | null>(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
+
   // Fetch centri di costo/ricavo
   useEffect(() => {
     const fetchCenters = async () => {
@@ -227,6 +254,31 @@ export function TransactionList({
     }
   };
 
+  // Apri dialog cambio categoria
+  const openCategoryDialog = (tx: TransactionWithCenters) => {
+    setCategoryTransaction(tx);
+    const isIncome = tx.amount > 0;
+    setSelectedCategoryId(
+      isIncome
+        ? (tx.revenueCenterId?.toString() || "")
+        : (tx.costCenterId?.toString() || "")
+    );
+    setCategoryDialogOpen(true);
+  };
+
+  // Salva cambio categoria
+  const saveCategoryChange = async () => {
+    if (!categoryTransaction) return;
+    const isIncome = categoryTransaction.amount > 0;
+    await handleCenterChange(
+      categoryTransaction.id,
+      selectedCategoryId || "none",
+      isIncome
+    );
+    setCategoryDialogOpen(false);
+    setCategoryTransaction(null);
+  };
+
   // Check if transaction is extraordinary (from notes)
   const isExtraordinary = (tx: TransactionWithCenters) => {
     return tx.notes?.includes("[STRAORDINARIO]");
@@ -262,6 +314,7 @@ export function TransactionList({
               loading={loading}
               onDelete={handleDelete}
               onSplit={onSplit}
+              onChangeCategory={openCategoryDialog}
             />
           );
         })}
@@ -320,15 +373,6 @@ export function TransactionList({
                       <ArrowRightLeft className="h-3 w-3 mr-1" />
                       Giroconto
                     </Badge>
-                  ) : currentCenter ? (
-                    <Badge
-                      style={{
-                        backgroundColor: currentCenter.color || "#6b7280",
-                        color: "white",
-                      }}
-                    >
-                      {currentCenter.name}
-                    </Badge>
                   ) : (
                     <Select
                       value={currentCenterId?.toString() || "none"}
@@ -338,7 +382,17 @@ export function TransactionList({
                       disabled={loading === tx.id}
                     >
                       <SelectTrigger className="h-8">
-                        <SelectValue placeholder="Assegna centro" />
+                        {currentCenter ? (
+                          <div className="flex items-center gap-2">
+                            <div
+                              className="w-3 h-3 rounded-full"
+                              style={{ backgroundColor: currentCenter.color || "#6b7280" }}
+                            />
+                            <span>{currentCenter.name}</span>
+                          </div>
+                        ) : (
+                          <SelectValue placeholder="Assegna centro" />
+                        )}
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">
@@ -410,6 +464,88 @@ export function TransactionList({
         </TableBody>
       </Table>
       </div>
+
+      {/* Dialog Cambio Categoria (Mobile) */}
+      <Dialog open={categoryDialogOpen} onOpenChange={setCategoryDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Tag className="h-5 w-5" />
+              Cambia Categoria
+            </DialogTitle>
+          </DialogHeader>
+
+          {categoryTransaction && (
+            <div className="space-y-4">
+              {/* Info transazione */}
+              <div className="bg-muted/30 rounded-lg p-3 border">
+                <div className="text-sm text-muted-foreground mb-1">
+                  {formatDate(categoryTransaction.date)}
+                </div>
+                <div className="font-medium truncate">{categoryTransaction.description || "-"}</div>
+                <div className={`font-mono font-bold mt-1 ${
+                  categoryTransaction.amount > 0 ? "text-green-600" : "text-red-600"
+                }`}>
+                  {categoryTransaction.amount > 0 ? "+" : ""}
+                  {formatCurrency(categoryTransaction.amount)}
+                </div>
+              </div>
+
+              {/* Select categoria */}
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  {categoryTransaction.amount > 0 ? "Centro di Ricavo" : "Centro di Costo"}
+                </label>
+                <Select
+                  value={selectedCategoryId}
+                  onValueChange={setSelectedCategoryId}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleziona categoria..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Nessuna categoria</SelectItem>
+                    {categoryTransaction.amount > 0 ? (
+                      revenueCenters.map((rc) => (
+                        <SelectItem key={rc.id} value={rc.id.toString()}>
+                          <div className="flex items-center gap-2">
+                            <div
+                              className="w-3 h-3 rounded-full"
+                              style={{ backgroundColor: rc.color || "#666" }}
+                            />
+                            {rc.name}
+                          </div>
+                        </SelectItem>
+                      ))
+                    ) : (
+                      costCenters.map((cc) => (
+                        <SelectItem key={cc.id} value={cc.id.toString()}>
+                          <div className="flex items-center gap-2">
+                            <div
+                              className="w-3 h-3 rounded-full"
+                              style={{ backgroundColor: cc.color || "#666" }}
+                            />
+                            {cc.name}
+                          </div>
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCategoryDialogOpen(false)}>
+              Annulla
+            </Button>
+            <Button onClick={saveCategoryChange} disabled={loading !== null}>
+              Salva
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
