@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { expectedIncomes, revenueCenters } from "@/lib/db/schema";
 import { eq, isNull, and, sql, or, lte, gte } from "drizzle-orm";
+import { syncForecastFromIncome } from "@/lib/forecast-sync";
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -109,6 +110,28 @@ export async function POST(request: NextRequest) {
     .returning();
 
   const result = Array.isArray(insertResult) ? insertResult[0] : null;
+
+  // Sincronizza con il previsionale (genera forecastItems)
+  if (result) {
+    try {
+      await syncForecastFromIncome({
+        id: result.id,
+        clientName: result.clientName,
+        amount: result.amount,
+        frequency: result.frequency,
+        expectedDay: result.expectedDay,
+        startDate: result.startDate,
+        endDate: result.endDate,
+        revenueCenterId: result.revenueCenterId,
+        reliability: result.reliability,
+        notes: result.notes,
+      });
+    } catch (error) {
+      console.error("Errore sync forecast:", error);
+      // Non blocca la creazione, solo log dell'errore
+    }
+  }
+
   return NextResponse.json(result, { status: 201 });
 }
 

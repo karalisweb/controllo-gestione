@@ -17,6 +17,7 @@ import { CostCenterForm } from "@/components/settings/CostCenterForm";
 import { RevenueCenterForm } from "@/components/settings/RevenueCenterForm";
 import { ExpectedIncomeForm } from "@/components/settings/ExpectedIncomeForm";
 import { ExpectedExpenseForm } from "@/components/settings/ExpectedExpenseForm";
+import { TerminateDialog } from "@/components/settings/TerminateDialog";
 import { MobileHeader } from "@/components/MobileHeader";
 import { formatCurrency } from "@/lib/utils/currency";
 import type { CostCenter, RevenueCenter, ExpectedIncome, ExpectedExpense } from "@/types";
@@ -242,6 +243,10 @@ export default function SettingsPage() {
   const [editingRevenueCenter, setEditingRevenueCenter] = useState<RevenueCenter | null>(null);
   const [editingIncome, setEditingIncome] = useState<ExpectedIncome | null>(null);
 
+  // State per dialog terminazione
+  const [terminateDialogOpen, setTerminateDialogOpen] = useState(false);
+  const [terminatingItem, setTerminatingItem] = useState<{ id: number; name: string; type: "income" | "expense" } | null>(null);
+
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
@@ -316,9 +321,22 @@ export default function SettingsPage() {
     await fetchData();
   };
 
-  const handleDeleteExpense = async (id: number) => {
-    if (!confirm("Eliminare questa spesa?")) return;
-    await fetch(`/api/expected-expenses/${id}`, { method: "DELETE" });
+  const handleDeleteExpense = (expense: ExpectedExpense) => {
+    setTerminatingItem({ id: expense.id, name: expense.name, type: "expense" });
+    setTerminateDialogOpen(true);
+  };
+
+  const handleDeleteExpenseComplete = async () => {
+    if (!terminatingItem) return;
+    await fetch(`/api/expected-expenses/${terminatingItem.id}`, { method: "DELETE" });
+    setTerminatingItem(null);
+    await fetchData();
+  };
+
+  const handleTerminateExpenseFromDate = async (date: string) => {
+    if (!terminatingItem) return;
+    await fetch(`/api/expected-expenses/${terminatingItem.id}?terminateDate=${date}`, { method: "DELETE" });
+    setTerminatingItem(null);
     await fetchData();
   };
 
@@ -372,9 +390,22 @@ export default function SettingsPage() {
     await fetchData();
   };
 
-  const handleDeleteIncome = async (id: number) => {
-    if (!confirm("Eliminare questo incasso?")) return;
-    await fetch(`/api/expected-incomes/${id}`, { method: "DELETE" });
+  const handleDeleteIncome = (income: ExpectedIncome) => {
+    setTerminatingItem({ id: income.id, name: income.clientName, type: "income" });
+    setTerminateDialogOpen(true);
+  };
+
+  const handleDeleteIncomeComplete = async () => {
+    if (!terminatingItem) return;
+    await fetch(`/api/expected-incomes/${terminatingItem.id}`, { method: "DELETE" });
+    setTerminatingItem(null);
+    await fetchData();
+  };
+
+  const handleTerminateIncomeFromDate = async (date: string) => {
+    if (!terminatingItem) return;
+    await fetch(`/api/expected-incomes/${terminatingItem.id}?terminateDate=${date}`, { method: "DELETE" });
+    setTerminatingItem(null);
     await fetchData();
   };
 
@@ -538,7 +569,7 @@ export default function SettingsPage() {
                           setEditingExpense(expense);
                           setExpenseFormOpen(true);
                         }}
-                        onDelete={() => handleDeleteExpense(expense.id)}
+                        onDelete={() => handleDeleteExpense(expense)}
                       />
                     ))
                   )}
@@ -595,7 +626,7 @@ export default function SettingsPage() {
                               }}>
                                 <Edit2 className="h-4 w-4" />
                               </Button>
-                              <Button variant="ghost" size="sm" className="text-red-500" onClick={() => handleDeleteExpense(expense.id)}>
+                              <Button variant="ghost" size="sm" className="text-red-500" onClick={() => handleDeleteExpense(expense)}>
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
@@ -881,7 +912,7 @@ export default function SettingsPage() {
                           setEditingIncome(income);
                           setIncomeFormOpen(true);
                         }}
-                        onDelete={() => handleDeleteIncome(income.id)}
+                        onDelete={() => handleDeleteIncome(income)}
                       />
                     ))
                   )}
@@ -936,7 +967,7 @@ export default function SettingsPage() {
                               }}>
                                 <Edit2 className="h-4 w-4" />
                               </Button>
-                              <Button variant="ghost" size="sm" className="text-red-500" onClick={() => handleDeleteIncome(income.id)}>
+                              <Button variant="ghost" size="sm" className="text-red-500" onClick={() => handleDeleteIncome(income)}>
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
@@ -1499,6 +1530,29 @@ export default function SettingsPage() {
         editingIncome={editingIncome}
         revenueCenters={revenueCenters}
       />
+
+      {/* Dialog per terminazione incassi/spese */}
+      {terminatingItem && (
+        <TerminateDialog
+          open={terminateDialogOpen}
+          onOpenChange={(open) => {
+            setTerminateDialogOpen(open);
+            if (!open) setTerminatingItem(null);
+          }}
+          itemName={terminatingItem.name}
+          itemType={terminatingItem.type}
+          onDeleteComplete={
+            terminatingItem.type === "expense"
+              ? handleDeleteExpenseComplete
+              : handleDeleteIncomeComplete
+          }
+          onTerminateFromDate={
+            terminatingItem.type === "expense"
+              ? handleTerminateExpenseFromDate
+              : handleTerminateIncomeFromDate
+          }
+        />
+      )}
     </div>
   );
 }
