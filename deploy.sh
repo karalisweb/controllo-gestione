@@ -17,8 +17,9 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configurazione Server
-SERVER_HOST="185.192.97.108"
+SERVER_HOST="vmi2996361.contaboserver.net"
 SERVER_USER="root"
+SERVER_PASS="SnEAw5k32Y8"
 SERVER_DIR="/root/karalisweb-finance"
 PM2_NAME="karalisweb-finance"
 
@@ -59,7 +60,16 @@ echo ""
 echo -e "${YELLOW}[4/5] Deploy sul server...${NC}"
 echo -e "Connessione a ${SERVER_HOST}..."
 
-ssh ${SERVER_USER}@${SERVER_HOST} << 'ENDSSH'
+# Verifica se sshpass è installato
+if ! command -v sshpass &> /dev/null; then
+    echo -e "${RED}sshpass non trovato. Installalo con: brew install hudochenkov/sshpass/sshpass${NC}"
+    echo -e "${YELLOW}In alternativa, esegui manualmente:${NC}"
+    echo -e "ssh ${SERVER_USER}@${SERVER_HOST}"
+    echo -e "cd ${SERVER_DIR} && git pull && npm install && npm run build && pm2 restart ${PM2_NAME}"
+    exit 1
+fi
+
+sshpass -p "${SERVER_PASS}" ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_HOST} << 'ENDSSH'
 set -e
 
 echo "Navigazione in /root/karalisweb-finance..."
