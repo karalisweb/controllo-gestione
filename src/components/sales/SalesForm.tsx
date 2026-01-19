@@ -74,7 +74,7 @@ export function SalesForm({
     sale ? (sale.totalAmount / 100).toFixed(2) : ""
   );
   const [commissionRate, setCommissionRate] = useState(
-    sale ? String(sale.commissionRate ?? 20) : "20"
+    sale ? String(sale.commissionRate ?? 0) : "0"
   );
   const [paymentType, setPaymentType] = useState<PaymentPlanType>(
     sale?.paymentType || "sito_web_50_50"
@@ -100,7 +100,7 @@ export function SalesForm({
 
   const grossCents = Math.round(parseFloat(totalAmountEuros || "0") * 100);
   const parsedCommission = parseInt(commissionRate);
-  const breakdown = calculateBreakdown(grossCents, isNaN(parsedCommission) ? 20 : parsedCommission);
+  const breakdown = calculateBreakdown(grossCents, isNaN(parsedCommission) ? 0 : parsedCommission);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -124,7 +124,7 @@ export function SalesForm({
         clientName: clientName || null,
         projectType,
         totalAmount: grossCents,
-        commissionRate: isNaN(payloadCommission) ? 20 : payloadCommission,
+        commissionRate: isNaN(payloadCommission) ? 0 : payloadCommission,
         paymentType,
         month,
         year,
@@ -224,9 +224,9 @@ export function SalesForm({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="0">0% (nessuna)</SelectItem>
                 <SelectItem value="20">20%</SelectItem>
                 <SelectItem value="30">30%</SelectItem>
-                <SelectItem value="0">0% (nessuna)</SelectItem>
               </SelectContent>
             </Select>
           </div>

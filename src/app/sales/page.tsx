@@ -305,8 +305,6 @@ export default function SalesPage() {
                   <TableHead className="text-right">Gap</TableHead>
                   <TableHead className="text-right">Target</TableHead>
                   <TableHead className="text-right">Pianificato</TableHead>
-                  <TableHead className="text-right">Commissioni</TableHead>
-                  <TableHead className="text-right">Delta</TableHead>
                   <TableHead className="text-right">Disp.</TableHead>
                   <TableHead className="text-center">Stato</TableHead>
                 </TableRow>
@@ -327,12 +325,6 @@ export default function SalesPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       {gap.sales.totalGross > 0 ? formatCurrency(gap.sales.totalGross) : "-"}
-                    </TableCell>
-                    <TableCell className="text-right text-blue-600">
-                      {gap.sales.totalCommission > 0 ? formatCurrency(gap.sales.totalCommission) : "-"}
-                    </TableCell>
-                    <TableCell className={`text-right ${gap.sales.totalCommission - 150000 >= 0 ? "text-green-600" : "text-red-600"}`}>
-                      {gap.sales.totalCommission > 0 ? formatCurrency(gap.sales.totalCommission - 150000) : "-"}
                     </TableCell>
                     <TableCell className="text-right text-green-600">
                       {gap.sales.totalAvailable > 0 ? formatCurrency(gap.sales.totalAvailable) : "-"}

@@ -23,7 +23,7 @@ function getMonthDateRange(month: number, year: number) {
 // Calcola il target vendite lordo per generare un certo disponibile
 function calculateSalesTarget(
   requiredAvailable: number,
-  commissionRate: number = 20
+  commissionRate: number = 0
 ): number {
   if (requiredAvailable <= 0) return 0;
 
@@ -50,7 +50,7 @@ function calculateSalesTarget(
 // Calcola il disponibile generato da un lordo
 function calculateAvailableFromGross(
   grossAmount: number,
-  commissionRate: number = 20
+  commissionRate: number = 0
 ): number {
   const netAmount = Math.round(grossAmount / 1.22);
   const commissionAmount = Math.round(netAmount * (commissionRate / 100));
@@ -63,7 +63,7 @@ function calculateAvailableFromGross(
 // Calcola la commissione da un lordo
 function calculateCommissionFromGross(
   grossAmount: number,
-  commissionRate: number = 20
+  commissionRate: number = 0
 ): number {
   const netAmount = Math.round(grossAmount / 1.22);
   const commissionAmount = Math.round(netAmount * (commissionRate / 100));
@@ -147,7 +147,7 @@ export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const year = parseInt(searchParams.get("year") || "2026");
   const month = searchParams.get("month") ? parseInt(searchParams.get("month")!) : null;
-  const commissionRate = parseInt(searchParams.get("commission") || "20");
+  const commissionRate = parseInt(searchParams.get("commission") || "0");
 
   // Calcola sempre tutti i 12 mesi per distribuire correttamente le rate
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
