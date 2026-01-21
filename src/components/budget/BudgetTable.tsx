@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -82,8 +82,14 @@ export function BudgetTable({
   onRefresh,
 }: BudgetTableProps) {
   const [filter, setFilter] = useState<"all" | "expense" | "income">("all");
-  const [selectedMonth, setSelectedMonth] = useState<number | "all">("all");
+  // Inizializza con il mese corrente
+  const [selectedMonth, setSelectedMonth] = useState<number | "all">(() => {
+    const now = new Date();
+    return now.getMonth() + 1; // getMonth() è 0-based
+  });
   const [paymentPlans, setPaymentPlans] = useState<PaymentPlan[]>([]);
+  const tableContainerRef = useRef<HTMLDivElement>(null);
+  const todayRowRef = useRef<HTMLTableRowElement>(null);
 
   // Fetch PDR attivi
   useEffect(() => {
@@ -184,6 +190,36 @@ export function BudgetTable({
       return { ...entry, balance: runningBalance };
     });
   }, [filteredEntries, initialBalance]);
+
+  // Trova l'indice della riga del giorno corrente o la prima successiva
+  const todayEntryIndex = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Trova la prima entry che ha data >= oggi
+    const index = entriesWithBalance.findIndex((entry) => {
+      const entryDate = new Date(entry.date);
+      entryDate.setHours(0, 0, 0, 0);
+      return entryDate >= today;
+    });
+
+    // Se non troviamo nessuna entry futura, mostra l'ultima
+    return index >= 0 ? index : entriesWithBalance.length - 1;
+  }, [entriesWithBalance]);
+
+  // Scroll alla riga del giorno corrente quando cambia mese o si caricano i dati
+  useEffect(() => {
+    // Piccolo delay per assicurarsi che il DOM sia renderizzato
+    const timer = setTimeout(() => {
+      if (todayRowRef.current && tableContainerRef.current) {
+        todayRowRef.current.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      }
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [selectedMonth, entriesWithBalance.length]);
 
   // Calcola totali per mese con la NUOVA LOGICA
   const monthlyTotals = useMemo(() => {
@@ -548,7 +584,7 @@ export function BudgetTable({
             </div>
           )}
 
-          <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
+          <div ref={tableContainerRef} className="overflow-x-auto max-h-[500px] overflow-y-auto">
             <Table>
               <TableHeader className="sticky top-0 bg-background z-10">
                 <TableRow>
@@ -567,8 +603,20 @@ export function BudgetTable({
                     </TableCell>
                   </TableRow>
                 ) : (
-                  entriesWithBalance.map((entry) => (
-                    <TableRow key={entry.id}>
+                  entriesWithBalance.map((entry, index) => {
+                    const isToday = index === todayEntryIndex;
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const entryDate = new Date(entry.date);
+                    entryDate.setHours(0, 0, 0, 0);
+                    const isPast = entryDate < today;
+
+                    return (
+                    <TableRow
+                      key={entry.id}
+                      ref={isToday ? todayRowRef : undefined}
+                      className={isToday ? "bg-primary/10 border-l-4 border-l-primary" : isPast ? "opacity-50" : ""}
+                    >
                       <TableCell className="font-mono text-sm">
                         {entry.dateStr}
                       </TableCell>
@@ -599,7 +647,8 @@ export function BudgetTable({
                         {formatCurrency(entry.balance)}
                       </TableCell>
                     </TableRow>
-                  ))
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
