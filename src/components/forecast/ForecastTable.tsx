@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -265,7 +265,13 @@ export function ForecastTable({
   onGenerate,
 }: ForecastTableProps) {
   const [filter, setFilter] = useState<"all" | "expense" | "income">("all");
-  const [selectedMonth, setSelectedMonth] = useState<number | "all">("all");
+  // Inizializza con il mese corrente
+  const [selectedMonth, setSelectedMonth] = useState<number | "all">(() => {
+    const now = new Date();
+    return now.getMonth() + 1; // getMonth() è 0-based
+  });
+  const tableContainerRef = useRef<HTMLDivElement>(null);
+  const todayRowRef = useRef<HTMLTableRowElement>(null);
 
   // Stati per editing inline
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -353,6 +359,36 @@ export function ForecastTable({
       return { ...item, balance: runningBalance };
     });
   }, [filteredItems, monthInitialBalance]);
+
+  // Trova l'indice della riga del giorno corrente o la prima successiva
+  const todayEntryIndex = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Trova la prima entry che ha data >= oggi
+    const index = itemsWithBalance.findIndex((item) => {
+      const itemDate = new Date(item.date);
+      itemDate.setHours(0, 0, 0, 0);
+      return itemDate >= today;
+    });
+
+    // Se non troviamo nessuna entry futura, mostra l'ultima
+    return index >= 0 ? index : itemsWithBalance.length - 1;
+  }, [itemsWithBalance]);
+
+  // Scroll alla riga del giorno corrente quando cambia mese o si caricano i dati
+  useEffect(() => {
+    // Piccolo delay per assicurarsi che il DOM sia renderizzato
+    const timer = setTimeout(() => {
+      if (todayRowRef.current && tableContainerRef.current) {
+        todayRowRef.current.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      }
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [selectedMonth, itemsWithBalance.length]);
 
   // Formatta data per display
   const formatDateDisplay = (dateStr: string) => {
@@ -796,7 +832,7 @@ export function ForecastTable({
           </div>
 
           {/* Vista Desktop - Tabella */}
-          <div className="hidden sm:block overflow-x-auto max-h-[600px] overflow-y-auto border rounded-lg">
+          <div ref={tableContainerRef} className="hidden sm:block overflow-x-auto max-h-[600px] overflow-y-auto border rounded-lg">
             <Table>
               <TableHeader className="sticky top-0 bg-background z-10">
                 <TableRow>
@@ -816,8 +852,20 @@ export function ForecastTable({
                     </TableCell>
                   </TableRow>
                 ) : (
-                  itemsWithBalance.map((item) => (
-                    <TableRow key={item.id} className="group">
+                  itemsWithBalance.map((item, index) => {
+                    const isToday = index === todayEntryIndex;
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const itemDate = new Date(item.date);
+                    itemDate.setHours(0, 0, 0, 0);
+                    const isPast = itemDate < today;
+
+                    return (
+                    <TableRow
+                      key={item.id}
+                      ref={isToday ? todayRowRef : undefined}
+                      className={`group ${isToday ? "bg-primary/10 border-l-4 border-l-primary" : isPast ? "opacity-50" : ""}`}
+                    >
                       {/* Data */}
                       <TableCell>
                         {editingId === item.id && editingField === "date" ? (
@@ -1027,7 +1075,8 @@ export function ForecastTable({
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
