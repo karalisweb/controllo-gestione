@@ -1,5 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="6" fill="#0f172a"/>
-  <text x="5" y="22" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="700" fill="#d4af37">K</text>
-  <text x="16" y="24" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="500" fill="#d4af37">f</text>
+  <rect width="32" height="32" rx="6" fill="#ffffff"/>
+  <!-- K verticale blu -->
+  <path d="M8 6 L8 26 L12 26 L12 6 Z" fill="#2a5d8f"/>
+  <!-- Diagonale superiore blu -->
+  <path d="M12 16 L22 6 L18 6 L12 12 Z" fill="#2a5d8f"/>
+  <!-- Diagonale inferiore blu -->
+  <path d="M12 16 L22 26 L18 26 L12 20 Z" fill="#2a5d8f"/>
+  <!-- Curva gialla decorativa -->
+  <path d="M14 10 Q20 16 14 22 Q18 16 14 10" fill="#e5b835" stroke="#e5b835" stroke-width="1"/>
 </svg>

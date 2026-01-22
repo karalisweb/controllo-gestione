@@ -202,25 +202,25 @@ export default function Home() {
 
       <div className="p-4 lg:p-6 max-w-4xl mx-auto space-y-6">
         {/* STATO AZIENDA - Hero Banner */}
-        <div className={`rounded-xl border-2 ${config.borderColor} ${config.bgColor} p-4 sm:p-6`}>
+        <div className={`rounded-xl border-2 ${config.borderColor} ${config.bgColor} p-4 sm:p-6 overflow-hidden`}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <Badge className={`${config.color} text-white font-bold`}>
+              <Badge className={`${config.color} text-white font-bold text-xs sm:text-sm`}>
                 {config.label}
               </Badge>
               {data.status === "defense" && (
-                <AlertTriangle className="h-5 w-5 text-red-500" />
+                <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-red-500" />
               )}
             </div>
             {/* Horizon selector */}
-            <div className="flex gap-1">
+            <div className="flex gap-0.5 sm:gap-1">
               {([30, 90, 180] as const).map((days) => (
                 <Button
                   key={days}
                   variant={horizon === days ? "default" : "ghost"}
                   size="sm"
                   onClick={() => setHorizon(days)}
-                  className="h-7 px-2 text-xs"
+                  className="h-6 sm:h-7 px-1.5 sm:px-2 text-xs"
                 >
                   {days}g
                 </Button>
@@ -228,13 +228,13 @@ export default function Home() {
             </div>
           </div>
 
-          <p className="text-sm text-muted-foreground mb-4">{config.sublabel}</p>
+          <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4">{config.sublabel}</p>
 
           {/* Progress bar */}
           <div className="mb-2">
-            <div className="flex justify-between text-xs text-muted-foreground mb-1">
+            <div className="flex justify-between text-[10px] sm:text-xs text-muted-foreground mb-1">
               <span>OGGI</span>
-              <span>
+              <span className="text-right">
                 {data.daysUntilDifficulty !== null
                   ? `DIFFICOLTÀ ${formatDate(data.difficultyDate)}`
                   : `FINE ${horizon}g`}
@@ -249,7 +249,7 @@ export default function Home() {
           </div>
 
           <div className="text-center">
-            <span className={`text-lg font-bold ${config.textColor}`}>
+            <span className={`text-sm sm:text-lg font-bold ${config.textColor}`}>
               {data.daysUntilDifficulty !== null
                 ? `${data.daysUntilDifficulty} giorni prima della difficoltà`
                 : "Nessuna difficoltà prevista"}
@@ -258,19 +258,19 @@ export default function Home() {
         </div>
 
         {/* I 3 NUMERI CHIAVE */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3">
           {/* 1. Giorni alla difficoltà */}
           <Card className="text-center">
-            <CardContent className="p-3 sm:p-4">
-              <Calendar className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
-              <div className={`text-2xl sm:text-3xl font-bold font-mono ${
+            <CardContent className="p-2 sm:p-4">
+              <Calendar className="h-5 w-5 sm:h-6 sm:w-6 mx-auto mb-1 sm:mb-2 text-muted-foreground" />
+              <div className={`text-xl sm:text-3xl font-bold font-mono ${
                 data.daysUntilDifficulty !== null && data.daysUntilDifficulty < 14
                   ? "text-red-600"
                   : "text-foreground"
               }`}>
                 {data.daysUntilDifficulty !== null ? data.daysUntilDifficulty : "∞"}
               </div>
-              <div className="text-xs text-muted-foreground">
+              <div className="text-[10px] sm:text-xs text-muted-foreground">
                 giorni
               </div>
             </CardContent>
@@ -278,29 +278,29 @@ export default function Home() {
 
           {/* 2. Saldo fine periodo */}
           <Card className="text-center">
-            <CardContent className="p-3 sm:p-4">
-              <TrendingUp className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
-              <div className={`text-xl sm:text-2xl font-bold font-mono ${
+            <CardContent className="p-2 sm:p-4">
+              <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6 mx-auto mb-1 sm:mb-2 text-muted-foreground" />
+              <div className={`text-base sm:text-2xl font-bold font-mono ${
                 data.endPeriodBalance >= 0 ? "text-green-600" : "text-red-600"
               }`}>
                 {formatCurrency(data.endPeriodBalance)}
               </div>
-              <div className="text-xs text-muted-foreground">
+              <div className="text-[10px] sm:text-xs text-muted-foreground">
                 saldo finale
               </div>
             </CardContent>
           </Card>
 
           {/* 3. Target fatturato */}
-          <Card className="text-center">
-            <CardContent className="p-3 sm:p-4">
-              <Target className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
-              <div className={`text-xl sm:text-2xl font-bold font-mono ${
+          <Card className="text-center col-span-2 sm:col-span-1">
+            <CardContent className="p-2 sm:p-4">
+              <Target className="h-5 w-5 sm:h-6 sm:w-6 mx-auto mb-1 sm:mb-2 text-muted-foreground" />
+              <div className={`text-base sm:text-2xl font-bold font-mono ${
                 data.requiredRevenue > 0 ? "text-amber-600" : "text-green-600"
               }`}>
                 {data.requiredRevenue > 0 ? formatCurrency(data.requiredRevenue) : "OK"}
               </div>
-              <div className="text-xs text-muted-foreground">
+              <div className="text-[10px] sm:text-xs text-muted-foreground">
                 da fatturare
               </div>
             </CardContent>
@@ -358,40 +358,40 @@ export default function Home() {
         )}
 
         {/* QUICK STATS */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <Card className="p-3">
-            <div className="flex items-center gap-2 mb-1">
-              <Wallet className="h-4 w-4 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">Cassa oggi</span>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
+          <Card className="p-2 sm:p-3">
+            <div className="flex items-center gap-1.5 sm:gap-2 mb-1">
+              <Wallet className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
+              <span className="text-[10px] sm:text-xs text-muted-foreground truncate">Cassa oggi</span>
             </div>
-            <div className="font-mono font-bold text-foreground">
+            <div className="font-mono font-bold text-sm sm:text-base text-foreground">
               {formatCurrency(data.currentBalance)}
             </div>
           </Card>
-          <Card className="p-3">
-            <div className="flex items-center gap-2 mb-1">
-              <TrendingUp className="h-4 w-4 text-red-500" />
-              <span className="text-xs text-muted-foreground">Uscite {horizon}g</span>
+          <Card className="p-2 sm:p-3">
+            <div className="flex items-center gap-1.5 sm:gap-2 mb-1">
+              <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-red-500 shrink-0" />
+              <span className="text-[10px] sm:text-xs text-muted-foreground truncate">Uscite {horizon}g</span>
             </div>
-            <div className="font-mono font-bold text-red-600">
+            <div className="font-mono font-bold text-sm sm:text-base text-red-600">
               {formatCurrency(data.totalExpensesInPeriod)}
             </div>
           </Card>
-          <Card className="p-3">
-            <div className="flex items-center gap-2 mb-1">
-              <TrendingUp className="h-4 w-4 text-green-500" />
-              <span className="text-xs text-muted-foreground">Incassi certi</span>
+          <Card className="p-2 sm:p-3">
+            <div className="flex items-center gap-1.5 sm:gap-2 mb-1">
+              <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-green-500 shrink-0" />
+              <span className="text-[10px] sm:text-xs text-muted-foreground truncate">Incassi certi</span>
             </div>
-            <div className="font-mono font-bold text-green-600">
+            <div className="font-mono font-bold text-sm sm:text-base text-green-600">
               {formatCurrency(data.totalCertainIncomeInPeriod)}
             </div>
           </Card>
-          <Card className="p-3">
-            <div className="flex items-center gap-2 mb-1">
-              <CreditCard className="h-4 w-4 text-amber-500" />
-              <span className="text-xs text-muted-foreground">Debiti PDR</span>
+          <Card className="p-2 sm:p-3">
+            <div className="flex items-center gap-1.5 sm:gap-2 mb-1">
+              <CreditCard className="h-3 w-3 sm:h-4 sm:w-4 text-amber-500 shrink-0" />
+              <span className="text-[10px] sm:text-xs text-muted-foreground truncate">Debiti PDR</span>
             </div>
-            <div className="font-mono font-bold text-amber-600">
+            <div className="font-mono font-bold text-sm sm:text-base text-amber-600">
               {formatCurrency(data.debt.remaining)}
             </div>
           </Card>

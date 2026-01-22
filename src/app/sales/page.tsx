@@ -183,48 +183,48 @@ export default function SalesPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
+    <div className="container mx-auto px-4 py-4 sm:py-8 space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
         <div>
-          <h1 className="text-3xl font-bold">Piano Commerciale {year}</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-xl sm:text-3xl font-bold">Piano Commerciale {year}</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             Obiettivi, opportunità e vendite per coprire il gap del previsionale
           </p>
         </div>
-        <Button onClick={handleAddSale}>+ Nuovo</Button>
+        <Button onClick={handleAddSale} className="w-full sm:w-auto">+ Nuovo</Button>
       </div>
 
       {/* Riepilogo Anno */}
       {yearSummary && (
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Situazione Anno {year}</CardTitle>
+          <CardHeader className="pb-2 px-3 sm:px-6">
+            <CardTitle className="text-base sm:text-lg">Situazione Anno {year}</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+          <CardContent className="px-3 sm:px-6">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4 mb-4">
               <div>
-                <div className="text-sm text-muted-foreground">Entrate previste</div>
-                <div className="text-lg font-semibold text-green-600">
+                <div className="text-xs sm:text-sm text-muted-foreground">Entrate previste</div>
+                <div className="text-sm sm:text-lg font-semibold text-green-600">
                   {formatCurrency(yearSummary.expectedIncomeAvailable)}
-                  <span className="text-xs text-muted-foreground ml-1">(disp.)</span>
+                  <span className="text-[10px] sm:text-xs text-muted-foreground ml-1">(disp.)</span>
                 </div>
               </div>
               <div>
-                <div className="text-sm text-muted-foreground">Uscite + PDR</div>
-                <div className="text-lg font-semibold text-red-600">
+                <div className="text-xs sm:text-sm text-muted-foreground">Uscite + PDR</div>
+                <div className="text-sm sm:text-lg font-semibold text-red-600">
                   {formatCurrency(yearSummary.totalOutflows)}
                 </div>
               </div>
               <div>
-                <div className="text-sm text-muted-foreground">GAP da coprire</div>
-                <div className="text-xl font-bold text-orange-600">
+                <div className="text-xs sm:text-sm text-muted-foreground">GAP da coprire</div>
+                <div className="text-base sm:text-xl font-bold text-orange-600">
                   {formatCurrency(yearSummary.gap)}
                 </div>
               </div>
               <div>
-                <div className="text-sm text-muted-foreground">Target vendite lordo</div>
-                <div className="text-xl font-bold">
+                <div className="text-xs sm:text-sm text-muted-foreground">Target vendite</div>
+                <div className="text-base sm:text-xl font-bold">
                   {formatCurrency(yearSummary.salesTargetGross)}
                 </div>
               </div>
@@ -232,11 +232,10 @@ export default function SalesPage() {
 
             {/* Progress bar */}
             <div className="space-y-2">
-              <div className="flex justify-between text-sm">
+              <div className="flex justify-between text-xs sm:text-sm">
                 <span>Pianificato: {formatCurrency(yearSummary.salesTotalGross)}</span>
-                <span>{yearProgress}% del gap coperto</span>
               </div>
-              <div className="h-4 bg-gray-200 rounded-full overflow-hidden">
+              <div className="h-3 sm:h-4 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                 <div
                   className={`h-full transition-all ${
                     yearProgress >= 100
@@ -248,9 +247,8 @@ export default function SalesPage() {
                   style={{ width: `${Math.min(100, yearProgress)}%` }}
                 />
               </div>
-              <div className="flex justify-between text-xs text-muted-foreground">
+              <div className="flex justify-between text-[10px] sm:text-xs text-muted-foreground">
                 <span>Vinto: {formatCurrency(yearSummary.salesClosedGross)}</span>
-                <span>Manca: {formatCurrency(yearSummary.remainingGap)} disponibili</span>
               </div>
             </div>
           </CardContent>
@@ -258,12 +256,12 @@ export default function SalesPage() {
       )}
 
       {/* Filtro mese */}
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
         <Select
           value={selectedMonth?.toString() || "all"}
           onValueChange={(v) => setSelectedMonth(v === "all" ? null : parseInt(v))}
         >
-          <SelectTrigger className="w-48">
+          <SelectTrigger className="w-full sm:w-48">
             <SelectValue placeholder="Filtra per mese" />
           </SelectTrigger>
           <SelectContent>
@@ -277,15 +275,15 @@ export default function SalesPage() {
         </Select>
 
         {selectedMonth && currentMonthGap && (
-          <div className="flex gap-4 text-sm">
+          <div className="grid grid-cols-3 gap-2 sm:flex sm:gap-4 text-xs sm:text-sm">
             <span>
-              Gap mese: <strong className="text-orange-600">{formatCurrency(currentMonthGap.gap)}</strong>
+              Gap: <strong className="text-orange-600">{formatCurrency(currentMonthGap.gap)}</strong>
             </span>
             <span>
               Target: <strong>{formatCurrency(currentMonthGap.salesTargetGross)}</strong>
             </span>
             <span>
-              Progresso: <strong>{currentMonthGap.progress}%</strong>
+              <strong>{currentMonthGap.progress}%</strong>
             </span>
           </div>
         )}
@@ -294,43 +292,22 @@ export default function SalesPage() {
       {/* Tabella riepilogo mensile */}
       {!selectedMonth && (
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Riepilogo Mensile</CardTitle>
+          <CardHeader className="pb-2 px-3 sm:px-6">
+            <CardTitle className="text-base sm:text-lg">Riepilogo Mensile</CardTitle>
           </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Mese</TableHead>
-                  <TableHead className="text-right">Gap</TableHead>
-                  <TableHead className="text-right">Target</TableHead>
-                  <TableHead className="text-right">Pianificato</TableHead>
-                  <TableHead className="text-right">Disp.</TableHead>
-                  <TableHead className="text-center">Stato</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {monthlyGaps.map((gap) => (
-                  <TableRow
-                    key={gap.month}
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => setSelectedMonth(gap.month)}
-                  >
-                    <TableCell className="font-medium">{MONTHS[gap.month - 1]}</TableCell>
-                    <TableCell className="text-right text-orange-600">
-                      {gap.gap > 0 ? formatCurrency(gap.gap) : "-"}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {gap.salesTargetGross > 0 ? formatCurrency(gap.salesTargetGross) : "-"}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {gap.sales.totalGross > 0 ? formatCurrency(gap.sales.totalGross) : "-"}
-                    </TableCell>
-                    <TableCell className="text-right text-green-600">
-                      {gap.sales.totalAvailable > 0 ? formatCurrency(gap.sales.totalAvailable) : "-"}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden mx-auto">
+          <CardContent className="px-3 sm:px-6">
+            {/* Mobile: Card List */}
+            <div className="sm:hidden space-y-2">
+              {monthlyGaps.map((gap) => (
+                <div
+                  key={gap.month}
+                  className="p-3 rounded-lg border cursor-pointer hover:bg-muted/50"
+                  onClick={() => setSelectedMonth(gap.month)}
+                >
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="font-medium">{MONTHS[gap.month - 1]}</span>
+                    <div className="flex items-center gap-2">
+                      <div className="w-12 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                         <div
                           className={`h-full ${
                             gap.progress >= 100
@@ -344,12 +321,82 @@ export default function SalesPage() {
                           style={{ width: `${Math.min(100, gap.progress)}%` }}
                         />
                       </div>
-                      <span className="text-xs text-muted-foreground">{gap.progress}%</span>
-                    </TableCell>
+                      <span className="text-xs text-muted-foreground w-8">{gap.progress}%</span>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <span className="text-muted-foreground">Gap: </span>
+                      <span className="text-orange-600 font-medium">
+                        {gap.gap > 0 ? formatCurrency(gap.gap) : "-"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Target: </span>
+                      <span className="font-medium">
+                        {gap.salesTargetGross > 0 ? formatCurrency(gap.salesTargetGross) : "-"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop: Table */}
+            <div className="hidden sm:block">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Mese</TableHead>
+                    <TableHead className="text-right">Gap</TableHead>
+                    <TableHead className="text-right">Target</TableHead>
+                    <TableHead className="text-right">Pianificato</TableHead>
+                    <TableHead className="text-right">Disp.</TableHead>
+                    <TableHead className="text-center">Stato</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {monthlyGaps.map((gap) => (
+                    <TableRow
+                      key={gap.month}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => setSelectedMonth(gap.month)}
+                    >
+                      <TableCell className="font-medium">{MONTHS[gap.month - 1]}</TableCell>
+                      <TableCell className="text-right text-orange-600">
+                        {gap.gap > 0 ? formatCurrency(gap.gap) : "-"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {gap.salesTargetGross > 0 ? formatCurrency(gap.salesTargetGross) : "-"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {gap.sales.totalGross > 0 ? formatCurrency(gap.sales.totalGross) : "-"}
+                      </TableCell>
+                      <TableCell className="text-right text-green-600">
+                        {gap.sales.totalAvailable > 0 ? formatCurrency(gap.sales.totalAvailable) : "-"}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <div className="w-16 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mx-auto">
+                          <div
+                            className={`h-full ${
+                              gap.progress >= 100
+                                ? "bg-green-500"
+                                : gap.progress >= 50
+                                ? "bg-yellow-500"
+                                : gap.progress > 0
+                                ? "bg-red-500"
+                                : "bg-gray-300"
+                            }`}
+                            style={{ width: `${Math.min(100, gap.progress)}%` }}
+                          />
+                        </div>
+                        <span className="text-xs text-muted-foreground">{gap.progress}%</span>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       )}
