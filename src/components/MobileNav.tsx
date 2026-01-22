@@ -8,12 +8,14 @@ import {
   CalendarRange,
   CreditCard,
   Receipt,
+  Target,
   Menu,
 } from "lucide-react";
 
 const mobileNavItems = [
   { href: "/", label: "Home", icon: LayoutDashboard },
   { href: "/forecast", label: "Previsionale", icon: CalendarRange },
+  { href: "/sales", label: "Commerciale", icon: Target },
   { href: "/payment-plans", label: "PDR", icon: CreditCard },
   { href: "/transactions", label: "Consuntivo", icon: Receipt },
   { href: "/settings", label: "Menu", icon: Menu },

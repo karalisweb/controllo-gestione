@@ -146,22 +146,28 @@ function LoginForm() {
 
   if (step === "loading") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <div className="text-gray-500">Caricamento...</div>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-muted-foreground">Caricamento...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Karalisweb Finance</CardTitle>
-          <CardDescription>
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <Card className="w-full max-w-md border-border/50 bg-card/80 backdrop-blur">
+        <CardHeader className="text-center pb-2">
+          {/* Logo Karalisweb */}
+          <div className="flex justify-center mb-4">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/10 border border-white/20">
+              <span className="text-3xl font-bold bg-gradient-to-r from-orange-500 to-amber-400 bg-clip-text text-transparent">K</span>
+            </div>
+          </div>
+          <CardTitle className="text-2xl font-bold bg-gradient-to-r from-orange-500 to-amber-400 bg-clip-text text-transparent">Finance</CardTitle>
+          <CardDescription className="text-muted-foreground">
             {step === "init"
               ? "Crea il primo account amministratore"
               : step === "credentials"
-              ? "Accedi al tuo account"
+              ? "Controllo di Gestione Aziendale"
               : "Verifica in due passaggi"}
           </CardDescription>
         </CardHeader>
@@ -218,7 +224,7 @@ function LoginForm() {
               {error && (
                 <div className="text-red-500 text-sm text-center">{error}</div>
               )}
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button type="submit" variant="gradient" className="w-full" disabled={loading}>
                 {loading ? "Creazione in corso..." : "Crea Account Admin"}
               </Button>
             </form>
@@ -255,7 +261,7 @@ function LoginForm() {
               {error && (
                 <div className="text-red-500 text-sm text-center">{error}</div>
               )}
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button type="submit" variant="gradient" className="w-full" disabled={loading}>
                 {loading ? "Accesso in corso..." : "Accedi"}
               </Button>
             </form>
@@ -283,7 +289,7 @@ function LoginForm() {
               {error && (
                 <div className="text-red-500 text-sm text-center">{error}</div>
               )}
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button type="submit" variant="gradient" className="w-full" disabled={loading}>
                 {loading ? "Verifica in corso..." : "Verifica"}
               </Button>
               <Button
@@ -309,8 +315,8 @@ function LoginForm() {
 export default function LoginPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <div className="text-gray-500">Caricamento...</div>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-muted-foreground">Caricamento...</div>
       </div>
     }>
       <LoginForm />

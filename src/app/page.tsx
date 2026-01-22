@@ -17,6 +17,8 @@ import {
   CreditCard,
   BarChart3,
   Wallet,
+  Bell,
+  User,
 } from "lucide-react";
 import Link from "next/link";
 import { AnnualControlTable } from "@/components/dashboard/AnnualControlTable";
@@ -183,13 +185,18 @@ export default function Home() {
               <span className="text-[#d4af37] font-bold text-sm">K</span>
               <span className="text-[#d4af37] font-medium text-xs -ml-0.5">f</span>
             </div>
-            <span className="font-semibold text-foreground">Cashflow</span>
+            <span className="font-semibold text-foreground">Dashboard</span>
           </div>
-          <Link href="/profile">
-            <Button variant="ghost" size="sm" className="text-xs">
-              {formatCurrency(data.currentBalance)}
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" className="text-muted-foreground">
+              <Bell className="h-5 w-5" />
             </Button>
-          </Link>
+            <Link href="/profile">
+              <Button variant="ghost" size="icon" className="text-muted-foreground">
+                <User className="h-5 w-5" />
+              </Button>
+            </Link>
+          </div>
         </div>
       </header>
 
