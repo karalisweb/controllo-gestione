@@ -17,7 +17,8 @@ export const metadata: Metadata = {
   title: "Finance v2.1 by Karalisweb",
   description: "Controllo cashflow decisionale - Karalisweb Finance",
   icons: {
-    icon: "/favicon.svg",
+    icon: "/logo-kw.png",
+    apple: "/logo-kw.png",
   },
 };
 
