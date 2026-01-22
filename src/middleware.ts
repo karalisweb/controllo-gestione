@@ -9,7 +9,16 @@ const sessionOptions = {
 };
 
 // Route pubbliche che non richiedono autenticazione
-const publicRoutes = ["/login", "/api/auth/login", "/api/auth/verify-2fa", "/api/auth/status", "/api/auth/init"];
+const publicRoutes = [
+  "/login",
+  "/api/auth/login",
+  "/api/auth/verify-2fa",
+  "/api/auth/status",
+  "/api/auth/init",
+  "/api/auth/request-password-reset",
+  "/api/auth/verify-reset-otp",
+  "/api/auth/reset-password",
+];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
