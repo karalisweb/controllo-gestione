@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { Sidebar } from "@/components/Sidebar";
-import { MobileNav } from "@/components/MobileNav";
+import { AuthLayout } from "@/components/AuthLayout";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,18 +31,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-background`}
       >
-        <div className="flex min-h-screen">
-          {/* Sidebar - hidden on mobile */}
-          <Sidebar />
-
-          {/* Main content */}
-          <main className="flex-1 lg:ml-64 pb-20 lg:pb-0">
-            {children}
-          </main>
-
-          {/* Mobile bottom navigation */}
-          <MobileNav />
-        </div>
+        <AuthLayout>{children}</AuthLayout>
       </body>
     </html>
   );
