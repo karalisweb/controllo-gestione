@@ -6,8 +6,8 @@ import { sendOtpLoginEmail, sendPasswordResetEmail } from "@/lib/email/emailServ
 
 // Configurazione
 const OTP_EXPIRY_MINUTES = 10;
-const RATE_LIMIT_MAX_REQUESTS = 3;
-const RATE_LIMIT_WINDOW_MINUTES = 15;
+const RATE_LIMIT_MAX_REQUESTS = 5; // Aumentato per sviluppo (era 3)
+const RATE_LIMIT_WINDOW_MINUTES = 1; // Ridotto per sviluppo (era 15)
 
 type OtpType = "2fa_login" | "password_reset";
 

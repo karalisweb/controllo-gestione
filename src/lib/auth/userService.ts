@@ -16,7 +16,7 @@ const totp = new TOTP({
 
 const SALT_ROUNDS = 12;
 const MAX_LOGIN_ATTEMPTS = 5;
-const LOCK_DURATION_MINUTES = 15;
+const LOCK_DURATION_MINUTES = 1; // Ridotto per sviluppo (era 15)
 const BACKUP_CODES_COUNT = 10;
 
 export class UserService {
