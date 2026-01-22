@@ -275,4 +275,17 @@ export class UserService {
 
     return { success: true };
   }
+
+  static async updateProfile(userId: number, name: string) {
+    const user = await db.select().from(users).where(eq(users.id, userId)).get();
+    if (!user) {
+      throw new Error("Utente non trovato");
+    }
+
+    await db.update(users)
+      .set({ name, updatedAt: new Date() })
+      .where(eq(users.id, userId));
+
+    return { success: true, name };
+  }
 }

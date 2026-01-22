@@ -11,6 +11,7 @@ import {
   Settings,
   Target,
   LogOut,
+  User,
 } from "lucide-react";
 
 const mainNavItems = [
@@ -62,8 +63,21 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Bottom Section - Settings & Logout */}
+      {/* Bottom Section - Profile, Settings & Logout */}
       <div className="border-t border-sidebar-border px-4 py-4 space-y-1">
+        <Link
+          href="/profile"
+          className={cn(
+            "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+            pathname === "/profile"
+              ? "bg-primary/10 text-primary"
+              : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+          )}
+        >
+          <User className={cn("h-5 w-5", pathname === "/profile" && "text-primary")} />
+          <span>Profilo</span>
+        </Link>
+
         <Link
           href="/settings"
           className={cn(
