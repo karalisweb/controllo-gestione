@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { UserService } from "@/lib/auth/userService";
+import { requestLoginOtp } from "@/lib/auth/otpService";
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,8 +25,18 @@ export async function POST(request: NextRequest) {
 
     const session = await getSession();
 
-    // Se 2FA attivo, richiedi secondo step
+    // Se 2FA attivo, invia OTP via email
     if (result.requires2FA && result.user) {
+      // Invia codice OTP via email
+      const otpResult = await requestLoginOtp(result.user.email);
+
+      if (!otpResult.success) {
+        return NextResponse.json(
+          { success: false, error: otpResult.error },
+          { status: 429 } // Too many requests se rate limited
+        );
+      }
+
       session.pending2FA = {
         userId: result.user.id,
         email: result.user.email,
@@ -36,7 +47,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         requires2FA: true,
-        message: "Inserisci il codice 2FA",
+        message: "Codice di verifica inviato via email",
       });
     }
 

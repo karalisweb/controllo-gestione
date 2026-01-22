@@ -263,7 +263,7 @@ export const users = sqliteTable("users", {
   updatedAt: integer("updated_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
 });
 
-// Backup codes per 2FA
+// Backup codes per 2FA (legacy - mantenuto per compatibilità)
 export const backupCodes = sqliteTable("backup_codes", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: integer("user_id").references(() => users.id),
@@ -271,6 +271,26 @@ export const backupCodes = sqliteTable("backup_codes", {
   used: integer("used", { mode: "boolean" }).default(false),
   usedAt: integer("used_at", { mode: "timestamp" }),
   createdAt: integer("created_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
+});
+
+// OTP codes per 2FA via email e recupero password
+export const otpCodes = sqliteTable("otp_codes", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  email: text("email").notNull(),
+  code: text("code").notNull(), // 6 cifre
+  type: text("type", { enum: ["2fa_login", "password_reset"] }).notNull(),
+  expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
+  used: integer("used", { mode: "boolean" }).default(false),
+  usedAt: integer("used_at", { mode: "timestamp" }),
+  createdAt: integer("created_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
+});
+
+// Rate limiting per OTP requests
+export const otpRateLimits = sqliteTable("otp_rate_limits", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  email: text("email").notNull(),
+  requestCount: integer("request_count").notNull().default(1),
+  windowStart: integer("window_start", { mode: "timestamp" }).notNull(),
 });
 
 // Types per le tabelle
@@ -321,3 +341,9 @@ export type NewUser = typeof users.$inferInsert;
 
 export type BackupCode = typeof backupCodes.$inferSelect;
 export type NewBackupCode = typeof backupCodes.$inferInsert;
+
+export type OtpCode = typeof otpCodes.$inferSelect;
+export type NewOtpCode = typeof otpCodes.$inferInsert;
+
+export type OtpRateLimit = typeof otpRateLimits.$inferSelect;
+export type NewOtpRateLimit = typeof otpRateLimits.$inferInsert;

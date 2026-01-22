@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MobileHeader } from "@/components/MobileHeader";
-import { Settings, User, Lock, Shield } from "lucide-react";
+import { Settings, User, Lock, Shield, Mail, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface UserData {
@@ -40,9 +40,13 @@ export default function ProfilePage() {
   const [passwordSuccess, setPasswordSuccess] = useState("");
   const [passwordError, setPasswordError] = useState("");
 
-  // Security (predisposto)
+  // Security 2FA
   const [twoFAEnabled, setTwoFAEnabled] = useState(false);
-  const [otpEmail, setOtpEmail] = useState("");
+  const [securityLoading, setSecurityLoading] = useState(false);
+  const [securitySuccess, setSecuritySuccess] = useState("");
+  const [securityError, setSecurityError] = useState("");
+  const [showDisableConfirm, setShowDisableConfirm] = useState(false);
+  const [disablePassword, setDisablePassword] = useState("");
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -133,10 +137,69 @@ export default function ProfilePage() {
     }
   };
 
+  const handleEnable2FA = async () => {
+    setSecurityLoading(true);
+    setSecurityError("");
+    setSecuritySuccess("");
+
+    try {
+      const res = await fetch("/api/auth/enable-2fa", {
+        method: "POST",
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        setTwoFAEnabled(true);
+        setSecuritySuccess("2FA attivato con successo. Riceverai un codice via email ad ogni accesso.");
+        setUser(prev => prev ? { ...prev, totpEnabled: true } : null);
+      } else {
+        setSecurityError(data.error || "Errore durante l'attivazione");
+      }
+    } catch {
+      setSecurityError("Errore di connessione");
+    } finally {
+      setSecurityLoading(false);
+    }
+  };
+
+  const handleDisable2FA = async () => {
+    if (!disablePassword) {
+      setSecurityError("Inserisci la password per confermare");
+      return;
+    }
+
+    setSecurityLoading(true);
+    setSecurityError("");
+    setSecuritySuccess("");
+
+    try {
+      const res = await fetch("/api/auth/disable-2fa", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: disablePassword }),
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        setTwoFAEnabled(false);
+        setSecuritySuccess("2FA disattivato.");
+        setUser(prev => prev ? { ...prev, totpEnabled: false } : null);
+        setShowDisableConfirm(false);
+        setDisablePassword("");
+      } else {
+        setSecurityError(data.error || "Errore durante la disattivazione");
+      }
+    } catch {
+      setSecurityError("Errore di connessione");
+    } finally {
+      setSecurityLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-muted-foreground">Caricamento...</div>
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -302,7 +365,12 @@ export default function ProfilePage() {
               {/* 2FA Status Card */}
               <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50 border">
                 <div className="flex items-center gap-3">
-                  <Shield className={cn("h-5 w-5", twoFAEnabled ? "text-green-500" : "text-muted-foreground")} />
+                  <div className={cn(
+                    "flex h-10 w-10 items-center justify-center rounded-lg",
+                    twoFAEnabled ? "bg-green-500/20" : "bg-muted"
+                  )}>
+                    <Shield className={cn("h-5 w-5", twoFAEnabled ? "text-green-500" : "text-muted-foreground")} />
+                  </div>
                   <div>
                     <p className="font-medium">2FA {twoFAEnabled ? "Attiva" : "Non attiva"}</p>
                     <p className="text-sm text-muted-foreground">
@@ -312,59 +380,91 @@ export default function ProfilePage() {
                     </p>
                   </div>
                 </div>
-                <Button
-                  variant={twoFAEnabled ? "outline" : "gradient"}
-                  size="sm"
-                  disabled
-                >
-                  {twoFAEnabled ? "Attiva" : "Attiva"}
-                </Button>
+                {!twoFAEnabled && (
+                  <Button
+                    variant="gradient"
+                    size="sm"
+                    onClick={handleEnable2FA}
+                    disabled={securityLoading}
+                  >
+                    {securityLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Attiva"}
+                  </Button>
+                )}
               </div>
 
-              {/* Disable 2FA Toggle */}
-              <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50 border">
-                <div>
-                  <p className="font-medium">Disattiva 2FA</p>
-                  <p className="text-sm text-muted-foreground">Rimuovi il secondo fattore di autenticazione</p>
+              {/* Come funziona */}
+              {!twoFAEnabled && (
+                <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/30">
+                  <div className="flex items-start gap-3">
+                    <Mail className="h-5 w-5 text-blue-500 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-blue-500">Come funziona</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Ogni volta che effettui il login, riceverai un codice a 6 cifre via email.
+                        Il codice è valido per 10 minuti e può essere usato una sola volta.
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <button
-                  disabled
-                  className={cn(
-                    "relative inline-flex h-6 w-11 items-center rounded-full transition-colors",
-                    twoFAEnabled ? "bg-gradient-to-r from-orange-500 to-amber-400" : "bg-muted"
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
-                      twoFAEnabled ? "translate-x-6" : "translate-x-1"
-                    )}
+              )}
+
+              {/* Disable 2FA */}
+              {twoFAEnabled && !showDisableConfirm && (
+                <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50 border">
+                  <div>
+                    <p className="font-medium">Disattiva 2FA</p>
+                    <p className="text-sm text-muted-foreground">Rimuovi il secondo fattore di autenticazione</p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowDisableConfirm(true)}
+                  >
+                    Disattiva
+                  </Button>
+                </div>
+              )}
+
+              {/* Disable confirmation */}
+              {twoFAEnabled && showDisableConfirm && (
+                <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/30 space-y-4">
+                  <p className="font-medium text-red-500">Conferma disattivazione</p>
+                  <p className="text-sm text-muted-foreground">
+                    Inserisci la tua password per confermare la disattivazione del 2FA.
+                    Il tuo account sarà meno protetto.
+                  </p>
+                  <Input
+                    type="password"
+                    value={disablePassword}
+                    onChange={(e) => setDisablePassword(e.target.value)}
+                    placeholder="Password"
                   />
-                </button>
-              </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleDisable2FA}
+                      disabled={securityLoading}
+                    >
+                      {securityLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Conferma disattivazione"}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setShowDisableConfirm(false);
+                        setDisablePassword("");
+                        setSecurityError("");
+                      }}
+                    >
+                      Annulla
+                    </Button>
+                  </div>
+                </div>
+              )}
 
-              {/* OTP Email */}
-              <div>
-                <label className="block text-sm font-medium mb-2">Email per codici OTP (opzionale)</label>
-                <Input
-                  type="email"
-                  value={otpEmail}
-                  onChange={(e) => setOtpEmail(e.target.value)}
-                  placeholder={user?.email || ""}
-                  disabled
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Lascia vuoto per usare la tua email principale ({user?.email})
-                </p>
-              </div>
-
-              <Button variant="gradient" disabled>
-                Attiva 2FA
-              </Button>
-
-              <p className="text-xs text-muted-foreground text-center">
-                Funzionalità in arrivo
-              </p>
+              {securityError && <p className="text-red-500 text-sm">{securityError}</p>}
+              {securitySuccess && <p className="text-green-500 text-sm">{securitySuccess}</p>}
             </CardContent>
           </Card>
         )}

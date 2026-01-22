@@ -288,4 +288,24 @@ export class UserService {
 
     return { success: true, name };
   }
+
+  static async updateLastLogin(userId: number) {
+    await db.update(users)
+      .set({ lastLoginAt: new Date() })
+      .where(eq(users.id, userId));
+  }
+
+  static async enable2FA(userId: number) {
+    await db.update(users)
+      .set({ totpEnabled: true, updatedAt: new Date() })
+      .where(eq(users.id, userId));
+    return { success: true };
+  }
+
+  static async disable2FASimple(userId: number) {
+    await db.update(users)
+      .set({ totpEnabled: false, totpSecret: null, updatedAt: new Date() })
+      .where(eq(users.id, userId));
+    return { success: true };
+  }
 }

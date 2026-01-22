@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { UserService } from "@/lib/auth/userService";
+import { verifyLoginOtp } from "@/lib/auth/otpService";
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,20 +17,25 @@ export async function POST(request: NextRequest) {
 
     if (!code) {
       return NextResponse.json(
-        { success: false, error: "Codice 2FA richiesto" },
+        { success: false, error: "Codice OTP richiesto" },
         { status: 400 }
       );
     }
 
     const { userId, email } = session.pending2FA;
-    const result = await UserService.verify2FALogin(userId, code);
 
-    if (!result.success) {
+    // Verifica OTP via email
+    const otpResult = await verifyLoginOtp(email, code);
+
+    if (!otpResult.valid) {
       return NextResponse.json(
-        { success: false, error: result.error || "Codice non valido" },
+        { success: false, error: otpResult.error || "Codice non valido o scaduto" },
         { status: 401 }
       );
     }
+
+    // Aggiorna ultimo login
+    await UserService.updateLastLogin(userId);
 
     // Login completato
     const user = await UserService.getUserById(userId);
@@ -49,7 +55,6 @@ export async function POST(request: NextRequest) {
         name: user?.name,
         role: user?.role,
       },
-      usedBackupCode: result.usedBackupCode,
     });
   } catch (error) {
     console.error("Errore verifica 2FA:", error);
