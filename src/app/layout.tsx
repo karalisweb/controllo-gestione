@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Finance v2.1 by Karalisweb",
-  description: "Controllo cashflow decisionale - Karalisweb Finance",
+  title: "KW Cashflow",
+  description: "Controllo cashflow decisionale",
   icons: {
     icon: "/logo-kw.png",
     apple: "/logo-kw.png",

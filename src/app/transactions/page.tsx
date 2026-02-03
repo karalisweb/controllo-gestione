@@ -5,14 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TransactionList } from "@/components/transactions/TransactionList";
-import { ImportModal } from "@/components/transactions/ImportModal";
 import { SplitCalculator } from "@/components/transactions/SplitCalculator";
 import { QuickTransactionInput } from "@/components/transactions/QuickTransactionInput";
 import { SplitsSummary } from "@/components/transactions/SplitsSummary";
 import { MobileHeader } from "@/components/MobileHeader";
 import { formatCurrency } from "@/lib/utils/currency";
 import type { Category } from "@/types";
-import { Upload, TrendingUp, TrendingDown, Wallet, Plus } from "lucide-react";
+import { TrendingUp, TrendingDown, Wallet, Plus } from "lucide-react";
 
 // Tipo per transazioni con centri di costo/ricavo
 interface TransactionWithCenters {
@@ -39,7 +38,6 @@ export default function TransactionsPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [importOpen, setImportOpen] = useState(false);
   const [quickInputOpen, setQuickInputOpen] = useState(false);
   const [splitTransaction, setSplitTransaction] = useState<TransactionWithCenters | null>(
     null
@@ -151,7 +149,7 @@ export default function TransactionsPage() {
           <div>
             <h1 className="text-xl lg:text-2xl font-bold">Consuntivo</h1>
             <p className="text-xs lg:text-sm text-muted-foreground">
-              Movimenti reali importati da Qonto
+              Movimenti reali registrati
             </p>
           </div>
           <div className="flex gap-2 w-full sm:w-auto">
@@ -159,11 +157,6 @@ export default function TransactionsPage() {
               <Plus className="h-4 w-4 mr-1 lg:mr-2" />
               <span className="hidden sm:inline">Nuovo Movimento</span>
               <span className="sm:hidden">Nuovo</span>
-            </Button>
-            <Button variant="outline" onClick={() => setImportOpen(true)} size="sm" className="flex-1 sm:flex-none">
-              <Upload className="h-4 w-4 mr-1 lg:mr-2" />
-              <span className="hidden sm:inline">Importa CSV</span>
-              <span className="sm:hidden">Importa</span>
             </Button>
           </div>
         </div>
@@ -241,12 +234,6 @@ export default function TransactionsPage() {
         </Tabs>
 
         {/* Modali */}
-        <ImportModal
-          open={importOpen}
-          onOpenChange={setImportOpen}
-          onImportComplete={fetchData}
-        />
-
         <QuickTransactionInput
           open={quickInputOpen}
           onOpenChange={setQuickInputOpen}

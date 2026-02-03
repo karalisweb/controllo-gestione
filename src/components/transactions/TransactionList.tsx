@@ -288,7 +288,7 @@ export function TransactionList({
     return (
       <div className="text-center py-12 text-muted-foreground">
         <p>Nessuna transazione trovata.</p>
-        <p className="text-sm">Usa &quot;Nuovo Movimento&quot; per inserire manualmente o importa da Qonto.</p>
+        <p className="text-sm">Usa &quot;Nuovo Movimento&quot; per inserire un movimento.</p>
       </div>
     );
   }

@@ -12,6 +12,7 @@ import {
   Target,
   LogOut,
   User,
+  HelpCircle,
 } from "lucide-react";
 
 const mainNavItems = [
@@ -45,8 +46,8 @@ export function Sidebar() {
           <span className="text-[#d4af37] font-medium text-sm -ml-0.5">f</span>
         </div>
         <div className="flex flex-col">
-          <span className="font-semibold text-foreground">Finance</span>
-          <span className="text-xs text-muted-foreground">by Karalisweb v. 2.1</span>
+          <span className="font-semibold text-foreground">KW Cashflow</span>
+          <span className="text-xs text-muted-foreground">v2.1</span>
         </div>
       </div>
 
@@ -100,6 +101,19 @@ export function Sidebar() {
         >
           <Settings className={cn("h-5 w-5", pathname === "/settings" && "text-primary")} />
           <span>Impostazioni</span>
+        </Link>
+
+        <Link
+          href="/guida"
+          className={cn(
+            "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+            pathname === "/guida"
+              ? "bg-primary/10 text-primary"
+              : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+          )}
+        >
+          <HelpCircle className={cn("h-5 w-5", pathname === "/guida" && "text-primary")} />
+          <span>Guida</span>
         </Link>
 
         <button

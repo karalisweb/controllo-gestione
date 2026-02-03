@@ -97,10 +97,10 @@ export const budgetItems = sqliteTable("budget_items", {
   deletedAt: integer("deleted_at", { mode: "timestamp" }),
 });
 
-// Movimenti reali (consuntivo) - importati da Qonto - importi in centesimi
+// Movimenti reali (consuntivo) - importi in centesimi
 export const transactions = sqliteTable("transactions", {
   id: integer("id").primaryKey({ autoIncrement: true }),
-  externalId: text("external_id").unique(), // ID Qonto per evitare duplicati
+  externalId: text("external_id").unique(), // ID esterno per evitare duplicati
   date: text("date").notNull(), // formato YYYY-MM-DD
   description: text("description"),
   amount: integer("amount").notNull(), // centesimi, positivo = entrata, negativo = uscita
@@ -113,7 +113,7 @@ export const transactions = sqliteTable("transactions", {
   matchedBudgetItemId: integer("matched_budget_item_id").references(() => budgetItems.id), // voce previsionale corrispondente
   linkedTransactionId: integer("linked_transaction_id"), // collegamento a transazione originale (es. incasso per cui questo è il bonifico soci)
   notes: text("notes"),
-  rawData: text("raw_data"), // JSON dati originali Qonto
+  rawData: text("raw_data"), // JSON dati originali
   createdAt: integer("created_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
   deletedAt: integer("deleted_at", { mode: "timestamp" }),
 });

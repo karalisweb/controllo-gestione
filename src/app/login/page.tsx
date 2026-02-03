@@ -313,7 +313,7 @@ function LoginForm() {
               <span className="text-3xl font-bold bg-gradient-to-r from-orange-500 to-amber-400 bg-clip-text text-transparent">K</span>
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold bg-gradient-to-r from-orange-500 to-amber-400 bg-clip-text text-transparent">Finance</CardTitle>
+          <CardTitle className="text-2xl font-bold bg-gradient-to-r from-orange-500 to-amber-400 bg-clip-text text-transparent">KW Cashflow</CardTitle>
           <CardDescription className="text-muted-foreground">
             {getDescription()}
           </CardDescription>
