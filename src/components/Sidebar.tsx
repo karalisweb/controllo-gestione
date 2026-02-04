@@ -8,11 +8,11 @@ import {
   CalendarRange,
   Receipt,
   CreditCard,
-  Settings,
   Target,
   LogOut,
   User,
   HelpCircle,
+  Wallet,
 } from "lucide-react";
 
 const mainNavItems = [
@@ -99,8 +99,8 @@ export function Sidebar() {
               : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
           )}
         >
-          <Settings className={cn("h-5 w-5", pathname === "/settings" && "text-primary")} />
-          <span>Impostazioni</span>
+          <Wallet className={cn("h-5 w-5", pathname === "/settings" && "text-primary")} />
+          <span>Piano Annuale</span>
         </Link>
 
         <Link
