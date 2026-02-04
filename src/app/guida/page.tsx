@@ -1,75 +1,60 @@
 "use client";
 
 import { MobileHeader } from "@/components/MobileHeader";
-import { Card } from "@/components/ui/card";
 import Link from "next/link";
 import {
   BookOpen,
-  LogIn,
   Receipt,
   CalendarRange,
   CreditCard,
   Target,
   Settings,
-  User,
-  HelpCircle,
   ChevronRight,
+  Zap,
 } from "lucide-react";
 
 const sections = [
   {
-    id: "introduzione",
-    title: "Introduzione",
-    description: "Cos'è KW Cashflow e come usarlo",
+    id: "come-funziona",
+    title: "Come funziona KW Cashflow",
+    description: "Panoramica dell'app e logica di utilizzo",
     icon: BookOpen,
-  },
-  {
-    id: "accesso-e-login",
-    title: "Accesso e Login",
-    description: "Come accedere, 2FA, password dimenticata",
-    icon: LogIn,
+    color: "bg-blue-500/10 text-blue-500",
   },
   {
     id: "consuntivo",
     title: "Consuntivo",
-    description: "Registrare incassi e spese reali",
+    description: "Registra incassi e spese reali",
     icon: Receipt,
+    color: "bg-green-500/10 text-green-500",
   },
   {
     id: "previsionale",
     title: "Previsionale",
-    description: "Proiezioni e pianificazione",
+    description: "Visualizza entrate e uscite future",
     icon: CalendarRange,
+    color: "bg-purple-500/10 text-purple-500",
   },
   {
-    id: "piani-di-rientro-pdr",
-    title: "Piani di Rientro (PDR)",
-    description: "Gestire debiti a rate",
-    icon: CreditCard,
+    id: "piano-annuale",
+    title: "Piano Annuale",
+    description: "Configura spese e incassi ricorrenti",
+    icon: Settings,
+    color: "bg-orange-500/10 text-orange-500",
   },
   {
     id: "piano-commerciale",
     title: "Piano Commerciale",
-    description: "Obiettivi e vendite",
+    description: "Gestisci obiettivi e vendite",
     icon: Target,
+    color: "bg-pink-500/10 text-pink-500",
   },
   {
-    id: "piano-annuale-impostazioni",
-    title: "Piano Annuale",
-    description: "Centri di costo/ricavo, spese e incassi previsti",
-    icon: Settings,
-  },
-  {
-    id: "profilo-e-sicurezza",
-    title: "Profilo e Sicurezza",
-    description: "Password, 2FA, logout",
-    icon: User,
-  },
-  {
-    id: "domande-frequenti",
-    title: "Domande Frequenti",
-    description: "FAQ e risposte rapide",
-    icon: HelpCircle,
+    id: "piani-di-rientro",
+    title: "Piani di Rientro",
+    description: "Gestisci debiti e rate",
+    icon: CreditCard,
+    color: "bg-red-500/10 text-red-500",
   },
 ];
 
@@ -78,79 +63,67 @@ export default function GuidaPage() {
     <div className="min-h-screen pb-20 lg:pb-6">
       <MobileHeader title="Guida" />
 
-      <div className="p-4 lg:p-6 max-w-4xl mx-auto">
+      <div className="p-4 lg:p-6 max-w-2xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-2xl lg:text-3xl font-bold mb-2">Guida Utente</h1>
+          <h1 className="text-2xl lg:text-3xl font-bold mb-2">Guida</h1>
           <p className="text-muted-foreground">
-            Tutto quello che ti serve sapere per usare KW Cashflow
+            Impara a usare KW Cashflow in modo efficace
           </p>
         </div>
 
-        {/* Quick Answers */}
-        <Card className="p-4 mb-8 bg-primary/5 border-primary/20">
-          <h2 className="font-semibold mb-3 flex items-center gap-2">
-            <HelpCircle className="h-5 w-5 text-primary" />
-            Risposte rapide
-          </h2>
-          <div className="grid gap-3 text-sm">
-            <div className="flex items-start gap-2">
-              <span className="text-primary font-medium">💰</span>
-              <div>
-                <span className="font-medium">Quanto ho in cassa?</span>
-                <span className="text-muted-foreground"> → Dashboard → Saldo disponibile</span>
-              </div>
+        {/* Quick Start */}
+        <div className="mb-8 p-5 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20">
+          <div className="flex items-start gap-4">
+            <div className="p-2.5 rounded-lg bg-primary/20">
+              <Zap className="h-5 w-5 text-primary" />
             </div>
-            <div className="flex items-start gap-2">
-              <span className="text-primary font-medium">📅</span>
-              <div>
-                <span className="font-medium">Cosa devo pagare?</span>
-                <span className="text-muted-foreground"> → Dashboard → Scadenze 7 giorni</span>
-              </div>
-            </div>
-            <div className="flex items-start gap-2">
-              <span className="text-primary font-medium">🎯</span>
-              <div>
-                <span className="font-medium">Quanto devo fatturare?</span>
-                <span className="text-muted-foreground"> → Dashboard → Target fatturato</span>
-              </div>
+            <div>
+              <h2 className="font-semibold mb-2">In breve</h2>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                KW Cashflow ti aiuta a capire <strong className="text-foreground">quanto hai</strong>, <strong className="text-foreground">quanto devi pagare</strong> e <strong className="text-foreground">quanto devi fatturare</strong>.
+                Non è un software di contabilità, ma uno strumento per prendere decisioni rapide sul tuo cashflow.
+              </p>
             </div>
           </div>
-        </Card>
+        </div>
 
-        {/* Sections Grid */}
-        <div className="grid gap-3">
+        {/* Sections */}
+        <div className="space-y-3">
+          <p className="text-sm font-medium text-muted-foreground px-1 mb-4">
+            SEZIONI DELLA GUIDA
+          </p>
+
           {sections.map((section) => {
             const Icon = section.icon;
             return (
               <Link
                 key={section.id}
                 href={`/guida/${section.id}`}
-                className="block"
+                className="flex items-center gap-4 p-4 rounded-xl border border-border/50 hover:border-border hover:bg-accent/30 transition-all group"
               >
-                <Card className="p-4 hover:bg-accent/50 transition-colors cursor-pointer">
-                  <div className="flex items-center gap-4">
-                    <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <Icon className="h-5 w-5 text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-medium">{section.title}</h3>
-                      <p className="text-sm text-muted-foreground truncate">
-                        {section.description}
-                      </p>
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                  </div>
-                </Card>
+                <div className={`p-2.5 rounded-lg ${section.color}`}>
+                  <Icon className="h-5 w-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-medium group-hover:text-primary transition-colors">
+                    {section.title}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    {section.description}
+                  </p>
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
               </Link>
             );
           })}
         </div>
 
         {/* Footer */}
-        <div className="mt-8 text-center text-sm text-muted-foreground">
-          <p>KW Cashflow v2.1</p>
-          <p>Guida aggiornata al 3 Febbraio 2026</p>
+        <div className="mt-10 pt-6 border-t border-border/50 text-center">
+          <p className="text-xs text-muted-foreground">
+            KW Cashflow v2.1
+          </p>
         </div>
       </div>
     </div>

@@ -1,704 +1,808 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { MobileHeader } from "@/components/MobileHeader";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
+import {
+  ArrowLeft,
+  ChevronRight,
+  BookOpen,
+  Receipt,
+  CalendarRange,
+  CreditCard,
+  Target,
+  Settings,
+  CheckCircle2,
+  AlertCircle,
+  Lightbulb,
+  ArrowRight,
+} from "lucide-react";
 
-const guideSections: Record<string, { title: string; content: React.ReactNode }> = {
-  "introduzione": {
-    title: "Introduzione",
-    content: (
-      <div className="prose prose-invert max-w-none">
-        <h2>Cos&apos;è KW Cashflow?</h2>
-        <p>
-          KW Cashflow è il tuo strumento per <strong>prendere decisioni rapide sul cashflow aziendale</strong>.
-          Non è un software di contabilità, ma un&apos;app decisionale che risponde a 3 domande fondamentali:
-        </p>
+// ============================================
+// COMPONENTI UI PER LA GUIDA
+// ============================================
 
-        <table>
-          <thead>
-            <tr>
-              <th>Domanda</th>
-              <th>Dove trovi la risposta</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>💰 <strong>Quanto ho in cassa?</strong></td>
-              <td>Dashboard → Saldo disponibile</td>
-            </tr>
-            <tr>
-              <td>📅 <strong>Cosa devo pagare?</strong></td>
-              <td>Dashboard → Scadenze prossimi 7 giorni</td>
-            </tr>
-            <tr>
-              <td>🎯 <strong>Quanto devo fatturare?</strong></td>
-              <td>Dashboard → Target fatturato</td>
-            </tr>
-          </tbody>
-        </table>
+function Section({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return <div className={`mb-8 ${className}`}>{children}</div>;
+}
 
-        <h2>Quando usare l&apos;app</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Frequenza</th>
-              <th>Cosa fare</th>
-              <th>Tempo</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><strong>Ogni giorno</strong></td>
-              <td>Registra incassi e spese quando avvengono</td>
-              <td>30 secondi</td>
-            </tr>
-            <tr>
-              <td><strong>Ogni settimana</strong></td>
-              <td>Verifica se le previsioni sono rispettate</td>
-              <td>5 minuti</td>
-            </tr>
-            <tr>
-              <td><strong>Ogni mese</strong></td>
-              <td>Analizza vendite, aggiusta il target</td>
-              <td>15 minuti</td>
-            </tr>
-          </tbody>
-        </table>
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return <h2 className="text-lg font-semibold mb-4">{children}</h2>;
+}
+
+function Paragraph({ children }: { children: React.ReactNode }) {
+  return <p className="text-muted-foreground leading-relaxed mb-4">{children}</p>;
+}
+
+function StepList({ children }: { children: React.ReactNode }) {
+  return <div className="space-y-3 mb-6">{children}</div>;
+}
+
+function Step({ number, title, description }: { number: number; title: string; description?: string }) {
+  return (
+    <div className="flex gap-4">
+      <div className="flex-shrink-0 w-7 h-7 rounded-full bg-primary/20 text-primary flex items-center justify-center text-sm font-medium">
+        {number}
       </div>
+      <div className="flex-1 pt-0.5">
+        <p className="font-medium">{title}</p>
+        {description && <p className="text-sm text-muted-foreground mt-1">{description}</p>}
+      </div>
+    </div>
+  );
+}
+
+function Tip({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex gap-3 p-4 rounded-lg bg-blue-500/10 border border-blue-500/20 mb-4">
+      <Lightbulb className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
+      <p className="text-sm leading-relaxed">{children}</p>
+    </div>
+  );
+}
+
+function Warning({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex gap-3 p-4 rounded-lg bg-amber-500/10 border border-amber-500/20 mb-4">
+      <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
+      <p className="text-sm leading-relaxed">{children}</p>
+    </div>
+  );
+}
+
+function KeyPoint({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex gap-3 p-4 rounded-lg bg-green-500/10 border border-green-500/20 mb-4">
+      <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+      <p className="text-sm leading-relaxed">{children}</p>
+    </div>
+  );
+}
+
+function FlowBox({ title, steps }: { title: string; steps: string[] }) {
+  return (
+    <div className="p-4 rounded-lg border border-border/50 bg-card/50 mb-4">
+      <p className="text-sm font-medium mb-3">{title}</p>
+      <div className="flex flex-wrap items-center gap-2">
+        {steps.map((step, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <span className="px-3 py-1.5 rounded-md bg-muted text-sm">{step}</span>
+            {i < steps.length - 1 && <ArrowRight className="h-4 w-4 text-muted-foreground" />}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function InfoCard({ title, value, subtitle }: { title: string; value: string; subtitle?: string }) {
+  return (
+    <div className="p-4 rounded-lg border border-border/50 bg-card/50">
+      <p className="text-sm text-muted-foreground mb-1">{title}</p>
+      <p className="text-lg font-semibold">{value}</p>
+      {subtitle && <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>}
+    </div>
+  );
+}
+
+// ============================================
+// CONTENUTI DELLE SEZIONI
+// ============================================
+
+const sections: Record<string, {
+  title: string;
+  subtitle: string;
+  icon: React.ElementType;
+  color: string;
+  content: React.ReactNode;
+}> = {
+  "come-funziona": {
+    title: "Come funziona KW Cashflow",
+    subtitle: "Panoramica dell'app e logica di utilizzo",
+    icon: BookOpen,
+    color: "bg-blue-500/10 text-blue-500",
+    content: (
+      <>
+        <Section>
+          <SectionTitle>A cosa serve</SectionTitle>
+          <Paragraph>
+            KW Cashflow è uno strumento decisionale per gestire il flusso di cassa della tua attività.
+            Ti permette di avere sempre sotto controllo la situazione finanziaria e prendere decisioni informate.
+          </Paragraph>
+          <Paragraph>
+            L&apos;app risponde a tre domande fondamentali:
+          </Paragraph>
+          <div className="grid gap-3 mb-4">
+            <InfoCard title="Quanto ho in cassa?" value="Saldo disponibile" subtitle="Dashboard" />
+            <InfoCard title="Cosa devo pagare?" value="Scadenze imminenti" subtitle="Dashboard" />
+            <InfoCard title="Quanto devo fatturare?" value="Target mensile" subtitle="Dashboard" />
+          </div>
+        </Section>
+
+        <Section>
+          <SectionTitle>La logica dell&apos;app</SectionTitle>
+          <Paragraph>
+            L&apos;app distingue tra ciò che è <strong>reale</strong> (già successo) e ciò che è <strong>previsto</strong> (deve ancora succedere):
+          </Paragraph>
+          <div className="grid gap-3 mb-4">
+            <div className="p-4 rounded-lg border border-green-500/30 bg-green-500/5">
+              <p className="font-medium text-green-500 mb-1">Consuntivo = Reale</p>
+              <p className="text-sm text-muted-foreground">Soldi che hai già incassato o spese che hai già pagato</p>
+            </div>
+            <div className="p-4 rounded-lg border border-purple-500/30 bg-purple-500/5">
+              <p className="font-medium text-purple-500 mb-1">Previsionale = Futuro</p>
+              <p className="text-sm text-muted-foreground">Incassi e spese che ti aspetti nei prossimi mesi</p>
+            </div>
+          </div>
+        </Section>
+
+        <Section>
+          <SectionTitle>Come usarla quotidianamente</SectionTitle>
+          <div className="space-y-4">
+            <div className="flex gap-4 p-4 rounded-lg border border-border/50">
+              <div className="text-2xl">📅</div>
+              <div>
+                <p className="font-medium">Ogni giorno (30 secondi)</p>
+                <p className="text-sm text-muted-foreground">Quando ricevi un incasso o paghi una spesa, registralo nel Consuntivo</p>
+              </div>
+            </div>
+            <div className="flex gap-4 p-4 rounded-lg border border-border/50">
+              <div className="text-2xl">📊</div>
+              <div>
+                <p className="font-medium">Ogni settimana (5 minuti)</p>
+                <p className="text-sm text-muted-foreground">Controlla la Dashboard per vedere se sei in linea con le previsioni</p>
+              </div>
+            </div>
+            <div className="flex gap-4 p-4 rounded-lg border border-border/50">
+              <div className="text-2xl">🎯</div>
+              <div>
+                <p className="font-medium">Ogni mese (15 minuti)</p>
+                <p className="text-sm text-muted-foreground">Rivedi il Piano Commerciale e aggiusta gli obiettivi di fatturato</p>
+              </div>
+            </div>
+          </div>
+        </Section>
+
+        <Section>
+          <SectionTitle>La ripartizione degli incassi</SectionTitle>
+          <Paragraph>
+            Ogni volta che incassi dei soldi, non sono tutti &quot;tuoi&quot;. L&apos;app calcola automaticamente come si dividono:
+          </Paragraph>
+          <div className="grid grid-cols-3 gap-3 mb-4">
+            <InfoCard title="IVA" value="22%" subtitle="Da versare allo Stato" />
+            <InfoCard title="Soci" value="30%" subtitle="Quote Daniela e Alessio" />
+            <InfoCard title="Disponibile" value="48%" subtitle="Per la cassa" />
+          </div>
+          <Tip>
+            Quando nella Dashboard vedi &quot;devi fatturare €10.000&quot;, significa che ti servono €10.000 lordi.
+            Di questi, solo €4.800 (il 48%) resteranno disponibili in cassa.
+          </Tip>
+        </Section>
+      </>
     ),
   },
-  "accesso-e-login": {
-    title: "Accesso e Login",
-    content: (
-      <div className="prose prose-invert max-w-none">
-        <h2>Come accedere</h2>
-        <ol>
-          <li>Vai su <strong>finance.karalisdemo.it</strong></li>
-          <li>Inserisci la tua <strong>email</strong></li>
-          <li>Inserisci la tua <strong>password</strong></li>
-          <li>Clicca <strong>Accedi</strong></li>
-        </ol>
 
-        <h2>Verifica in due passaggi (2FA)</h2>
-        <p>Se hai attivato la verifica in due passaggi:</p>
-        <ol>
-          <li>Dopo aver inserito email e password, riceverai un <strong>codice via email</strong></li>
-          <li>Il codice è di <strong>6 cifre</strong> e scade dopo <strong>10 minuti</strong></li>
-          <li>Inserisci il codice e clicca <strong>Verifica</strong></li>
-        </ol>
-        <p className="bg-primary/10 p-3 rounded-lg">
-          💡 <strong>Tip:</strong> Se non ricevi il codice, controlla la cartella spam o clicca &quot;Reinvia codice&quot;
-        </p>
-
-        <h2>Password dimenticata?</h2>
-        <ol>
-          <li>Nella pagina di login, clicca <strong>&quot;Password dimenticata?&quot;</strong></li>
-          <li>Inserisci la tua email</li>
-          <li>Riceverai un codice via email</li>
-          <li>Inserisci il codice e la nuova password</li>
-          <li>Clicca <strong>Reimposta password</strong></li>
-        </ol>
-        <p className="bg-amber-500/10 p-3 rounded-lg text-amber-200">
-          ⚠️ <strong>Attenzione:</strong> La nuova password deve essere di almeno 6 caratteri
-        </p>
-      </div>
-    ),
-  },
   "consuntivo": {
     title: "Consuntivo",
+    subtitle: "Registra incassi e spese reali",
+    icon: Receipt,
+    color: "bg-green-500/10 text-green-500",
     content: (
-      <div className="prose prose-invert max-w-none">
-        <p>Il <strong>Consuntivo</strong> è dove registri tutti i movimenti reali: incassi ricevuti e spese effettuate.</p>
+      <>
+        <Section>
+          <SectionTitle>A cosa serve</SectionTitle>
+          <Paragraph>
+            Il Consuntivo è dove registri tutti i movimenti di denaro <strong>che sono già avvenuti</strong>:
+            incassi che hai ricevuto e spese che hai pagato. È la fotografia della tua situazione reale.
+          </Paragraph>
+          <KeyPoint>
+            Il Consuntivo registra solo fatti, non previsioni. Se un cliente ti deve dei soldi ma non te li ha ancora dati, non va qui.
+          </KeyPoint>
+        </Section>
 
-        <h2>Come accedere</h2>
-        <p>📍 <strong>Menu laterale → Consuntivo</strong></p>
+        <Section>
+          <SectionTitle>Quando registrare un incasso</SectionTitle>
+          <Paragraph>
+            Ogni volta che ricevi un pagamento (bonifico, contanti, carta), devi registrarlo.
+            Ma prima di inserirlo, verifica alcune cose:
+          </Paragraph>
 
-        <h2>Cosa vedi</h2>
-        <ul>
-          <li><strong>Totale Entrate:</strong> Somma di tutti gli incassi registrati</li>
-          <li><strong>Totale Uscite:</strong> Somma di tutte le spese registrate</li>
-          <li><strong>Saldo:</strong> Differenza tra entrate e uscite</li>
-          <li><strong>Riepilogo Ripartizioni:</strong> Quanto è stato versato ai soci e all&apos;IVA</li>
-        </ul>
+          <FlowBox
+            title="Flusso corretto per registrare un incasso:"
+            steps={["Verifica Previsionale", "Controlla Piano Annuale", "Calcola ripartizione", "Registra in Consuntivo"]}
+          />
 
-        <h2>Registrare un incasso</h2>
-        <ol>
-          <li>Clicca <strong>+ Nuovo Movimento</strong></li>
-          <li>Seleziona <strong>Entrata</strong></li>
-          <li>Compila:
-            <ul>
-              <li><strong>Data:</strong> quando hai ricevuto il pagamento</li>
-              <li><strong>Importo:</strong> l&apos;importo LORDO (IVA inclusa)</li>
-              <li><strong>Descrizione:</strong> nome cliente o motivo</li>
-              <li><strong>Centro di ricavo:</strong> categoria (es. Siti Web, Marketing)</li>
-            </ul>
-          </li>
-          <li>Clicca <strong>Salva</strong></li>
-        </ol>
+          <StepList>
+            <Step
+              number={1}
+              title="Verifica nel Previsionale"
+              description="L'incasso era già previsto? Se sì, troverai una voce corrispondente nel Previsionale. Questo ti aiuta a capire se stai rispettando le previsioni."
+            />
+            <Step
+              number={2}
+              title="Controlla il Piano Annuale"
+              description="È un cliente che paga regolarmente (es. canone mensile)? Se è la prima volta che ti paga, vai nel Piano Annuale e aggiungilo agli Incassi Previsti così sarà tracciato anche per i mesi futuri."
+            />
+            <Step
+              number={3}
+              title="Calcola la ripartizione"
+              description="L'app calcola automaticamente quanto va all'IVA (22%), ai soci (30%) e quanto resta disponibile (48%). Verifica che i bonifici ai soci siano stati fatti."
+            />
+            <Step
+              number={4}
+              title="Registra nel Consuntivo"
+              description="Inserisci l'importo LORDO (IVA inclusa), la data e seleziona il Centro di Ricavo corretto."
+            />
+          </StepList>
 
-        <p className="bg-primary/10 p-3 rounded-lg">
-          💡 <strong>Tip:</strong> L&apos;app calcola automaticamente la ripartizione:<br/>
-          • <strong>22%</strong> → IVA (da versare allo Stato)<br/>
-          • <strong>30%</strong> → Quote soci (Daniela 10% + Alessio 20%)<br/>
-          • <strong>48%</strong> → Disponibile per la cassa
-        </p>
+          <Warning>
+            Inserisci sempre l&apos;importo LORDO (con IVA). L&apos;app farà i calcoli per te. Se inserisci €1.000,
+            il sistema sa che €180 sono IVA e solo €573 sono disponibili per la cassa.
+          </Warning>
+        </Section>
 
-        <h2>Registrare una spesa</h2>
-        <ol>
-          <li>Clicca <strong>+ Nuovo Movimento</strong></li>
-          <li>Seleziona <strong>Uscita</strong></li>
-          <li>Compila:
-            <ul>
-              <li><strong>Data:</strong> quando hai pagato</li>
-              <li><strong>Importo:</strong> l&apos;importo pagato</li>
-              <li><strong>Descrizione:</strong> fornitore o motivo</li>
-              <li><strong>Centro di costo:</strong> categoria (es. Software, Telefonia)</li>
-            </ul>
-          </li>
-          <li>Clicca <strong>Salva</strong></li>
-        </ol>
+        <Section>
+          <SectionTitle>Quando registrare una spesa</SectionTitle>
+          <Paragraph>
+            Ogni volta che paghi qualcosa (fornitore, abbonamento, affitto), registralo.
+            Il flusso è simile a quello degli incassi:
+          </Paragraph>
 
-        <h2>Calcolare la ripartizione di un incasso</h2>
-        <p>Quando registri un incasso, puoi vedere come viene ripartito:</p>
-        <ol>
-          <li>Nella lista movimenti, trova l&apos;incasso</li>
-          <li>Clicca il pulsante <strong>Ripartisci</strong> (icona calcolatrice)</li>
-          <li>Vedi il dettaglio</li>
-        </ol>
+          <FlowBox
+            title="Flusso corretto per registrare una spesa:"
+            steps={["Verifica Previsionale", "Controlla Piano Annuale", "Registra in Consuntivo"]}
+          />
 
-        <table>
-          <thead>
-            <tr>
-              <th>Voce</th>
-              <th>Percentuale</th>
-              <th>Esempio su €1.000</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Lordo IVA</td>
-              <td>100%</td>
-              <td>€1.000,00</td>
-            </tr>
-            <tr>
-              <td>IVA 22%</td>
-              <td>22% del netto</td>
-              <td>€180,33</td>
-            </tr>
-            <tr>
-              <td>Daniela</td>
-              <td>10% del netto</td>
-              <td>€81,97</td>
-            </tr>
-            <tr>
-              <td>Alessio</td>
-              <td>20% del netto</td>
-              <td>€163,93</td>
-            </tr>
-            <tr>
-              <td><strong>Disponibile</strong></td>
-              <td>48% del lordo</td>
-              <td><strong>€573,77</strong></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+          <StepList>
+            <Step
+              number={1}
+              title="Verifica nel Previsionale"
+              description="La spesa era già prevista? Controlla se c'è una voce corrispondente."
+            />
+            <Step
+              number={2}
+              title="Controlla il Piano Annuale"
+              description="È una spesa ricorrente (es. abbonamento mensile)? Se è nuova, vai nel Piano Annuale e aggiungila alle Spese Previste."
+            />
+            <Step
+              number={3}
+              title="Registra nel Consuntivo"
+              description="Inserisci l'importo pagato, la data e seleziona il Centro di Costo corretto."
+            />
+          </StepList>
+        </Section>
+
+        <Section>
+          <SectionTitle>Come registrare un movimento</SectionTitle>
+          <StepList>
+            <Step number={1} title="Vai nella sezione Consuntivo" description="Menu laterale → Consuntivo" />
+            <Step number={2} title="Clicca '+ Nuovo Movimento'" />
+            <Step number={3} title="Compila i campi" description="Data, importo, descrizione, tipo (entrata/uscita), centro di costo o ricavo" />
+            <Step number={4} title="Salva" />
+          </StepList>
+          <Tip>
+            Per gli incassi, dopo aver salvato puoi cliccare &quot;Ripartisci&quot; per vedere nel dettaglio come si dividono i soldi tra IVA, soci e cassa.
+          </Tip>
+        </Section>
+      </>
     ),
   },
+
   "previsionale": {
     title: "Previsionale",
+    subtitle: "Visualizza entrate e uscite future",
+    icon: CalendarRange,
+    color: "bg-purple-500/10 text-purple-500",
     content: (
-      <div className="prose prose-invert max-w-none">
-        <p>Il <strong>Previsionale</strong> mostra cosa ti aspetti di incassare e spendere nei prossimi mesi.</p>
+      <>
+        <Section>
+          <SectionTitle>A cosa serve</SectionTitle>
+          <Paragraph>
+            Il Previsionale mostra tutti gli incassi e le spese che ti aspetti nel futuro.
+            È generato automaticamente dal Piano Annuale e dal Piano Commerciale.
+          </Paragraph>
+          <KeyPoint>
+            Il Previsionale non si compila manualmente. Si popola automaticamente quando configuri correttamente il Piano Annuale e il Piano Commerciale.
+          </KeyPoint>
+        </Section>
 
-        <h2>Come accedere</h2>
-        <p>📍 <strong>Menu laterale → Previsionale</strong></p>
+        <Section>
+          <SectionTitle>Da dove vengono i dati</SectionTitle>
+          <div className="space-y-3 mb-4">
+            <div className="p-4 rounded-lg border border-border/50">
+              <p className="font-medium mb-1">Spese previste</p>
+              <p className="text-sm text-muted-foreground">Vengono dal Piano Annuale → sezione &quot;Spese Previste&quot;</p>
+            </div>
+            <div className="p-4 rounded-lg border border-border/50">
+              <p className="font-medium mb-1">Incassi previsti</p>
+              <p className="text-sm text-muted-foreground">Vengono dal Piano Annuale → sezione &quot;Incassi Previsti&quot;</p>
+            </div>
+            <div className="p-4 rounded-lg border border-border/50">
+              <p className="font-medium mb-1">Rate vendite</p>
+              <p className="text-sm text-muted-foreground">Vengono dal Piano Commerciale quando chiudi una vendita</p>
+            </div>
+            <div className="p-4 rounded-lg border border-border/50">
+              <p className="font-medium mb-1">Rate debiti</p>
+              <p className="text-sm text-muted-foreground">Vengono dai Piani di Rientro</p>
+            </div>
+          </div>
+        </Section>
 
-        <h2>Cosa vedi</h2>
-        <p>Una tabella con tutte le voci previste:</p>
-        <ul>
-          <li><strong>Data:</strong> quando è previsto il movimento</li>
-          <li><strong>Descrizione:</strong> cosa è (es. &quot;Wind Telefonica&quot;, &quot;Cliente Rossi&quot;)</li>
-          <li><strong>Tipo:</strong> Entrata (verde) o Uscita (rosso)</li>
-          <li><strong>Importo:</strong> quanto</li>
-          <li><strong>Centro:</strong> categoria associata</li>
-        </ul>
+        <Section>
+          <SectionTitle>Affidabilità degli incassi</SectionTitle>
+          <Paragraph>
+            Non tutti gli incassi previsti sono ugualmente certi. Per questo ogni incasso ha un livello di affidabilità:
+          </Paragraph>
+          <div className="space-y-3 mb-4">
+            <div className="flex gap-3 p-3 rounded-lg border border-green-500/30 bg-green-500/5">
+              <div className="w-3 h-3 rounded-full bg-green-500 mt-1.5" />
+              <div>
+                <p className="font-medium">Alta</p>
+                <p className="text-sm text-muted-foreground">Incasso praticamente certo. Viene contato al 100% nelle proiezioni.</p>
+              </div>
+            </div>
+            <div className="flex gap-3 p-3 rounded-lg border border-yellow-500/30 bg-yellow-500/5">
+              <div className="w-3 h-3 rounded-full bg-yellow-500 mt-1.5" />
+              <div>
+                <p className="font-medium">Media</p>
+                <p className="text-sm text-muted-foreground">Probabile ma non certo. Viene contato solo dopo quelli ad alta affidabilità.</p>
+              </div>
+            </div>
+            <div className="flex gap-3 p-3 rounded-lg border border-red-500/30 bg-red-500/5">
+              <div className="w-3 h-3 rounded-full bg-red-500 mt-1.5" />
+              <div>
+                <p className="font-medium">Bassa</p>
+                <p className="text-sm text-muted-foreground">Incerto. NON viene contato nelle proiezioni per sicurezza.</p>
+              </div>
+            </div>
+          </div>
+          <Tip>
+            L&apos;app è volutamente pessimista. Preferisce dirti che ti mancano soldi piuttosto che farti credere di averne abbastanza quando non è così.
+          </Tip>
+        </Section>
 
-        <h2>Affidabilità degli incassi</h2>
-        <p>Ogni incasso previsto ha un livello di affidabilità:</p>
-        <table>
-          <thead>
-            <tr>
-              <th>Livello</th>
-              <th>Significato</th>
-              <th>Come viene calcolato</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>🟢 <strong>Alta</strong></td>
-              <td>Sicuro al 100%</td>
-              <td>Conta tutto nelle proiezioni</td>
-            </tr>
-            <tr>
-              <td>🟡 <strong>Media</strong></td>
-              <td>Probabile</td>
-              <td>Conta solo dopo quelli &quot;Alta&quot;</td>
-            </tr>
-            <tr>
-              <td>🔴 <strong>Bassa</strong></td>
-              <td>Incerto</td>
-              <td>NON conta nelle proiezioni</td>
-            </tr>
-          </tbody>
-        </table>
-        <p className="bg-primary/10 p-3 rounded-lg">
-          💡 <strong>Tip:</strong> L&apos;app è pessimista di default. Gli incassi &quot;Bassa&quot; non vengono mai contati per evitare sorprese.
-        </p>
-
-        <h2>Priorità delle spese</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Priorità</th>
-              <th>Significato</th>
-              <th>Esempi</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>🔴 <strong>Essenziale</strong></td>
-              <td>DEVE essere pagata</td>
-              <td>Server, strumenti vitali</td>
-            </tr>
-            <tr>
-              <td>🟠 <strong>Importante</strong></td>
-              <td>Difficile rinunciare</td>
-              <td>Affitto, telefono</td>
-            </tr>
-            <tr>
-              <td>🟡 <strong>Investimento</strong></td>
-              <td>Utile ma rinviabile</td>
-              <td>Software opzionali</td>
-            </tr>
-            <tr>
-              <td>⚪ <strong>Normale</strong></td>
-              <td>Ordinaria</td>
-              <td>Altro</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+        <Section>
+          <SectionTitle>Come usare il Previsionale</SectionTitle>
+          <Paragraph>
+            Il Previsionale serve principalmente per <strong>confrontare</strong> ciò che avevi previsto con ciò che è realmente successo:
+          </Paragraph>
+          <StepList>
+            <Step number={1} title="Guarda le voci del mese corrente" description="Quali incassi ti aspettavi? Quali spese?" />
+            <Step number={2} title="Confronta con il Consuntivo" description="Gli incassi sono arrivati? Le spese le hai pagate?" />
+            <Step number={3} title="Se qualcosa non torna, agisci" description="Cliente in ritardo? Spesa imprevista? Aggiorna le previsioni." />
+          </StepList>
+        </Section>
+      </>
     ),
   },
-  "piani-di-rientro-pdr": {
-    title: "Piani di Rientro (PDR)",
+
+  "piano-annuale": {
+    title: "Piano Annuale",
+    subtitle: "Configura spese e incassi ricorrenti",
+    icon: Settings,
+    color: "bg-orange-500/10 text-orange-500",
     content: (
-      <div className="prose prose-invert max-w-none">
-        <p>I <strong>Piani di Rientro</strong> servono a gestire i debiti da pagare a rate.</p>
+      <>
+        <Section>
+          <SectionTitle>A cosa serve</SectionTitle>
+          <Paragraph>
+            Il Piano Annuale è dove configuri tutte le spese e gli incassi che si ripetono regolarmente.
+            Sono i &quot;mattoni&quot; che costruiscono il tuo Previsionale automaticamente.
+          </Paragraph>
+          <KeyPoint>
+            Configura bene il Piano Annuale una volta sola, e il Previsionale si popolerà automaticamente per tutto l&apos;anno.
+          </KeyPoint>
+        </Section>
 
-        <h2>Come accedere</h2>
-        <p>📍 <strong>Menu laterale → Piani di Rientro</strong></p>
+        <Section>
+          <SectionTitle>Le quattro sezioni</SectionTitle>
+          <div className="space-y-4 mb-4">
+            <div className="p-4 rounded-lg border border-border/50">
+              <p className="font-medium mb-2">1. Centri di Costo</p>
+              <p className="text-sm text-muted-foreground mb-2">
+                Sono le categorie in cui raggruppare le spese. Esempi: Telefonia, Software, Server, Collaboratori, Ufficio.
+              </p>
+              <p className="text-xs text-muted-foreground">Servono per capire dove vanno i soldi quando analizzi i report.</p>
+            </div>
+            <div className="p-4 rounded-lg border border-border/50">
+              <p className="font-medium mb-2">2. Spese Previste</p>
+              <p className="text-sm text-muted-foreground mb-2">
+                Sono le spese ricorrenti che sai di dover pagare. Esempi: abbonamento Wind, Asana, affitto ufficio.
+              </p>
+              <p className="text-xs text-muted-foreground">Per ogni spesa indichi: importo, frequenza (mensile/trimestrale/annuale), giorno del mese, priorità.</p>
+            </div>
+            <div className="p-4 rounded-lg border border-border/50">
+              <p className="font-medium mb-2">3. Centri di Ricavo</p>
+              <p className="text-sm text-muted-foreground mb-2">
+                Sono le categorie in cui raggruppare gli incassi. Esempi: Siti Web, Marketing, Licenze, Domini.
+              </p>
+              <p className="text-xs text-muted-foreground">Servono per capire da dove arrivano i soldi.</p>
+            </div>
+            <div className="p-4 rounded-lg border border-border/50">
+              <p className="font-medium mb-2">4. Incassi Previsti</p>
+              <p className="text-sm text-muted-foreground mb-2">
+                Sono gli incassi ricorrenti che ti aspetti. Esempi: canone mensile Cliente X, rinnovo annuale Cliente Y.
+              </p>
+              <p className="text-xs text-muted-foreground">Per ogni incasso indichi: cliente, importo, frequenza, giorno del mese, affidabilità.</p>
+            </div>
+          </div>
+        </Section>
 
-        <h2>Cosa vedi</h2>
-        <ul>
-          <li>Lista di tutti i debiti con rate concordate</li>
-          <li>Per ogni piano: creditore, importo totale, rate pagate/totali</li>
-          <li>Progresso visivo (barra percentuale)</li>
-        </ul>
+        <Section>
+          <SectionTitle>Aggiungere una spesa ricorrente</SectionTitle>
+          <StepList>
+            <Step number={1} title="Vai in Impostazioni" description="Menu laterale → Impostazioni" />
+            <Step number={2} title="Seleziona 'Spese Previste'" />
+            <Step number={3} title="Clicca '+ Nuova Spesa'" />
+            <Step number={4} title="Compila i campi:" />
+          </StepList>
+          <div className="pl-11 space-y-2 mb-4 text-sm">
+            <p><strong>Nome:</strong> es. &quot;Wind Telefonica&quot;</p>
+            <p><strong>Centro di Costo:</strong> es. &quot;Telefonia&quot;</p>
+            <p><strong>Importo:</strong> quanto paghi ogni volta</p>
+            <p><strong>Frequenza:</strong> mensile, trimestrale, annuale, ecc.</p>
+            <p><strong>Giorno del mese:</strong> quando scade di solito</p>
+            <p><strong>Priorità:</strong> quanto è importante pagarla</p>
+          </div>
+          <Tip>
+            La priorità aiuta l&apos;app a capire quali spese sono vitali (da pagare assolutamente) e quali sono rinviabili in caso di difficoltà.
+          </Tip>
+        </Section>
 
-        <h2>Creare un nuovo piano</h2>
-        <ol>
-          <li>Clicca <strong>+ Nuovo Piano</strong></li>
-          <li>Compila:
-            <ul>
-              <li><strong>Creditore:</strong> a chi devi i soldi</li>
-              <li><strong>Importo totale:</strong> debito complessivo</li>
-              <li><strong>Numero rate:</strong> in quante rate paghi</li>
-              <li><strong>Data inizio:</strong> quando parte il piano</li>
-              <li><strong>Note:</strong> informazioni aggiuntive (opzionale)</li>
-            </ul>
-          </li>
-          <li>Clicca <strong>Salva</strong></li>
-        </ol>
-        <p className="bg-primary/10 p-3 rounded-lg">
-          💡 <strong>Tip:</strong> L&apos;importo della singola rata viene calcolato automaticamente (totale ÷ numero rate)
-        </p>
+        <Section>
+          <SectionTitle>Aggiungere un incasso ricorrente</SectionTitle>
+          <StepList>
+            <Step number={1} title="Vai in Impostazioni" description="Menu laterale → Impostazioni" />
+            <Step number={2} title="Seleziona 'Incassi Previsti'" />
+            <Step number={3} title="Clicca '+ Nuovo Incasso'" />
+            <Step number={4} title="Compila i campi:" />
+          </StepList>
+          <div className="pl-11 space-y-2 mb-4 text-sm">
+            <p><strong>Cliente:</strong> nome del cliente</p>
+            <p><strong>Centro di Ricavo:</strong> es. &quot;Siti Web&quot;</p>
+            <p><strong>Importo:</strong> quanto ti paga ogni volta (LORDO)</p>
+            <p><strong>Frequenza:</strong> mensile, trimestrale, annuale, ecc.</p>
+            <p><strong>Giorno del mese:</strong> quando ti paga di solito</p>
+            <p><strong>Affidabilità:</strong> quanto sei sicuro che pagherà</p>
+          </div>
+          <Warning>
+            Sii realistico con l&apos;affidabilità. Se un cliente paga sempre in ritardo o a volte salta, metti &quot;Media&quot; o &quot;Bassa&quot;.
+          </Warning>
+        </Section>
 
-        <h2>Marcare una rata come pagata</h2>
-        <ol>
-          <li>Trova il piano nella lista</li>
-          <li>Clicca per espandere e vedere le rate</li>
-          <li>Clicca <strong>Segna come pagata</strong> sulla rata</li>
-          <li>Conferma la data di pagamento</li>
-        </ol>
-
-        <h2>Strategia consigliata: Effetto Snowball</h2>
-        <p>L&apos;app suggerisce di pagare prima i <strong>debiti più piccoli</strong>:</p>
-        <ul>
-          <li>Chiudi velocemente i debiti minori</li>
-          <li>Liberi liquidità per quelli maggiori</li>
-          <li>Ottieni motivazione vedendo i progressi</li>
-        </ul>
-      </div>
+        <Section>
+          <SectionTitle>Terminare un contratto</SectionTitle>
+          <Paragraph>
+            Se un cliente smette di pagarti o cancelli un abbonamento, non eliminare la voce. Usa la funzione &quot;Termina&quot;:
+          </Paragraph>
+          <StepList>
+            <Step number={1} title="Trova la voce nella lista" />
+            <Step number={2} title="Clicca 'Termina'" />
+            <Step number={3} title="Inserisci la data di fine" />
+          </StepList>
+          <Tip>
+            Terminare invece di eliminare ti permette di mantenere lo storico e vedere quanto spendevi/incassavi in passato.
+          </Tip>
+        </Section>
+      </>
     ),
   },
+
   "piano-commerciale": {
     title: "Piano Commerciale",
+    subtitle: "Gestisci obiettivi e vendite",
+    icon: Target,
+    color: "bg-pink-500/10 text-pink-500",
     content: (
-      <div className="prose prose-invert max-w-none">
-        <p>Il <strong>Piano Commerciale</strong> ti aiuta a pianificare quanto devi vendere per raggiungere i tuoi obiettivi.</p>
+      <>
+        <Section>
+          <SectionTitle>A cosa serve</SectionTitle>
+          <Paragraph>
+            Il Piano Commerciale ti aiuta a pianificare quanto devi vendere per coprire le spese e i debiti.
+            Ti permette di definire obiettivi di vendita e tracciare le trattative in corso.
+          </Paragraph>
+          <KeyPoint>
+            Il Piano Commerciale risponde alla domanda: &quot;Quanto devo fatturare questo mese per stare tranquillo?&quot;
+          </KeyPoint>
+        </Section>
 
-        <h2>Come accedere</h2>
-        <p>📍 <strong>Menu laterale → Piano Commerciale</strong></p>
+        <Section>
+          <SectionTitle>I quattro stati di una vendita</SectionTitle>
+          <div className="space-y-3 mb-4">
+            <div className="flex gap-3 p-3 rounded-lg border border-border/50">
+              <div className="text-xl">📊</div>
+              <div>
+                <p className="font-medium">Obiettivo</p>
+                <p className="text-sm text-muted-foreground">Un piano generico senza cliente specifico. Es: &quot;Voglio vendere 1 sito web a febbraio&quot;</p>
+              </div>
+            </div>
+            <div className="flex gap-3 p-3 rounded-lg border border-border/50">
+              <div className="text-xl">🎯</div>
+              <div>
+                <p className="font-medium">Opportunità</p>
+                <p className="text-sm text-muted-foreground">Una trattativa in corso con un cliente specifico. Hai fatto il preventivo.</p>
+              </div>
+            </div>
+            <div className="flex gap-3 p-3 rounded-lg border border-border/50">
+              <div className="text-xl">✅</div>
+              <div>
+                <p className="font-medium">Vinta</p>
+                <p className="text-sm text-muted-foreground">Il cliente ha accettato. La vendita è chiusa.</p>
+              </div>
+            </div>
+            <div className="flex gap-3 p-3 rounded-lg border border-border/50">
+              <div className="text-xl">❌</div>
+              <div>
+                <p className="font-medium">Persa</p>
+                <p className="text-sm text-muted-foreground">Il cliente ha rifiutato o la trattativa è saltata.</p>
+              </div>
+            </div>
+          </div>
+        </Section>
 
-        <h2>Tipi di voci</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Status</th>
-              <th>Significato</th>
-              <th>Quando usarlo</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>📊 <strong>Obiettivo</strong></td>
-              <td>Piano generico</td>
-              <td>&quot;Voglio vendere 1 sito web a febbraio&quot;</td>
-            </tr>
-            <tr>
-              <td>🎯 <strong>Opportunità</strong></td>
-              <td>Trattativa in corso</td>
-              <td>&quot;Ho fatto preventivo a Cliente X&quot;</td>
-            </tr>
-            <tr>
-              <td>✅ <strong>Vinta</strong></td>
-              <td>Vendita chiusa</td>
-              <td>&quot;Cliente X ha accettato&quot;</td>
-            </tr>
-            <tr>
-              <td>❌ <strong>Persa</strong></td>
-              <td>Non conclusa</td>
-              <td>&quot;Cliente X ha rifiutato&quot;</td>
-            </tr>
-          </tbody>
-        </table>
+        <Section>
+          <SectionTitle>Come usare il Piano Commerciale</SectionTitle>
 
-        <h2>Creare un obiettivo/opportunità</h2>
-        <ol>
-          <li>Clicca <strong>+ Nuova Voce</strong></li>
-          <li>Compila:
-            <ul>
-              <li><strong>Cliente:</strong> nome (opzionale per obiettivi generici)</li>
-              <li><strong>Tipo progetto:</strong> Sito Web, Marketing, MSD, Licenza, Altro</li>
-              <li><strong>Importo lordo:</strong> valore totale IVA inclusa</li>
-              <li><strong>Mese obiettivo:</strong> quando vuoi chiuderla</li>
-              <li><strong>Tipo pagamento:</strong> come incasserai</li>
-            </ul>
-          </li>
-          <li>Clicca <strong>Salva</strong></li>
-        </ol>
+          <p className="font-medium mb-3">1. A inizio mese: definisci gli obiettivi</p>
+          <Paragraph>
+            Guarda quanto devi fatturare (lo vedi nella Dashboard) e crea degli obiettivi generici
+            per raggiungere quella cifra.
+          </Paragraph>
 
-        <h2>Tipi di pagamento</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Tipo</th>
-              <th>Come funziona</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><strong>Sito Web 50/50</strong></td>
-              <td>50% subito, 50% alla consegna</td>
-            </tr>
-            <tr>
-              <td><strong>MSD 30/70</strong></td>
-              <td>30% subito, 70% alla consegna</td>
-            </tr>
-            <tr>
-              <td><strong>Marketing trimestrale</strong></td>
-              <td>Diviso in 4 rate trimestrali</td>
-            </tr>
-            <tr>
-              <td><strong>Immediato</strong></td>
-              <td>Tutto subito</td>
-            </tr>
-            <tr>
-              <td><strong>Custom</strong></td>
-              <td>Personalizzato</td>
-            </tr>
-          </tbody>
-        </table>
+          <p className="font-medium mb-3">2. Durante il mese: traccia le opportunità</p>
+          <Paragraph>
+            Quando fai un preventivo a un cliente, trasforma l&apos;obiettivo in un&apos;opportunità
+            (o creane una nuova) con i dati specifici.
+          </Paragraph>
 
-        <h2>Gap Analysis</h2>
-        <p>L&apos;app calcola automaticamente il <strong>gap mensile</strong>:</p>
-        <p className="bg-muted p-3 rounded-lg font-mono text-sm">
-          GAP = Spese previste + Rate PDR - Incassi certi
-        </p>
-        <p>Se il gap è positivo, devi vendere di più!</p>
-        <p className="bg-primary/10 p-3 rounded-lg">
-          💡 <strong>Tip:</strong> Il &quot;Target fatturato&quot; nella dashboard ti dice quanto devi vendere in LORDO per coprire il gap (tenendo conto che solo il 48% resta in cassa).
-        </p>
-      </div>
+          <p className="font-medium mb-3">3. Quando chiudi: segna come vinta</p>
+          <Paragraph>
+            Quando il cliente accetta, segna l&apos;opportunità come &quot;Vinta&quot;.
+            Le rate di incasso verranno aggiunte automaticamente al Previsionale.
+          </Paragraph>
+        </Section>
+
+        <Section>
+          <SectionTitle>Tipi di pagamento</SectionTitle>
+          <Paragraph>
+            Quando crei una vendita, devi indicare come il cliente ti pagherà:
+          </Paragraph>
+          <div className="space-y-2 mb-4 text-sm">
+            <div className="p-3 rounded bg-muted/50">
+              <strong>Sito Web 50/50:</strong> 50% all&apos;ordine, 50% alla consegna
+            </div>
+            <div className="p-3 rounded bg-muted/50">
+              <strong>MSD 30/70:</strong> 30% all&apos;ordine, 70% alla consegna
+            </div>
+            <div className="p-3 rounded bg-muted/50">
+              <strong>Marketing trimestrale:</strong> Diviso in 4 rate trimestrali
+            </div>
+            <div className="p-3 rounded bg-muted/50">
+              <strong>Immediato:</strong> Tutto subito
+            </div>
+          </div>
+          <Tip>
+            Il tipo di pagamento determina quando vedrai gli incassi nel Previsionale.
+            Se vendi un sito da €5.000 con pagamento 50/50, vedrai €2.500 subito e €2.500 alla consegna.
+          </Tip>
+        </Section>
+
+        <Section>
+          <SectionTitle>Gap Analysis</SectionTitle>
+          <Paragraph>
+            L&apos;app calcola automaticamente il &quot;gap&quot; tra quanto ti serve e quanto hai già venduto:
+          </Paragraph>
+          <div className="p-4 rounded-lg bg-muted/30 border border-border/50 font-mono text-sm mb-4">
+            GAP = (Spese previste + Rate debiti) − Incassi certi
+          </div>
+          <Paragraph>
+            Se il gap è positivo, significa che devi vendere di più. Il &quot;Target fatturato&quot; nella Dashboard
+            ti dice esattamente quanto devi vendere in LORDO per colmare il gap.
+          </Paragraph>
+          <Warning>
+            Ricorda: del fatturato lordo, solo il 48% resta disponibile in cassa.
+            Se ti servono €5.000 in cassa, devi fatturare circa €10.400.
+          </Warning>
+        </Section>
+      </>
     ),
   },
-  "piano-annuale-impostazioni": {
-    title: "Piano Annuale (Impostazioni)",
+
+  "piani-di-rientro": {
+    title: "Piani di Rientro",
+    subtitle: "Gestisci debiti e rate",
+    icon: CreditCard,
+    color: "bg-red-500/10 text-red-500",
     content: (
-      <div className="prose prose-invert max-w-none">
-        <p>Il <strong>Piano Annuale</strong> è dove configuri le spese e gli incassi ricorrenti.</p>
+      <>
+        <Section>
+          <SectionTitle>A cosa serve</SectionTitle>
+          <Paragraph>
+            I Piani di Rientro (PDR) servono a gestire i debiti che devi pagare a rate.
+            Può essere un debito con un fornitore, un finanziamento, o qualsiasi importo che stai restituendo gradualmente.
+          </Paragraph>
+          <KeyPoint>
+            Ogni rata di un PDR viene automaticamente inserita nel Previsionale come spesa da pagare.
+          </KeyPoint>
+        </Section>
 
-        <h2>Come accedere</h2>
-        <p>📍 <strong>Menu laterale → Impostazioni</strong></p>
+        <Section>
+          <SectionTitle>Creare un Piano di Rientro</SectionTitle>
+          <StepList>
+            <Step number={1} title="Vai in Piani di Rientro" description="Menu laterale → Piani di Rientro" />
+            <Step number={2} title="Clicca '+ Nuovo Piano'" />
+            <Step number={3} title="Compila i campi:" />
+          </StepList>
+          <div className="pl-11 space-y-2 mb-4 text-sm">
+            <p><strong>Creditore:</strong> a chi devi i soldi</p>
+            <p><strong>Importo totale:</strong> quanto devi in tutto</p>
+            <p><strong>Numero rate:</strong> in quante rate pagherai</p>
+            <p><strong>Data inizio:</strong> quando inizia il piano</p>
+          </div>
+          <Tip>
+            L&apos;importo della singola rata viene calcolato automaticamente dividendo il totale per il numero di rate.
+          </Tip>
+        </Section>
 
-        <h2>Le 4 sezioni</h2>
+        <Section>
+          <SectionTitle>Segnare una rata come pagata</SectionTitle>
+          <StepList>
+            <Step number={1} title="Trova il piano nella lista" />
+            <Step number={2} title="Espandi per vedere le rate" />
+            <Step number={3} title="Clicca 'Segna come pagata' sulla rata" />
+            <Step number={4} title="Conferma la data di pagamento" />
+          </StepList>
+          <Paragraph>
+            Quando segni una rata come pagata, il progresso del piano si aggiorna e la rata
+            scompare dalle spese future nel Previsionale.
+          </Paragraph>
+        </Section>
 
-        <h3>1. Centri di Costo</h3>
-        <p>Categorie per raggruppare le spese:</p>
-        <ul>
-          <li><strong>Telefonia:</strong> Wind, MyCentralino</li>
-          <li><strong>Software:</strong> Asana, servizi online</li>
-          <li><strong>Server:</strong> hosting, domini</li>
-          <li><strong>Collaboratori:</strong> compensi esterni</li>
-          <li><strong>Ufficio:</strong> affitto, utenze</li>
-        </ul>
+        <Section>
+          <SectionTitle>Strategia: Effetto Snowball</SectionTitle>
+          <Paragraph>
+            Se hai più debiti, l&apos;app suggerisce di usare la strategia &quot;Snowball&quot;:
+            paga prima i debiti più piccoli.
+          </Paragraph>
+          <div className="space-y-3 mb-4">
+            <div className="flex gap-3 items-start">
+              <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+              <p className="text-sm">Chiudi velocemente i debiti minori</p>
+            </div>
+            <div className="flex gap-3 items-start">
+              <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+              <p className="text-sm">Liberi liquidità per quelli maggiori</p>
+            </div>
+            <div className="flex gap-3 items-start">
+              <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+              <p className="text-sm">Ottieni motivazione vedendo i progressi</p>
+            </div>
+          </div>
+          <Tip>
+            Psicologicamente, chiudere un debito (anche piccolo) dà una grande soddisfazione
+            e ti motiva a continuare. Non sottovalutare questo effetto!
+          </Tip>
+        </Section>
 
-        <h3>2. Spese Previste</h3>
-        <p>Le spese che sai già di dover sostenere:</p>
-        <ul>
-          <li>Abbonamenti mensili</li>
-          <li>Affitti</li>
-          <li>Rate fisse</li>
-        </ul>
-        <p><strong>Per aggiungere:</strong> Nome, Centro di costo, Importo, Frequenza, Giorno mese, Date inizio/fine, Priorità</p>
-
-        <h3>3. Centri di Ricavo</h3>
-        <p>Categorie per raggruppare gli incassi:</p>
-        <ul>
-          <li><strong>Siti Web:</strong> sviluppo siti</li>
-          <li><strong>Marketing:</strong> campagne, ads</li>
-          <li><strong>Domini:</strong> rinnovi domini</li>
-          <li><strong>Licenze:</strong> software venduti</li>
-        </ul>
-
-        <h3>4. Incassi Previsti</h3>
-        <p>Gli incassi ricorrenti che ti aspetti:</p>
-        <ul>
-          <li>Canoni mensili clienti</li>
-          <li>Rinnovi annuali</li>
-        </ul>
-        <p><strong>Per aggiungere:</strong> Nome cliente, Centro di ricavo, Importo, Frequenza, Giorno mese, Affidabilità</p>
-
-        <h2>Terminare un contratto</h2>
-        <p>Se un cliente o un fornitore smette:</p>
-        <ol>
-          <li>Trova la voce nella lista</li>
-          <li>Clicca <strong>Termina</strong></li>
-          <li>Inserisci la data di fine</li>
-          <li>Conferma</li>
-        </ol>
-        <p>La voce non verrà più considerata nelle proiezioni future.</p>
-      </div>
-    ),
-  },
-  "profilo-e-sicurezza": {
-    title: "Profilo e Sicurezza",
-    content: (
-      <div className="prose prose-invert max-w-none">
-        <h2>Come accedere</h2>
-        <p>📍 <strong>Menu laterale → Profilo</strong></p>
-
-        <h2>Modificare il nome</h2>
-        <ol>
-          <li>Clicca sul campo <strong>Nome</strong></li>
-          <li>Modifica</li>
-          <li>Clicca <strong>Salva</strong></li>
-        </ol>
-
-        <h2>Cambiare password</h2>
-        <ol>
-          <li>Clicca <strong>Cambia Password</strong></li>
-          <li>Inserisci la password attuale</li>
-          <li>Inserisci la nuova password (minimo 6 caratteri)</li>
-          <li>Conferma la nuova password</li>
-          <li>Clicca <strong>Salva</strong></li>
-        </ol>
-
-        <h2>Attivare la verifica in due passaggi (2FA)</h2>
-        <p>La 2FA aggiunge sicurezza: anche se qualcuno scopre la tua password, non può accedere senza il codice.</p>
-        <p><strong>Per attivare:</strong></p>
-        <ol>
-          <li>Vai su <strong>Profilo</strong></li>
-          <li>Clicca <strong>Attiva 2FA</strong></li>
-          <li>Scegli il metodo:
-            <ul>
-              <li><strong>Email OTP:</strong> ricevi codice via email ad ogni login</li>
-              <li><strong>App TOTP:</strong> usa Google Authenticator o simile</li>
-            </ul>
-          </li>
-          <li>Segui le istruzioni</li>
-          <li>Salva i <strong>codici di backup</strong> in un posto sicuro!</li>
-        </ol>
-        <p className="bg-amber-500/10 p-3 rounded-lg text-amber-200">
-          ⚠️ <strong>Importante:</strong> I codici di backup servono se perdi accesso all&apos;email o all&apos;app. Conservali offline!
-        </p>
-
-        <h2>Disattivare la 2FA</h2>
-        <ol>
-          <li>Vai su <strong>Profilo</strong></li>
-          <li>Clicca <strong>Disattiva 2FA</strong></li>
-          <li>Inserisci la password per confermare</li>
-        </ol>
-
-        <h2>Logout</h2>
-        <p>Clicca <strong>Esci</strong> nel menu laterale (in basso)</p>
-      </div>
-    ),
-  },
-  "domande-frequenti": {
-    title: "Domande Frequenti",
-    content: (
-      <div className="prose prose-invert max-w-none">
-        <h2>Quanto ho disponibile in cassa?</h2>
-        <p>📍 <strong>Dashboard → Saldo disponibile</strong></p>
-        <p>Questo numero tiene conto di:</p>
-        <ul>
-          <li>Saldo attuale</li>
-          <li>Meno le spese previste</li>
-          <li>Meno le rate PDR</li>
-          <li>Più gli incassi CERTI (solo affidabilità Alta)</li>
-        </ul>
-
-        <h2>Quali scadenze ho questa settimana?</h2>
-        <p>📍 <strong>Dashboard → Scadenze prossimi 7 giorni</strong></p>
-        <p>Vedi l&apos;elenco ordinato per data con icona colorata per priorità e importo.</p>
-
-        <h2>Quanto devo fatturare questo mese?</h2>
-        <p>📍 <strong>Dashboard → Target fatturato</strong></p>
-        <p>Questo numero ti dice quanto devi vendere IN LORDO per coprire tutte le spese, pagare le rate PDR e mantenere un minimo di buffer.</p>
-        <p className="bg-primary/10 p-3 rounded-lg">
-          💡 <strong>Ricorda:</strong> Del fatturato lordo, solo il <strong>48%</strong> resta in cassa (dopo IVA e quote soci).
-        </p>
-
-        <h2>Perché il &quot;disponibile&quot; è diverso dal totale incassato?</h2>
-        <p>Perché ogni incasso viene diviso:</p>
-        <ul>
-          <li><strong>22%</strong> → IVA (non è tua, va allo Stato)</li>
-          <li><strong>30%</strong> → Quote soci (va ai soci)</li>
-          <li><strong>48%</strong> → Disponibile (quello che puoi spendere)</li>
-        </ul>
-
-        <h2>Come faccio a sapere se sono in difficoltà?</h2>
-        <p>📍 <strong>Dashboard → Stato azienda</strong></p>
-        <table>
-          <thead>
-            <tr>
-              <th>Stato</th>
-              <th>Colore</th>
-              <th>Significato</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><strong>DIFESA</strong></td>
-              <td>🔴 Rosso</td>
-              <td>Meno di 30 giorni prima di non poter pagare</td>
-            </tr>
-            <tr>
-              <td><strong>STABILIZZAZIONE</strong></td>
-              <td>🟡 Giallo</td>
-              <td>Paghi tutto ma senza margine</td>
-            </tr>
-            <tr>
-              <td><strong>RICOSTRUZIONE</strong></td>
-              <td>🟢 Verde</td>
-              <td>Hai buffer, puoi investire</td>
-            </tr>
-          </tbody>
-        </table>
-
-        <h2>Posso usare l&apos;app da telefono?</h2>
-        <p>Sì! L&apos;app è responsive:</p>
-        <ul>
-          <li>Su <strong>desktop:</strong> menu laterale sempre visibile</li>
-          <li>Su <strong>mobile:</strong> menu in basso (bottom navigation)</li>
-        </ul>
-      </div>
+        <Section>
+          <SectionTitle>PDR e Dashboard</SectionTitle>
+          <Paragraph>
+            Le rate dei PDR vengono considerate nel calcolo del &quot;Target fatturato&quot;.
+            Questo significa che quando l&apos;app ti dice quanto devi fatturare,
+            sta già includendo le rate dei debiti da pagare.
+          </Paragraph>
+          <Warning>
+            Non dimenticare di creare un PDR per ogni debito che hai.
+            Se non lo fai, l&apos;app non saprà che devi pagare quelle rate e le proiezioni saranno sbagliate.
+          </Warning>
+        </Section>
+      </>
     ),
   },
 };
 
+// ============================================
+// NAVIGAZIONE TRA SEZIONI
+// ============================================
+
 const sectionOrder = [
-  "introduzione",
-  "accesso-e-login",
+  "come-funziona",
   "consuntivo",
   "previsionale",
-  "piani-di-rientro-pdr",
+  "piano-annuale",
   "piano-commerciale",
-  "piano-annuale-impostazioni",
-  "profilo-e-sicurezza",
-  "domande-frequenti",
+  "piani-di-rientro",
 ];
+
+// ============================================
+// COMPONENTE PAGINA
+// ============================================
 
 export default function GuidaSectionPage() {
   const params = useParams();
-  const router = useRouter();
   const section = params.section as string;
 
   const currentIndex = sectionOrder.indexOf(section);
   const prevSection = currentIndex > 0 ? sectionOrder[currentIndex - 1] : null;
   const nextSection = currentIndex < sectionOrder.length - 1 ? sectionOrder[currentIndex + 1] : null;
 
-  const sectionData = guideSections[section];
+  const sectionData = sections[section];
 
   if (!sectionData) {
     return (
       <div className="min-h-screen pb-20 lg:pb-6">
         <MobileHeader title="Guida" />
-        <div className="p-4 lg:p-6 text-center">
-          <p className="text-muted-foreground">Sezione non trovata</p>
-          <Button onClick={() => router.push("/guida")} className="mt-4">
+        <div className="p-6 text-center">
+          <p className="text-muted-foreground mb-4">Sezione non trovata</p>
+          <Link href="/guida" className="text-primary hover:underline">
             Torna alla guida
-          </Button>
+          </Link>
         </div>
       </div>
     );
   }
 
+  const Icon = sectionData.icon;
+
   return (
     <div className="min-h-screen pb-20 lg:pb-6">
       <MobileHeader title="Guida" />
 
-      <div className="p-4 lg:p-6 max-w-4xl mx-auto">
-        {/* Back button */}
+      <div className="p-4 lg:p-6 max-w-2xl mx-auto">
+        {/* Back link */}
         <Link
           href="/guida"
-          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6"
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           Torna all&apos;indice
         </Link>
 
-        {/* Title */}
-        <h1 className="text-2xl lg:text-3xl font-bold mb-6">{sectionData.title}</h1>
+        {/* Header */}
+        <div className="flex items-start gap-4 mb-8">
+          <div className={`p-3 rounded-xl ${sectionData.color}`}>
+            <Icon className="h-6 w-6" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold mb-1">{sectionData.title}</h1>
+            <p className="text-muted-foreground">{sectionData.subtitle}</p>
+          </div>
+        </div>
 
         {/* Content */}
-        <div className="mb-8">{sectionData.content}</div>
+        <div className="mb-8">
+          {sectionData.content}
+        </div>
 
         {/* Navigation */}
-        <div className="flex justify-between items-center pt-6 border-t border-border">
+        <div className="flex justify-between items-center pt-6 border-t border-border/50">
           {prevSection ? (
             <Link
               href={`/guida/${prevSection}`}
-              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
-              <ChevronLeft className="h-4 w-4" />
-              <span className="hidden sm:inline">{guideSections[prevSection]?.title}</span>
+              <ArrowLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">{sections[prevSection]?.title}</span>
               <span className="sm:hidden">Precedente</span>
             </Link>
           ) : (
@@ -708,10 +812,10 @@ export default function GuidaSectionPage() {
           {nextSection ? (
             <Link
               href={`/guida/${nextSection}`}
-              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
-              <span className="hidden sm:inline">{guideSections[nextSection]?.title}</span>
-              <span className="sm:hidden">Successivo</span>
+              <span className="hidden sm:inline">{sections[nextSection]?.title}</span>
+              <span className="sm:hidden">Successiva</span>
               <ChevronRight className="h-4 w-4" />
             </Link>
           ) : (
