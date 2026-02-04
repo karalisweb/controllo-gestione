@@ -138,7 +138,7 @@ export function PaymentPlanList({
           <Card key={plan.id}>
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <Button
                     variant="ghost"
                     size="sm"
@@ -152,6 +152,17 @@ export function PaymentPlanList({
                     )}
                   </Button>
                   <CardTitle className="text-lg">{plan.creditorName}</CardTitle>
+                  {plan.category && (
+                    <Badge
+                      variant="outline"
+                      style={{
+                        borderColor: plan.category.color || undefined,
+                        color: plan.category.color || undefined,
+                      }}
+                    >
+                      {plan.category.name}
+                    </Badge>
+                  )}
                   <Badge variant={plan.isActive ? "default" : "secondary"}>
                     {plan.isActive ? "Attivo" : "Completato"}
                   </Badge>

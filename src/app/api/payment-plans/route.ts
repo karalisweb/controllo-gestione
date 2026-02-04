@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { paymentPlans, paymentPlanInstallments } from "@/lib/db/schema";
+import { paymentPlans, paymentPlanInstallments, paymentPlanCategories } from "@/lib/db/schema";
 import { eq, isNull, and } from "drizzle-orm";
 
 export async function GET(request: NextRequest) {
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     .where(and(...conditions))
     .orderBy(paymentPlans.startDate);
 
-  // Per ogni piano, recupera le rate
+  // Per ogni piano, recupera le rate e la categoria
   const plansWithInstallments = await Promise.all(
     plans.map(async (plan) => {
       const installments = await db
@@ -27,8 +27,19 @@ export async function GET(request: NextRequest) {
         .where(eq(paymentPlanInstallments.paymentPlanId, plan.id))
         .orderBy(paymentPlanInstallments.dueDate);
 
+      // Recupera categoria se presente
+      let category = null;
+      if (plan.categoryId) {
+        const catArr = await db
+          .select()
+          .from(paymentPlanCategories)
+          .where(eq(paymentPlanCategories.id, plan.categoryId));
+        category = catArr[0] || null;
+      }
+
       return {
         ...plan,
+        category,
         installments,
       };
     })
@@ -42,6 +53,7 @@ export async function POST(request: NextRequest) {
 
   const {
     creditorName,
+    categoryId,
     totalAmount,
     installmentAmount,
     totalInstallments,
@@ -63,6 +75,7 @@ export async function POST(request: NextRequest) {
   // Crea il piano di rientro
   const insertResult = await db.insert(paymentPlans).values({
     creditorName,
+    categoryId: categoryId || null,
     totalAmount, // centesimi
     installmentAmount: calculatedInstallmentAmount, // centesimi
     totalInstallments,

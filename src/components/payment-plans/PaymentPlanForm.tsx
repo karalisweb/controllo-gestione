@@ -1,22 +1,31 @@
 "use client";
 
 import { useForm } from "react-hook-form";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { formatCurrency, eurosToCents, centsToEuros } from "@/lib/utils/currency";
+import { eurosToCents, centsToEuros } from "@/lib/utils/currency";
+import type { PaymentPlanCategory } from "@/types";
 
 const schema = z.object({
   creditorName: z.string().min(1, "Nome creditore obbligatorio"),
+  categoryId: z.string().optional(),
   totalAmount: z.string().min(1, "Importo totale obbligatorio"),
   totalInstallments: z.string().min(1, "Numero rate obbligatorio"),
   installmentAmount: z.string().optional(),
@@ -29,6 +38,7 @@ type FormData = z.infer<typeof schema>;
 interface EditingPlan {
   id: number;
   creditorName: string;
+  categoryId: number | null;
   totalAmount: number;
   totalInstallments: number;
   installmentAmount: number;
@@ -42,6 +52,7 @@ interface PaymentPlanFormProps {
   editingPlan?: EditingPlan | null;
   onSubmit: (data: {
     creditorName: string;
+    categoryId?: number;
     totalAmount: number;
     totalInstallments: number;
     installmentAmount?: number;
@@ -57,6 +68,8 @@ export function PaymentPlanForm({
   editingPlan,
   onSubmit,
 }: PaymentPlanFormProps) {
+  const [categories, setCategories] = useState<PaymentPlanCategory[]>([]);
+
   const {
     register,
     handleSubmit,
@@ -68,6 +81,7 @@ export function PaymentPlanForm({
     resolver: zodResolver(schema),
     defaultValues: {
       creditorName: "",
+      categoryId: "",
       totalAmount: "",
       totalInstallments: "",
       installmentAmount: "",
@@ -76,10 +90,27 @@ export function PaymentPlanForm({
     },
   });
 
+  // Carica le categorie
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await fetch("/api/payment-plan-categories");
+        if (res.ok) {
+          const data = await res.json();
+          setCategories(data);
+        }
+      } catch (error) {
+        console.error("Errore nel caricamento categorie:", error);
+      }
+    };
+    fetchCategories();
+  }, []);
+
   // Popola il form quando si modifica un piano esistente
   useEffect(() => {
     if (editingPlan) {
       setValue("creditorName", editingPlan.creditorName);
+      setValue("categoryId", editingPlan.categoryId?.toString() || "");
       setValue("totalAmount", centsToEuros(editingPlan.totalAmount).toFixed(2));
       setValue("totalInstallments", editingPlan.totalInstallments.toString());
       // Calcola importo rata da totale / numero rate
@@ -90,6 +121,7 @@ export function PaymentPlanForm({
     } else {
       reset({
         creditorName: "",
+        categoryId: "",
         totalAmount: "",
         totalInstallments: "",
         installmentAmount: "",
@@ -116,6 +148,7 @@ export function PaymentPlanForm({
     try {
       await onSubmit({
         creditorName: data.creditorName,
+        categoryId: data.categoryId ? parseInt(data.categoryId) : undefined,
         totalAmount: eurosToCents(parseFloat(data.totalAmount)),
         totalInstallments: parseInt(data.totalInstallments),
         installmentAmount: data.installmentAmount
@@ -131,6 +164,8 @@ export function PaymentPlanForm({
       // Errore gestito dal chiamante
     }
   };
+
+  const selectedCategoryId = watch("categoryId");
 
   const isEditing = !!editingPlan;
 
@@ -153,6 +188,33 @@ export function PaymentPlanForm({
                 {errors.creditorName.message}
               </p>
             )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="categoryId">Categoria</Label>
+            <Select
+              value={selectedCategoryId || ""}
+              onValueChange={(value) => setValue("categoryId", value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Seleziona categoria..." />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id.toString()}>
+                    <div className="flex items-center gap-2">
+                      {cat.color && (
+                        <div
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: cat.color }}
+                        />
+                      )}
+                      {cat.name}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

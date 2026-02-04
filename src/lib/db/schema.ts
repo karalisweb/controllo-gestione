@@ -141,10 +141,22 @@ export const settings = sqliteTable("settings", {
   updatedAt: integer("updated_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
 });
 
+// Categorie piani di rientro (Finanziamento Qonto, Ex Fornitore, Fornitore Attuale)
+export const paymentPlanCategories = sqliteTable("payment_plan_categories", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull(),
+  color: text("color"), // colore per badge/visualizzazione
+  sortOrder: integer("sort_order").default(0),
+  isActive: integer("is_active", { mode: "boolean" }).default(true),
+  createdAt: integer("created_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
+  deletedAt: integer("deleted_at", { mode: "timestamp" }),
+});
+
 // Piani di rientro - importi in centesimi
 export const paymentPlans = sqliteTable("payment_plans", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   creditorName: text("creditor_name").notNull(),
+  categoryId: integer("category_id").references(() => paymentPlanCategories.id), // categoria piano
   totalAmount: integer("total_amount").notNull(), // centesimi
   installmentAmount: integer("installment_amount").notNull(), // centesimi
   totalInstallments: integer("total_installments").notNull(),
@@ -317,6 +329,9 @@ export type NewTransaction = typeof transactions.$inferInsert;
 
 export type IncomeSplit = typeof incomeSplits.$inferSelect;
 export type NewIncomeSplit = typeof incomeSplits.$inferInsert;
+
+export type PaymentPlanCategory = typeof paymentPlanCategories.$inferSelect;
+export type NewPaymentPlanCategory = typeof paymentPlanCategories.$inferInsert;
 
 export type PaymentPlan = typeof paymentPlans.$inferSelect;
 export type NewPaymentPlan = typeof paymentPlans.$inferInsert;

@@ -40,6 +40,7 @@ export async function PUT(
 
   const {
     creditorName,
+    categoryId,
     totalAmount,
     totalInstallments,
     installmentAmount,
@@ -78,6 +79,7 @@ export async function PUT(
     .update(paymentPlans)
     .set({
       creditorName: creditorName ?? existing.creditorName,
+      categoryId: categoryId !== undefined ? (categoryId || null) : existing.categoryId,
       totalAmount: newTotalAmount,
       totalInstallments: newTotalInstallments,
       installmentAmount: newInstallmentAmount,

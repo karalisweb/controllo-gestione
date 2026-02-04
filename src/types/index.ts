@@ -131,9 +131,20 @@ export interface PaymentPlanInstallment {
   projectedBalance?: number; // saldo previsto alla data
 }
 
+// Categoria per piani di rientro (Finanziamento Qonto, Ex Fornitore, Fornitore Attuale)
+export interface PaymentPlanCategory {
+  id: number;
+  name: string;
+  color: string | null;
+  sortOrder: number | null;
+  isActive: boolean | null;
+  createdAt: Date | null;
+}
+
 export interface PaymentPlan {
   id: number;
   creditorName: string;
+  categoryId: number | null;
   totalAmount: number; // centesimi
   installmentAmount: number; // centesimi
   totalInstallments: number;
@@ -143,6 +154,7 @@ export interface PaymentPlan {
   isActive: boolean | null;
   createdAt: Date | null;
   installments?: PaymentPlanInstallment[];
+  category?: PaymentPlanCategory | null;
   // Campi calcolati
   remainingAmount?: number;
   priority?: number; // ordine di priorità (1 = più piccolo)

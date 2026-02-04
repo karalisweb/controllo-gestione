@@ -6,10 +6,11 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PaymentPlanForm } from "@/components/payment-plans/PaymentPlanForm";
 import { PaymentPlanList } from "@/components/payment-plans/PaymentPlanList";
+import { PaymentPlanCategoryManager } from "@/components/payment-plans/PaymentPlanCategoryManager";
 import { MobileHeader } from "@/components/MobileHeader";
 import { formatCurrency } from "@/lib/utils/currency";
 import type { PaymentPlan } from "@/types";
-import { Plus } from "lucide-react";
+import { Plus, Tags } from "lucide-react";
 
 export default function PaymentPlansPage() {
   const [plans, setPlans] = useState<PaymentPlan[]>([]);
@@ -18,6 +19,7 @@ export default function PaymentPlansPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState<PaymentPlan | null>(null);
   const [activeTab, setActiveTab] = useState("active");
+  const [categoryManagerOpen, setCategoryManagerOpen] = useState(false);
 
   const fetchPlans = useCallback(async () => {
     try {
@@ -205,10 +207,21 @@ export default function PaymentPlansPage() {
               Gestisci i debiti rateizzati con fornitori e creditori
             </p>
           </div>
-          <Button onClick={() => setFormOpen(true)} size="sm" className="w-full sm:w-auto">
-            <Plus className="h-4 w-4 mr-2" />
-            Nuovo Piano
-          </Button>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCategoryManagerOpen(true)}
+              className="flex-1 sm:flex-none"
+            >
+              <Tags className="h-4 w-4 mr-2" />
+              Categorie
+            </Button>
+            <Button onClick={() => setFormOpen(true)} size="sm" className="flex-1 sm:flex-none">
+              <Plus className="h-4 w-4 mr-2" />
+              Nuovo Piano
+            </Button>
+          </div>
         </div>
 
         {/* Riepilogo totali - cards compatte */}
@@ -273,6 +286,11 @@ export default function PaymentPlansPage() {
           onOpenChange={handleFormClose}
           editingPlan={editingPlan}
           onSubmit={handleCreatePlan}
+        />
+
+        <PaymentPlanCategoryManager
+          open={categoryManagerOpen}
+          onOpenChange={setCategoryManagerOpen}
         />
       </div>
     </div>
