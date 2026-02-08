@@ -19,8 +19,8 @@ export const metadata: Metadata = {
   title: "KW Cashflow",
   description: "Controllo cashflow decisionale",
   icons: {
-    icon: "/logo-kw.png",
-    apple: "/logo-kw.png",
+    icon: "/favicon.svg",
+    apple: "/favicon.svg",
   },
 };
 

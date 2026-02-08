@@ -314,10 +314,10 @@ function LoginForm() {
           boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)',
         }}
       >
-        {/* Logo negativo Karalisweb */}
+        {/* Logo negativo Karalisweb (giallo su sfondo scuro) */}
         <div className="flex justify-center mb-8">
           <Image
-            src="/logo-kw.png"
+            src="/logo-kw-negativo.png"
             alt="Karalisweb"
             width={180}
             height={60}

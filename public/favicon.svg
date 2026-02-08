@@ -1,11 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="6" fill="#ffffff"/>
-  <!-- K verticale blu -->
-  <path d="M8 6 L8 26 L12 26 L12 6 Z" fill="#2a5d8f"/>
-  <!-- Diagonale superiore blu -->
-  <path d="M12 16 L22 6 L18 6 L12 12 Z" fill="#2a5d8f"/>
-  <!-- Diagonale inferiore blu -->
-  <path d="M12 16 L22 26 L18 26 L12 20 Z" fill="#2a5d8f"/>
-  <!-- Curva gialla decorativa -->
-  <path d="M14 10 Q20 16 14 22 Q18 16 14 10" fill="#e5b835" stroke="#e5b835" stroke-width="1"/>
+  <!-- Sfondo scuro con angoli arrotondati (come header Sidebar) -->
+  <rect width="32" height="32" rx="6" fill="#0d1521"/>
+  <!-- Icona Wallet (Lucide) color oro #d4a726 -->
+  <g transform="translate(5, 5)" fill="none" stroke="#d4a726" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Corpo wallet -->
+    <rect x="1" y="5" width="20" height="14" rx="2"/>
+    <!-- Flap superiore -->
+    <path d="M4 5V3a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v2"/>
+    <!-- Cerchio moneta -->
+    <circle cx="17" cy="12" r="1.5" fill="#d4a726"/>
+  </g>
 </svg>
