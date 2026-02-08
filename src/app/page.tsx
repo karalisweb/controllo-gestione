@@ -1,160 +1,147 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { useEffect, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils/currency";
 import {
-  AlertTriangle,
-  Calendar,
-  TrendingUp,
   Target,
   Loader2,
-  Settings,
-  ChevronRight,
-  FileText,
-  CreditCard,
-  BarChart3,
+  TrendingUp,
+  TrendingDown,
   Wallet,
+  Shield,
+  Calendar,
+  AlertTriangle,
+  CheckCircle,
+  ArrowRight,
+  CreditCard,
+  FileText,
   Bell,
-  User,
+  ChevronRight,
+  Receipt,
+  Clock,
+  PartyPopper,
 } from "lucide-react";
 import Link from "next/link";
-import { AnnualControlTable } from "@/components/dashboard/AnnualControlTable";
+import { QuickEntry } from "@/components/dashboard/QuickEntry";
 
-interface CashflowData {
-  daysUntilDifficulty: number | null;
-  difficultyDate: string | null;
-  endPeriodBalance: number;
-  requiredRevenue: number;
-  status: "defense" | "stabilization" | "growth";
+interface DashboardData {
   currentBalance: number;
-  horizonDays: number;
-  upcomingExpenses: Array<{
-    id: number;
-    date: string;
-    description: string;
-    amount: number;
-    type: "cost" | "pdr" | "tax";
-    isEssential: boolean;
-    isPaid: boolean;
-  }>;
-  totalExpensesInPeriod: number;
-  totalCertainIncomeInPeriod: number;
-  debt: {
-    total: number;
-    remaining: number;
-    plansCount: number;
+  balanceChange7Days: number;
+  runway: {
+    months: number;
+    target: number;
+    percent: number;
+    avgMonthlyBurn: number;
   };
+  quarterSales: {
+    quarter: number;
+    year: number;
+    daysRemaining: number;
+    gap: number;
+    salesAvailable: number;
+    salesWonAvailable: number;
+    salesGross: number;
+    salesWonGross: number;
+    remainingToSell: number;
+    progress: number;
+  };
+  currentMonthSustainability: {
+    month: number;
+    year: number;
+    income: number;
+    expenses: number;
+    pdr: number;
+    margin: number;
+    prevMonth: {
+      month: number;
+      year: number;
+      margin: number;
+    };
+    marginChange: number;
+  };
+  next7Days: {
+    incomes: Array<{ id: number; date: string; description: string; amount: number; clientName: string }>;
+    expenses: Array<{ id: number; date: string; description: string; amount: number; type: string; isEssential: boolean }>;
+    totalIncome: number;
+    totalExpense: number;
+    balance: number;
+  };
+  last7Days: {
+    incomes: Array<{ id: number; date: string; description: string; amount: number }>;
+    expenses: Array<{ id: number; date: string; description: string; amount: number }>;
+    totalIncome: number;
+    totalExpense: number;
+    balance: number;
+  };
+  actions: {
+    overdueInstallments: Array<{ id: number; creditorName: string; dueDate: string; amount: number }>;
+    overdueTotal: number;
+    invoicesToIssue: Array<{ id: number; clientName: string; amount: number }>;
+    invoicesTotal: number;
+    latePayments: Array<{ id: number; clientName: string; amount: number; expectedDay: number }>;
+    lateTotal: number;
+  };
+  pdr: {
+    plans: Array<{
+      id: number;
+      creditorName: string;
+      category: { name: string; color: string } | null;
+      totalAmount: number;
+      remaining: number;
+      paidInstallments: number;
+      totalInstallments: number;
+      progress: number;
+      estimatedCloseDate: string;
+    }>;
+    totalRemaining: number;
+    monthlyTotal: number;
+  };
+  trend: Array<{
+    month: number;
+    year: number;
+    income: number;
+    expenses: number;
+    margin: number;
+  }>;
 }
 
-const STATUS_CONFIG = {
-  defense: {
-    label: "DIFESA",
-    sublabel: "Meno di 30 giorni di margine",
-    color: "bg-red-500",
-    textColor: "text-red-600",
-    borderColor: "border-red-500",
-    bgColor: "bg-red-500/10",
-  },
-  stabilization: {
-    label: "STABILIZZAZIONE",
-    sublabel: "Riesco a pagare, margine ridotto",
-    color: "bg-amber-500",
-    textColor: "text-amber-600",
-    borderColor: "border-amber-500",
-    bgColor: "bg-amber-500/10",
-  },
-  growth: {
-    label: "RICOSTRUZIONE",
-    sublabel: "Ho buffer, posso investire",
-    color: "bg-green-500",
-    textColor: "text-green-600",
-    borderColor: "border-green-500",
-    bgColor: "bg-green-500/10",
-  },
-};
+const MONTH_NAMES = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"];
 
 export default function Home() {
-  const [data, setData] = useState<CashflowData | null>(null);
+  const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [horizon, setHorizon] = useState<30 | 90 | 180>(30);
-  const [setupStatus, setSetupStatus] = useState<{
-    isSetupComplete: boolean;
-    initialBalance: string;
-  } | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    checkSetup();
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await fetch("/api/dashboard-ceo?year=2026");
+      if (!res.ok) throw new Error("Errore nel caricamento");
+      const dashboardData = await res.json();
+      setData(dashboardData);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Errore sconosciuto");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
-    if (setupStatus?.isSetupComplete) {
-      fetchData();
-    }
-  }, [horizon, setupStatus]);
+    fetchData();
+  }, [fetchData]);
 
-  const checkSetup = async () => {
-    try {
-      const res = await fetch("/api/setup");
-      if (res.ok) {
-        const status = await res.json();
-        setSetupStatus(status);
-        if (!status.isSetupComplete) {
-          setLoading(false);
-        }
-      }
-    } catch {
-      setLoading(false);
-    }
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString("it-IT", { day: "numeric", month: "short" });
   };
 
-  const runSetup = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/setup", { method: "POST" });
-      if (res.ok) {
-        await checkSetup();
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+  const formatMonth = (month: number) => MONTH_NAMES[month - 1];
 
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/cashflow?horizon=${horizon}`);
-      if (res.ok) {
-        const cashflowData = await res.json();
-        setData(cashflowData);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Setup non completato
-  if (!loading && setupStatus && !setupStatus.isSetupComplete) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="text-center max-w-md">
-          <Settings className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-          <h1 className="text-2xl font-bold mb-2">Benvenuto in Cashflow</h1>
-          <p className="text-muted-foreground mb-6">
-            Prima di iniziare, configuro i dati iniziali.
-          </p>
-          <Button onClick={runSetup} size="lg">
-            Configura Dati Iniziali
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  // Loading
-  if (loading || !data) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -162,21 +149,24 @@ export default function Home() {
     );
   }
 
-  const config = STATUS_CONFIG[data.status];
-  const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return "-";
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("it-IT", { day: "numeric", month: "short" });
-  };
+  if (error || !data) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <AlertTriangle className="h-12 w-12 mx-auto text-red-500 mb-4" />
+          <p className="text-red-500">{error || "Errore nel caricamento"}</p>
+          <Button onClick={fetchData} className="mt-4">Riprova</Button>
+        </div>
+      </div>
+    );
+  }
 
-  // Calcola percentuale barra progresso
-  const progressPercent =
-    data.daysUntilDifficulty !== null
-      ? Math.min(100, Math.round((data.daysUntilDifficulty / data.horizonDays) * 100))
-      : 100;
+  const hasActions = data.actions.overdueInstallments.length > 0 ||
+                     data.actions.invoicesToIssue.length > 0 ||
+                     data.actions.latePayments.length > 0;
 
   return (
-    <div className="min-h-screen pb-20">
+    <div className="min-h-screen pb-24">
       {/* Mobile Header */}
       <header className="lg:hidden sticky top-0 z-30 bg-sidebar border-b border-sidebar-border">
         <div className="flex items-center justify-between px-4 h-14">
@@ -187,168 +177,398 @@ export default function Home() {
             </div>
             <span className="font-semibold text-foreground">Dashboard</span>
           </div>
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" className="text-muted-foreground">
-              <Bell className="h-5 w-5" />
-            </Button>
-            <Link href="/profile">
-              <Button variant="ghost" size="icon" className="text-muted-foreground">
-                <User className="h-5 w-5" />
-              </Button>
-            </Link>
-          </div>
+          <Button variant="ghost" size="icon" className="text-muted-foreground">
+            <Bell className="h-5 w-5" />
+          </Button>
         </div>
       </header>
 
-      <div className="p-4 lg:p-6 max-w-4xl mx-auto space-y-6">
-        {/* STATO AZIENDA - Hero Banner */}
-        <div className={`rounded-xl border-2 ${config.borderColor} ${config.bgColor} p-4 sm:p-6 overflow-hidden`}>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Badge className={`${config.color} text-white font-bold text-xs sm:text-sm`}>
-                {config.label}
-              </Badge>
-              {data.status === "defense" && (
-                <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-red-500" />
-              )}
-            </div>
-            {/* Horizon selector */}
-            <div className="flex gap-0.5 sm:gap-1">
-              {([30, 90, 180] as const).map((days) => (
-                <Button
-                  key={days}
-                  variant={horizon === days ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setHorizon(days)}
-                  className="h-6 sm:h-7 px-1.5 sm:px-2 text-xs"
-                >
-                  {days}g
-                </Button>
-              ))}
-            </div>
-          </div>
-
-          <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4">{config.sublabel}</p>
-
-          {/* Progress bar */}
-          <div className="mb-2">
-            <div className="flex justify-between text-[10px] sm:text-xs text-muted-foreground mb-1">
-              <span>OGGI</span>
-              <span className="text-right">
-                {data.daysUntilDifficulty !== null
-                  ? `DIFFICOLTÀ ${formatDate(data.difficultyDate)}`
-                  : `FINE ${horizon}g`}
+      <div className="p-4 lg:p-6 max-w-5xl mx-auto space-y-4">
+        {/* ============ 1. HERO: VENDI ANCORA ============ */}
+        <Card className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border-amber-200 dark:border-amber-800">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex items-center gap-2 mb-2">
+              <Target className="h-5 w-5 text-amber-600" />
+              <span className="text-sm font-medium text-amber-700 dark:text-amber-400">
+                OBIETTIVO Q{data.quarterSales.quarter} {data.quarterSales.year}
               </span>
+              <Badge variant="outline" className="ml-auto text-xs">
+                {data.quarterSales.daysRemaining} giorni rimasti
+              </Badge>
             </div>
-            <div className="h-2 bg-muted rounded-full overflow-hidden">
-              <div
-                className={`h-full ${config.color} transition-all`}
-                style={{ width: `${progressPercent}%` }}
-              />
-            </div>
-          </div>
 
-          <div className="text-center">
-            <span className={`text-sm sm:text-lg font-bold ${config.textColor}`}>
-              {data.daysUntilDifficulty !== null
-                ? `${data.daysUntilDifficulty} giorni prima della difficoltà`
-                : "Nessuna difficoltà prevista"}
-            </span>
-          </div>
+            <div className="text-center py-4">
+              <div className="text-xs text-muted-foreground mb-1">Vendi ancora</div>
+              <div className="text-3xl sm:text-4xl font-bold font-mono text-amber-600 dark:text-amber-400">
+                {formatCurrency(data.quarterSales.remainingToSell)}
+              </div>
+            </div>
+
+            {/* Progress bar */}
+            <div className="mt-4">
+              <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                <span>Venduto {formatCurrency(data.quarterSales.salesAvailable)}</span>
+                <span>Target {formatCurrency(data.quarterSales.gap)}</span>
+              </div>
+              <div className="h-3 bg-amber-200 dark:bg-amber-900 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-amber-500 transition-all rounded-full"
+                  style={{ width: `${data.quarterSales.progress}%` }}
+                />
+              </div>
+              <div className="text-center text-sm font-medium text-amber-600 mt-2">
+                {data.quarterSales.progress}% raggiunto
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* ============ 2. CASSA + RUNWAY ============ */}
+        <div className="grid grid-cols-2 gap-3">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Wallet className="h-4 w-4 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">CASSA OGGI</span>
+              </div>
+              <div className="text-2xl sm:text-3xl font-bold font-mono">
+                {formatCurrency(data.currentBalance)}
+              </div>
+              <div className={`flex items-center gap-1 text-xs mt-1 ${
+                data.balanceChange7Days >= 0 ? "text-green-600" : "text-red-600"
+              }`}>
+                {data.balanceChange7Days >= 0 ? (
+                  <TrendingUp className="h-3 w-3" />
+                ) : (
+                  <TrendingDown className="h-3 w-3" />
+                )}
+                <span>{data.balanceChange7Days >= 0 ? "+" : ""}{formatCurrency(data.balanceChange7Days)} vs 7gg</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Shield className="h-4 w-4 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">RUNWAY</span>
+              </div>
+              <div className="text-2xl sm:text-3xl font-bold font-mono">
+                {data.runway.months} <span className="text-base font-normal text-muted-foreground">mesi</span>
+              </div>
+              <div className="mt-2">
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className={`h-full transition-all rounded-full ${
+                      data.runway.percent >= 100 ? "bg-green-500" :
+                      data.runway.percent >= 60 ? "bg-amber-500" : "bg-red-500"
+                    }`}
+                    style={{ width: `${Math.min(100, data.runway.percent)}%` }}
+                  />
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  target: {data.runway.target} mesi
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* I 3 NUMERI CHIAVE */}
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3">
-          {/* 1. Giorni alla difficoltà */}
-          <Card className="text-center">
-            <CardContent className="p-2 sm:p-4">
-              <Calendar className="h-5 w-5 sm:h-6 sm:w-6 mx-auto mb-1 sm:mb-2 text-muted-foreground" />
-              <div className={`text-xl sm:text-3xl font-bold font-mono ${
-                data.daysUntilDifficulty !== null && data.daysUntilDifficulty < 14
-                  ? "text-red-600"
-                  : "text-foreground"
-              }`}>
-                {data.daysUntilDifficulty !== null ? data.daysUntilDifficulty : "∞"}
+        {/* ============ 3. SOSTENIBILITÀ MESE ============ */}
+        <Card>
+          <CardHeader className="pb-2 px-4">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              {formatMonth(data.currentMonthSustainability.month)} {data.currentMonthSustainability.year} - Sostenibilità
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-sm">Entrate previste</span>
+                <span className="font-mono text-green-600">+{formatCurrency(data.currentMonthSustainability.income)}</span>
               </div>
-              <div className="text-[10px] sm:text-xs text-muted-foreground">
-                giorni
+              <div className="flex justify-between items-center">
+                <span className="text-sm">Uscite operative</span>
+                <span className="font-mono text-red-600">-{formatCurrency(data.currentMonthSustainability.expenses)}</span>
               </div>
-            </CardContent>
-          </Card>
+              <div className="flex justify-between items-center">
+                <span className="text-sm">Rate PDR</span>
+                <span className="font-mono text-amber-600">-{formatCurrency(data.currentMonthSustainability.pdr)}</span>
+              </div>
+              <div className="border-t pt-2 mt-2">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">MARGINE PREVISTO</span>
+                  <span className={`font-mono font-bold text-lg ${
+                    data.currentMonthSustainability.margin >= 0 ? "text-green-600" : "text-red-600"
+                  }`}>
+                    {data.currentMonthSustainability.margin >= 0 ? "+" : ""}{formatCurrency(data.currentMonthSustainability.margin)}
+                    {data.currentMonthSustainability.margin < 0 && (
+                      <AlertTriangle className="inline h-4 w-4 ml-1" />
+                    )}
+                  </span>
+                </div>
+              </div>
+              <div className="text-xs text-muted-foreground flex items-center gap-1">
+                vs {formatMonth(data.currentMonthSustainability.prevMonth.month)}:
+                <span className={data.currentMonthSustainability.marginChange >= 0 ? "text-green-600" : "text-red-600"}>
+                  {data.currentMonthSustainability.marginChange >= 0 ? "+" : ""}{formatCurrency(data.currentMonthSustainability.marginChange)}
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-          {/* 2. Saldo fine periodo */}
-          <Card className="text-center">
-            <CardContent className="p-2 sm:p-4">
-              <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6 mx-auto mb-1 sm:mb-2 text-muted-foreground" />
-              <div className={`text-base sm:text-2xl font-bold font-mono ${
-                data.endPeriodBalance >= 0 ? "text-green-600" : "text-red-600"
-              }`}>
-                {formatCurrency(data.endPeriodBalance)}
-              </div>
-              <div className="text-[10px] sm:text-xs text-muted-foreground">
-                saldo finale
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* 3. Target fatturato */}
-          <Card className="text-center col-span-2 sm:col-span-1">
-            <CardContent className="p-2 sm:p-4">
-              <Target className="h-5 w-5 sm:h-6 sm:w-6 mx-auto mb-1 sm:mb-2 text-muted-foreground" />
-              <div className={`text-base sm:text-2xl font-bold font-mono ${
-                data.requiredRevenue > 0 ? "text-amber-600" : "text-green-600"
-              }`}>
-                {data.requiredRevenue > 0 ? formatCurrency(data.requiredRevenue) : "OK"}
-              </div>
-              <div className="text-[10px] sm:text-xs text-muted-foreground">
-                da fatturare
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* PROSSIME SCADENZE (7 giorni) */}
-        {data.upcomingExpenses.length > 0 && (
+        {/* ============ 4. PROSSIMI 7GG + ULTIMI 7GG ============ */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {/* Prossimi 7 giorni */}
           <Card>
             <CardHeader className="pb-2 px-4">
               <CardTitle className="text-sm font-medium flex items-center justify-between">
-                <span>Prossime Scadenze (7gg)</span>
-                <Link href="/forecast">
+                <span className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  Prossimi 7 giorni
+                </span>
+                <span className={`font-mono text-sm ${
+                  data.next7Days.balance >= 0 ? "text-green-600" : "text-red-600"
+                }`}>
+                  {data.next7Days.balance >= 0 ? "+" : ""}{formatCurrency(data.next7Days.balance)}
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-4 pb-4">
+              {data.next7Days.incomes.length > 0 && (
+                <div className="mb-3">
+                  <div className="text-xs text-muted-foreground mb-1">IN ENTRATA</div>
+                  {data.next7Days.incomes.slice(0, 3).map((income) => (
+                    <div key={income.id} className="flex justify-between items-center py-1 text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground w-10">{formatDate(income.date)}</span>
+                        <span className="truncate max-w-[120px]">{income.clientName}</span>
+                      </div>
+                      <span className="font-mono text-green-600">+{formatCurrency(income.amount)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {data.next7Days.expenses.length > 0 && (
+                <div>
+                  <div className="text-xs text-muted-foreground mb-1">IN USCITA</div>
+                  {data.next7Days.expenses.slice(0, 4).map((expense) => (
+                    <div key={expense.id} className="flex justify-between items-center py-1 text-sm">
+                      <div className="flex items-center gap-2">
+                        {expense.isEssential && <div className="w-2 h-2 rounded-full bg-red-500" />}
+                        {expense.type === "pdr" && <div className="w-2 h-2 rounded-full bg-amber-500" />}
+                        {!expense.isEssential && expense.type !== "pdr" && <div className="w-2 h-2 rounded-full bg-muted" />}
+                        <span className="text-xs text-muted-foreground w-10">{formatDate(expense.date)}</span>
+                        <span className="truncate max-w-[100px]">{expense.description}</span>
+                      </div>
+                      <span className="font-mono text-red-600">-{formatCurrency(expense.amount)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {data.next7Days.incomes.length === 0 && data.next7Days.expenses.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">Nessun movimento previsto</p>
+              )}
+              <Link href="/forecast" className="block mt-3">
+                <Button variant="ghost" size="sm" className="w-full text-xs">
+                  Vedi tutti <ChevronRight className="h-3 w-3 ml-1" />
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+
+          {/* Ultimi 7 giorni */}
+          <Card>
+            <CardHeader className="pb-2 px-4">
+              <CardTitle className="text-sm font-medium flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Ultimi 7 giorni
+                </span>
+                <span className={`font-mono text-sm ${
+                  data.last7Days.balance >= 0 ? "text-green-600" : "text-red-600"
+                }`}>
+                  {data.last7Days.balance >= 0 ? "+" : ""}{formatCurrency(data.last7Days.balance)}
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-4 pb-4">
+              {data.last7Days.incomes.length > 0 && (
+                <div className="mb-3">
+                  <div className="text-xs text-muted-foreground mb-1">INCASSATI</div>
+                  {data.last7Days.incomes.slice(0, 3).map((income) => (
+                    <div key={income.id} className="flex justify-between items-center py-1 text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground w-10">{formatDate(income.date)}</span>
+                        <span className="truncate max-w-[120px]">{income.description}</span>
+                      </div>
+                      <span className="font-mono text-green-600">+{formatCurrency(income.amount)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {data.last7Days.expenses.length > 0 && (
+                <div>
+                  <div className="text-xs text-muted-foreground mb-1">SPESI</div>
+                  {data.last7Days.expenses.slice(0, 4).map((expense) => (
+                    <div key={expense.id} className="flex justify-between items-center py-1 text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground w-10">{formatDate(expense.date)}</span>
+                        <span className="truncate max-w-[100px]">{expense.description}</span>
+                      </div>
+                      <span className="font-mono text-red-600">{formatCurrency(expense.amount)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {data.last7Days.incomes.length === 0 && data.last7Days.expenses.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">Nessun movimento registrato</p>
+              )}
+              <Link href="/transactions" className="block mt-3">
+                <Button variant="ghost" size="sm" className="w-full text-xs">
+                  Vedi tutti <ChevronRight className="h-3 w-3 ml-1" />
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* ============ 5. AZIONI RICHIESTE ============ */}
+        {hasActions && (
+          <Card className="border-amber-200 dark:border-amber-800">
+            <CardHeader className="pb-2 px-4">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-amber-500" />
+                Azioni Richieste
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-4 pb-4 space-y-3">
+              {/* Rate scadute */}
+              {data.actions.overdueInstallments.length > 0 && (
+                <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-red-500" />
+                      <span className="font-medium text-red-700 dark:text-red-400">
+                        {data.actions.overdueInstallments.length} rate PDR scadute
+                      </span>
+                    </div>
+                    <span className="font-mono font-bold text-red-600">
+                      {formatCurrency(data.actions.overdueTotal)}
+                    </span>
+                  </div>
+                  <div className="text-xs text-red-600 dark:text-red-400">
+                    {data.actions.overdueInstallments.slice(0, 3).map(i => i.creditorName).join(" • ")}
+                  </div>
+                  <Link href="/payment-plans">
+                    <Button size="sm" variant="outline" className="mt-2 h-7 text-xs border-red-300 text-red-600 hover:bg-red-100">
+                      Gestisci <ArrowRight className="h-3 w-3 ml-1" />
+                    </Button>
+                  </Link>
+                </div>
+              )}
+
+              {/* Fatture da emettere */}
+              {data.actions.invoicesToIssue.length > 0 && (
+                <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-amber-500" />
+                      <span className="font-medium text-amber-700 dark:text-amber-400">
+                        {data.actions.invoicesToIssue.length} fatture da emettere
+                      </span>
+                    </div>
+                    <span className="font-mono font-bold text-amber-600">
+                      {formatCurrency(data.actions.invoicesTotal)}
+                    </span>
+                  </div>
+                  <div className="text-xs text-amber-600 dark:text-amber-400">
+                    {data.actions.invoicesToIssue.slice(0, 3).map(i => i.clientName).join(" • ")}
+                  </div>
+                </div>
+              )}
+
+              {/* Incassi in ritardo */}
+              {data.actions.latePayments.length > 0 && (
+                <div className="p-3 rounded-lg bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Receipt className="h-4 w-4 text-orange-500" />
+                      <span className="font-medium text-orange-700 dark:text-orange-400">
+                        {data.actions.latePayments.length} incassi in ritardo
+                      </span>
+                    </div>
+                    <span className="font-mono font-bold text-orange-600">
+                      {formatCurrency(data.actions.lateTotal)}
+                    </span>
+                  </div>
+                  <div className="text-xs text-orange-600 dark:text-orange-400">
+                    {data.actions.latePayments.slice(0, 3).map(i => i.clientName).join(" • ")}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* ============ 6. PIANI DI RIENTRO ============ */}
+        {data.pdr.plans.length > 0 && (
+          <Card>
+            <CardHeader className="pb-2 px-4">
+              <CardTitle className="text-sm font-medium flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <CreditCard className="h-4 w-4" />
+                  Piani di Rientro
+                </span>
+                <Link href="/payment-plans">
                   <Button variant="ghost" size="sm" className="h-6 text-xs">
-                    Vedi tutte <ChevronRight className="h-3 w-3 ml-1" />
+                    Gestisci <ChevronRight className="h-3 w-3 ml-1" />
                   </Button>
                 </Link>
               </CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-4">
-              <div className="space-y-2">
-                {data.upcomingExpenses.slice(0, 5).map((expense) => (
-                  <div
-                    key={expense.id}
-                    className="flex items-center justify-between py-2 border-b last:border-0"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`w-2 h-2 rounded-full ${
-                        expense.isEssential ? "bg-red-500" :
-                        expense.type === "pdr" ? "bg-amber-500" : "bg-muted"
-                      }`} />
-                      <div>
-                        <div className="text-sm font-medium truncate max-w-[180px] sm:max-w-none">
-                          {expense.description}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {formatDate(expense.date)}
-                          {expense.type === "pdr" && (
-                            <Badge variant="outline" className="ml-2 text-xs py-0">PDR</Badge>
-                          )}
-                          {expense.isEssential && (
-                            <Badge variant="outline" className="ml-2 text-xs py-0 border-red-500 text-red-500">VITALE</Badge>
-                          )}
-                        </div>
+              <div className="flex justify-between text-xs text-muted-foreground mb-3">
+                <span>Debito residuo: <span className="font-mono font-medium text-foreground">{formatCurrency(data.pdr.totalRemaining)}</span></span>
+                <span>Rate mese: <span className="font-mono font-medium text-foreground">{formatCurrency(data.pdr.monthlyTotal)}</span></span>
+              </div>
+              <div className="space-y-3">
+                {data.pdr.plans.slice(0, 3).map((plan) => (
+                  <div key={plan.id} className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-sm">{plan.creditorName}</span>
+                        {plan.category && (
+                          <Badge
+                            variant="outline"
+                            className="text-xs"
+                            style={{ borderColor: plan.category.color || undefined, color: plan.category.color || undefined }}
+                          >
+                            {plan.category.name}
+                          </Badge>
+                        )}
+                        {plan.progress >= 75 && (
+                          <PartyPopper className="h-4 w-4 text-amber-500" />
+                        )}
                       </div>
+                      <span className="text-xs text-muted-foreground">
+                        {formatMonth(new Date(plan.estimatedCloseDate).getMonth() + 1)} {new Date(plan.estimatedCloseDate).getFullYear()}
+                      </span>
                     </div>
-                    <div className="font-mono text-sm font-bold text-red-600">
-                      {formatCurrency(expense.amount)}
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-green-500 transition-all rounded-full"
+                          style={{ width: `${plan.progress}%` }}
+                        />
+                      </div>
+                      <span className="text-xs font-mono w-10 text-right">{plan.progress}%</span>
+                    </div>
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>{plan.paidInstallments}/{plan.totalInstallments} rate</span>
+                      <span>{formatCurrency(plan.remaining)} rimasti</span>
                     </div>
                   </div>
                 ))}
@@ -357,77 +577,93 @@ export default function Home() {
           </Card>
         )}
 
-        {/* QUICK STATS */}
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
-          <Card className="p-2 sm:p-3">
-            <div className="flex items-center gap-1.5 sm:gap-2 mb-1">
-              <Wallet className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
-              <span className="text-[10px] sm:text-xs text-muted-foreground truncate">Cassa oggi</span>
+        {/* ============ 7. TREND ============ */}
+        <Card>
+          <CardHeader className="pb-2 px-4">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" />
+              Trend ultimi 3 mesi
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            <div className="grid grid-cols-3 gap-2">
+              {data.trend.map((month, idx) => {
+                const isCurrentMonth = idx === data.trend.length - 1;
+                return (
+                  <div
+                    key={`${month.month}-${month.year}`}
+                    className={`p-3 rounded-lg text-center ${
+                      isCurrentMonth ? "bg-muted" : "bg-muted/50"
+                    }`}
+                  >
+                    <div className="text-xs text-muted-foreground mb-1">
+                      {formatMonth(month.month)} {isCurrentMonth && "(prev)"}
+                    </div>
+                    <div className={`font-mono font-bold ${
+                      month.margin >= 0 ? "text-green-600" : "text-red-600"
+                    }`}>
+                      {month.margin >= 0 ? "+" : ""}{formatCurrency(month.margin)}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {month.margin >= 0 ? (
+                        <CheckCircle className="inline h-3 w-3 text-green-500" />
+                      ) : (
+                        <AlertTriangle className="inline h-3 w-3 text-red-500" />
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-            <div className="font-mono font-bold text-sm sm:text-base text-foreground">
-              {formatCurrency(data.currentBalance)}
-            </div>
-          </Card>
-          <Card className="p-2 sm:p-3">
-            <div className="flex items-center gap-1.5 sm:gap-2 mb-1">
-              <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-red-500 shrink-0" />
-              <span className="text-[10px] sm:text-xs text-muted-foreground truncate">Uscite {horizon}g</span>
-            </div>
-            <div className="font-mono font-bold text-sm sm:text-base text-red-600">
-              {formatCurrency(data.totalExpensesInPeriod)}
-            </div>
-          </Card>
-          <Card className="p-2 sm:p-3">
-            <div className="flex items-center gap-1.5 sm:gap-2 mb-1">
-              <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-green-500 shrink-0" />
-              <span className="text-[10px] sm:text-xs text-muted-foreground truncate">Incassi certi</span>
-            </div>
-            <div className="font-mono font-bold text-sm sm:text-base text-green-600">
-              {formatCurrency(data.totalCertainIncomeInPeriod)}
-            </div>
-          </Card>
-          <Card className="p-2 sm:p-3">
-            <div className="flex items-center gap-1.5 sm:gap-2 mb-1">
-              <CreditCard className="h-3 w-3 sm:h-4 sm:w-4 text-amber-500 shrink-0" />
-              <span className="text-[10px] sm:text-xs text-muted-foreground truncate">Debiti PDR</span>
-            </div>
-            <div className="font-mono font-bold text-sm sm:text-base text-amber-600">
-              {formatCurrency(data.debt.remaining)}
-            </div>
-          </Card>
-        </div>
+            {data.trend.length >= 2 && (
+              <div className="text-center text-xs text-muted-foreground mt-3">
+                {data.trend[data.trend.length - 1].margin > data.trend[data.trend.length - 2].margin ? (
+                  <span className="text-green-600 flex items-center justify-center gap-1">
+                    <TrendingUp className="h-3 w-3" /> In miglioramento
+                  </span>
+                ) : data.trend[data.trend.length - 1].margin < data.trend[data.trend.length - 2].margin ? (
+                  <span className="text-red-600 flex items-center justify-center gap-1">
+                    <TrendingDown className="h-3 w-3" /> In peggioramento
+                  </span>
+                ) : (
+                  <span>Stabile</span>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-        {/* QUICK LINKS */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        {/* Quick Links */}
+        <div className="grid grid-cols-4 gap-2">
           <Link href="/forecast" className="block">
             <Button variant="outline" className="w-full h-auto py-3 flex flex-col gap-1">
-              <BarChart3 className="h-5 w-5" />
-              <span className="text-xs">Previsionale</span>
+              <Calendar className="h-5 w-5" />
+              <span className="text-[10px]">Previsionale</span>
             </Button>
           </Link>
           <Link href="/transactions" className="block">
             <Button variant="outline" className="w-full h-auto py-3 flex flex-col gap-1">
               <FileText className="h-5 w-5" />
-              <span className="text-xs">Consuntivo</span>
+              <span className="text-[10px]">Consuntivo</span>
             </Button>
           </Link>
-          <Link href="/payment-plans" className="block">
+          <Link href="/sales" className="block">
             <Button variant="outline" className="w-full h-auto py-3 flex flex-col gap-1">
-              <CreditCard className="h-5 w-5" />
-              <span className="text-xs">PDR</span>
+              <Target className="h-5 w-5" />
+              <span className="text-[10px]">Commerciale</span>
             </Button>
           </Link>
           <Link href="/settings" className="block">
             <Button variant="outline" className="w-full h-auto py-3 flex flex-col gap-1">
-              <Settings className="h-5 w-5" />
-              <span className="text-xs">Piano Annuale</span>
+              <Receipt className="h-5 w-5" />
+              <span className="text-[10px]">Piano</span>
             </Button>
           </Link>
         </div>
-
-        {/* CONTROLLO DI GESTIONE ANNUALE */}
-        <AnnualControlTable />
       </div>
+
+      {/* FAB Quick Entry */}
+      <QuickEntry onSuccess={fetchData} />
     </div>
   );
 }

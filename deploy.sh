@@ -1,102 +1,262 @@
 #!/bin/bash
 
-# ============================================
-# Deploy Script - Karalisweb Finance
-# ============================================
-# Esegue commit, push su GitHub e pull sul server
+# ╔══════════════════════════════════════════════════════════════╗
+# ║             KW CASHFLOW - Deploy Script                      ║
+# ╠══════════════════════════════════════════════════════════════╣
+# ║ App:              KW Cashflow                                ║
+# ║ Versione:         2.1.0                                      ║
+# ║ Ultimo update:    2026-02-08                                 ║
+# ║                                                              ║
+# ║ Cartella locale:  ~/Desktop/Sviluppo App Claude Code/       ║
+# ║                   CashFlow/kw-cashflow                       ║
+# ║ Repo GitHub:      github.com/karalisweb/controllo-gestione  ║
+# ║ Cartella server:  /root/karalisweb-finance                   ║
+# ║                                                              ║
+# ║ Porta locale:     3002                                       ║
+# ║ Porta server:     3002 (proxy Nginx su porta 80/443)         ║
+# ║                                                              ║
+# ║ URL pubblico:     https://finance.karalisdemo.it             ║
+# ║ VPS:              185.192.97.108                              ║
+# ║ Process manager:  PM2 (nome: karalisweb-finance)             ║
+# ║ Restart server:   pm2 restart karalisweb-finance             ║
+# ║ Restart locale:   npm run dev                                ║
+# ╚══════════════════════════════════════════════════════════════╝
+#
 # Uso: ./deploy.sh "messaggio commit"
-# ============================================
+#      ./deploy.sh --bump patch "messaggio commit"
+#      ./deploy.sh --bump minor "messaggio commit"
+#      ./deploy.sh --bump major "messaggio commit"
 
-set -e  # Esci in caso di errore
+set -e  # Esci se un comando fallisce
 
 # Colori per output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-# Configurazione Server
-SERVER_HOST="vmi2996361.contaboserver.net"
-SERVER_USER="root"
-SERVER_PASS="SnEAw5k32Y8"
-SERVER_DIR="/root/karalisweb-finance"
-PM2_NAME="karalisweb-finance"
+# ═══════════════════════════════════════════
+# CONFIGURAZIONE (modifica qui per altre app)
+# ═══════════════════════════════════════════
+APP_NAME="KW Cashflow"
+APP_VERSION="2.1.0"
+VPS_HOST="root@185.192.97.108"
+VPS_PATH="/root/karalisweb-finance"
+BRANCH="main"
+PM2_PROCESS="karalisweb-finance"
+LOCAL_PORT=3002
+SERVER_PORT=3002
+PUBLIC_URL="https://finance.karalisdemo.it"
+NGINX_CONFIG="/etc/nginx/sites-available/finance.karalisdemo.it"
+GITHUB_REPO="github.com/karalisweb/controllo-gestione"
 
-# Messaggio commit (parametro opzionale)
-COMMIT_MSG="${1:-Auto deploy $(date '+%Y-%m-%d %H:%M')}"
+# ═══════════════════════════════════════════
+# FUNZIONI
+# ═══════════════════════════════════════════
 
-echo -e "${BLUE}============================================${NC}"
-echo -e "${BLUE}   DEPLOY KARALISWEB FINANCE${NC}"
-echo -e "${BLUE}============================================${NC}"
-echo ""
+print_header() {
+    echo -e "\n${BLUE}═══════════════════════════════════════${NC}"
+    echo -e "${BLUE}  $1${NC}"
+    echo -e "${BLUE}═══════════════════════════════════════${NC}"
+}
 
-# 1. Verifica modifiche locali
-echo -e "${YELLOW}[1/5] Verifico modifiche locali...${NC}"
-if [[ -z $(git status --porcelain) ]]; then
-    echo -e "${GREEN}Nessuna modifica da committare${NC}"
-    SKIP_COMMIT=true
+print_step() {
+    echo -e "\n${GREEN}==>${NC} $1"
+}
+
+print_warning() {
+    echo -e "${YELLOW}[!] $1${NC}"
+}
+
+print_error() {
+    echo -e "${RED}[X] $1${NC}"
+}
+
+print_success() {
+    echo -e "${GREEN}[OK] $1${NC}"
+}
+
+# ═══════════════════════════════════════════
+# VERSIONING
+# ═══════════════════════════════════════════
+
+bump_version() {
+    local current="$1"
+    local bump_type="$2"
+
+    local major minor patch
+    major=$(echo "$current" | cut -d. -f1)
+    minor=$(echo "$current" | cut -d. -f2)
+    patch=$(echo "$current" | cut -d. -f3)
+
+    case "$bump_type" in
+        major)
+            major=$((major + 1))
+            minor=0
+            patch=0
+            ;;
+        minor)
+            minor=$((minor + 1))
+            patch=0
+            ;;
+        patch)
+            patch=$((patch + 1))
+            ;;
+    esac
+
+    echo "${major}.${minor}.${patch}"
+}
+
+update_version_in_files() {
+    local old_version="$1"
+    local new_version="$2"
+
+    # 1. package.json
+    if [ -f "package.json" ]; then
+        sed -i '' "s/\"version\": \"${old_version}\"/\"version\": \"${new_version}\"/" package.json
+        print_success "package.json → v${new_version}"
+    fi
+
+    # 2. deploy.sh (questo file - APP_VERSION e header)
+    sed -i '' "s/APP_VERSION=\"${old_version}\"/APP_VERSION=\"${new_version}\"/" deploy.sh
+    sed -i '' "s/# ║ Versione:         ${old_version}/# ║ Versione:         ${new_version}/" deploy.sh
+    # Aggiorna data ultimo update
+    sed -i '' "s/# ║ Ultimo update:    [0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}/# ║ Ultimo update:    $(date '+%Y-%m-%d')/" deploy.sh
+    print_success "deploy.sh → v${new_version}"
+
+    # 3. DEPLOY.md
+    if [ -f "DEPLOY.md" ]; then
+        sed -i '' "s/Versione attuale: \*\*${old_version}\*\*/Versione attuale: **${new_version}**/" DEPLOY.md
+        print_success "DEPLOY.md → v${new_version}"
+    fi
+}
+
+# ═══════════════════════════════════════════
+# PARSING ARGOMENTI
+# ═══════════════════════════════════════════
+
+BUMP_TYPE=""
+COMMIT_MSG=""
+
+if [ "$1" = "--bump" ]; then
+    BUMP_TYPE="$2"
+    COMMIT_MSG="$3"
+
+    if [[ "$BUMP_TYPE" != "major" && "$BUMP_TYPE" != "minor" && "$BUMP_TYPE" != "patch" ]]; then
+        print_error "Tipo di bump non valido: $BUMP_TYPE"
+        echo "Usa: major, minor, o patch"
+        exit 1
+    fi
+
+    if [ -z "$COMMIT_MSG" ]; then
+        print_error "Devi specificare un messaggio di commit!"
+        echo "Uso: ./deploy.sh --bump $BUMP_TYPE \"messaggio commit\""
+        exit 1
+    fi
 else
-    git status --short
-    SKIP_COMMIT=false
+    COMMIT_MSG="$1"
 fi
-echo ""
 
-# 2. Commit e Push
-if [ "$SKIP_COMMIT" = false ]; then
-    echo -e "${YELLOW}[2/5] Commit delle modifiche...${NC}"
-    git add .
-    git commit -m "$COMMIT_MSG"
-    echo -e "${GREEN}Commit completato: $COMMIT_MSG${NC}"
+# Verifica messaggio commit
+if [ -z "$COMMIT_MSG" ]; then
+    print_error "Devi specificare un messaggio di commit!"
     echo ""
-fi
-
-echo -e "${YELLOW}[3/5] Push su GitHub...${NC}"
-git push origin main
-echo -e "${GREEN}Push completato${NC}"
-echo ""
-
-# 3. Deploy sul server
-echo -e "${YELLOW}[4/5] Deploy sul server...${NC}"
-echo -e "Connessione a ${SERVER_HOST}..."
-
-# Verifica se sshpass è installato
-if ! command -v sshpass &> /dev/null; then
-    echo -e "${RED}sshpass non trovato. Installalo con: brew install hudochenkov/sshpass/sshpass${NC}"
-    echo -e "${YELLOW}In alternativa, esegui manualmente:${NC}"
-    echo -e "ssh ${SERVER_USER}@${SERVER_HOST}"
-    echo -e "cd ${SERVER_DIR} && git pull && npm install && npm run build && pm2 restart ${PM2_NAME}"
+    echo "Uso:"
+    echo "  ./deploy.sh \"messaggio commit\""
+    echo "  ./deploy.sh --bump patch \"fix bug XYZ\""
+    echo "  ./deploy.sh --bump minor \"nuova funzionalita ABC\""
+    echo "  ./deploy.sh --bump major \"redesign completo\""
     exit 1
 fi
 
-sshpass -p "${SERVER_PASS}" ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_HOST} << 'ENDSSH'
-set -e
+# Header
+print_header "$APP_NAME v$APP_VERSION - Deploy"
 
-echo "Navigazione in /root/karalisweb-finance..."
-cd /root/karalisweb-finance
+# ═══════════════════════════════════════════
+# STEP 0: Versioning (se richiesto)
+# ═══════════════════════════════════════════
 
-echo "Pull da GitHub..."
-git pull origin main
+if [ -n "$BUMP_TYPE" ]; then
+    print_step "Step 0 - Aggiornamento versione ($BUMP_TYPE)..."
+    NEW_VERSION=$(bump_version "$APP_VERSION" "$BUMP_TYPE")
+    echo -e "  ${CYAN}${APP_VERSION}${NC} → ${GREEN}${NEW_VERSION}${NC}"
+    update_version_in_files "$APP_VERSION" "$NEW_VERSION"
+    APP_VERSION="$NEW_VERSION"
+    echo ""
+fi
 
-echo "Installazione dipendenze..."
-npm install
+# ═══════════════════════════════════════════
+# STEP 1: Verifica stato Git
+# ═══════════════════════════════════════════
 
-echo "Build applicazione..."
-npm run build
+print_step "Step 1/6 - Verifico stato Git locale..."
+if [ -n "$(git status --porcelain | grep -v '\.db')" ]; then
+    git status --short | grep -v '\.db'
+else
+    print_warning "Nessuna modifica da committare (esclusi file .db)"
+    read -p "Vuoi continuare comunque con il deploy? (y/n) " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        exit 0
+    fi
+fi
 
-echo "Riavvio PM2..."
-pm2 restart karalisweb-finance --update-env || pm2 start npm --name "karalisweb-finance" -- start
+# ═══════════════════════════════════════════
+# STEP 2: Add e Commit
+# ═══════════════════════════════════════════
 
-echo "Stato PM2:"
-pm2 list
+print_step "Step 2/6 - Aggiungo modifiche e creo commit..."
+git add .
+git commit -m "$COMMIT_MSG" || print_warning "Niente da committare"
 
-ENDSSH
+# ═══════════════════════════════════════════
+# STEP 3: Push a GitHub
+# ═══════════════════════════════════════════
+
+print_step "Step 3/6 - Push a GitHub ($BRANCH)..."
+git push origin $BRANCH
+print_success "Push completato"
+
+# ═══════════════════════════════════════════
+# STEP 4: Pull sul VPS + Install dipendenze
+# ═══════════════════════════════════════════
+
+print_step "Step 4/6 - Pull sul VPS e installazione dipendenze..."
+ssh $VPS_HOST "cd $VPS_PATH && git pull origin $BRANCH && npm install"
+print_success "Pull e npm install completati"
+
+# ═══════════════════════════════════════════
+# STEP 5: Build Next.js sul server
+# ═══════════════════════════════════════════
+
+print_step "Step 5/6 - Build Next.js sul server..."
+ssh $VPS_HOST "cd $VPS_PATH && npm run build"
+print_success "Build completata"
+
+# ═══════════════════════════════════════════
+# STEP 6: Restart PM2 + Pulizia cache
+# ═══════════════════════════════════════════
+
+print_step "Step 6/6 - Restart $PM2_PROCESS su VPS..."
+ssh $VPS_HOST "cd $VPS_PATH && pm2 restart $PM2_PROCESS --update-env || pm2 start npm --name '$PM2_PROCESS' -- start"
+print_success "Restart completato"
+
+# ═══════════════════════════════════════════
+# RIEPILOGO FINALE
+# ═══════════════════════════════════════════
 
 echo ""
-echo -e "${YELLOW}[5/5] Verifica deploy...${NC}"
-echo -e "${GREEN}============================================${NC}"
-echo -e "${GREEN}   DEPLOY COMPLETATO!${NC}"
-echo -e "${GREEN}============================================${NC}"
-echo ""
-echo -e "App disponibile su: ${BLUE}https://finance.karalisdemo.it${NC}"
-echo ""
+echo -e "${GREEN}═══════════════════════════════════════${NC}"
+echo -e "${GREEN}  Deploy completato!${NC}"
+echo -e "${GREEN}═══════════════════════════════════════${NC}"
+echo -e "  App:      ${APP_NAME}"
+echo -e "  Versione: v${APP_VERSION}"
+echo -e "  Commit:   ${COMMIT_MSG}"
+echo -e "  Branch:   ${BRANCH}"
+echo -e "  Server:   ${VPS_HOST} (porta ${SERVER_PORT})"
+echo -e "  PM2:      ${PM2_PROCESS}"
+echo -e "  URL:      ${PUBLIC_URL}"
+echo -e "  Data:     $(date '+%Y-%m-%d %H:%M:%S')"
+echo -e "${GREEN}═══════════════════════════════════════${NC}"
