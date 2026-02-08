@@ -16,7 +16,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "KW Cashflow",
+  title: "KW - Cashflow",
   description: "Controllo cashflow decisionale",
   icons: {
     icon: "/favicon.svg",
