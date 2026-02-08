@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -33,12 +34,20 @@ interface TransactionWithCenters {
   revenueCenter?: { id: number | null; name: string | null; color: string | null } | null;
 }
 
-export default function TransactionsPage() {
+function TransactionsContent() {
+  const searchParams = useSearchParams();
   const [transactions, setTransactions] = useState<TransactionWithCenters[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [quickInputOpen, setQuickInputOpen] = useState(false);
+
+  // Apri automaticamente il dialog se ?new=1
+  useEffect(() => {
+    if (searchParams.get("new") === "1") {
+      setQuickInputOpen(true);
+    }
+  }, [searchParams]);
   const [splitTransaction, setSplitTransaction] = useState<TransactionWithCenters | null>(
     null
   );
@@ -250,5 +259,13 @@ export default function TransactionsPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function TransactionsPage() {
+  return (
+    <Suspense>
+      <TransactionsContent />
+    </Suspense>
   );
 }

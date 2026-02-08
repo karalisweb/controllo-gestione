@@ -6,19 +6,17 @@ import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
   CalendarRange,
-  CreditCard,
   Receipt,
-  Target,
+  PlusCircle,
   Menu,
 } from "lucide-react";
 
 const mobileNavItems = [
   { href: "/", label: "Home", icon: LayoutDashboard },
   { href: "/forecast", label: "Previsionale", icon: CalendarRange },
-  { href: "/sales", label: "Commerciale", icon: Target },
-  { href: "/payment-plans", label: "PDR", icon: CreditCard },
+  { href: "/transactions?new=1", label: "Nuovo", icon: PlusCircle },
   { href: "/transactions", label: "Consuntivo", icon: Receipt },
-  { href: "/settings", label: "Menu", icon: Menu },
+  { href: "/settings", label: "Altro", icon: Menu },
 ];
 
 export function MobileNav() {

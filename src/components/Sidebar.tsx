@@ -10,6 +10,7 @@ import {
   CreditCard,
   Target,
   Wallet,
+  PlusCircle,
   LogOut,
   User,
   BookOpen,
@@ -22,19 +23,25 @@ import {
 
 const navSections = [
   {
-    title: "GESTIONE",
+    title: "MENU",
     items: [
       { href: "/", label: "Dashboard", icon: LayoutDashboard },
       { href: "/forecast", label: "Previsionale", icon: CalendarRange },
-      { href: "/sales", label: "Piano Commerciale", icon: Target },
       { href: "/transactions", label: "Consuntivo", icon: Receipt },
-      { href: "/payment-plans", label: "Piani di Rientro", icon: CreditCard },
     ],
   },
   {
-    title: "PIANIFICAZIONE",
+    title: "STRUMENTI",
     items: [
+      { href: "/payment-plans", label: "Piani di Rientro", icon: CreditCard },
+      { href: "/sales", label: "Piano Commerciale", icon: Target },
       { href: "/settings", label: "Piano Annuale", icon: Wallet },
+    ],
+  },
+  {
+    title: "AZIONI",
+    items: [
+      { href: "/transactions?new=1", label: "Nuovo Movimento", icon: PlusCircle },
     ],
   },
 ];
