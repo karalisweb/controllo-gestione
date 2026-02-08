@@ -12,7 +12,6 @@ import {
   Wallet,
   LogOut,
   User,
-  Settings,
   BookOpen,
 } from "lucide-react";
 
@@ -48,7 +47,6 @@ const navSections = [
 
 const fixedNavItems = [
   { href: "/profile", label: "Profilo", icon: User },
-  { href: "/impostazioni", label: "Impostazioni", icon: Settings },
   { href: "/guida", label: "Guida", icon: BookOpen },
 ];
 

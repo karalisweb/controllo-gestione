@@ -11,7 +11,7 @@ import {
   CalendarRange,
   CreditCard,
   Target,
-  Settings,
+  Wallet,
   CheckCircle2,
   AlertCircle,
   Lightbulb,
@@ -399,7 +399,7 @@ const sections: Record<string, {
   "piano-annuale": {
     title: "Piano Annuale",
     subtitle: "Configura spese e incassi ricorrenti",
-    icon: Settings,
+    icon: Wallet,
     color: "bg-orange-500/10 text-orange-500",
     content: (
       <>
@@ -451,7 +451,7 @@ const sections: Record<string, {
         <Section>
           <SectionTitle>Aggiungere una spesa ricorrente</SectionTitle>
           <StepList>
-            <Step number={1} title="Vai in Impostazioni" description="Menu laterale → Impostazioni" />
+            <Step number={1} title="Vai in Piano Annuale" description="Menu laterale → Piano Annuale" />
             <Step number={2} title="Seleziona 'Spese Previste'" />
             <Step number={3} title="Clicca '+ Nuova Spesa'" />
             <Step number={4} title="Compila i campi:" />
@@ -472,7 +472,7 @@ const sections: Record<string, {
         <Section>
           <SectionTitle>Aggiungere un incasso ricorrente</SectionTitle>
           <StepList>
-            <Step number={1} title="Vai in Impostazioni" description="Menu laterale → Impostazioni" />
+            <Step number={1} title="Vai in Piano Annuale" description="Menu laterale → Piano Annuale" />
             <Step number={2} title="Seleziona 'Incassi Previsti'" />
             <Step number={3} title="Clicca '+ Nuovo Incasso'" />
             <Step number={4} title="Compila i campi:" />

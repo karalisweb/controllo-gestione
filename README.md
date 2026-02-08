@@ -1,36 +1,172 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# KW Cashflow
 
-## Getting Started
+Strumento decisionale per la gestione del cashflow aziendale di Karalisweb.
 
-First, run the development server:
+Non è un software di contabilità, ma un'app per prendere **decisioni rapide** su:
+- **Quanto devo vendere** per coprire costi e debiti
+- **Quali costi posso tagliare** per migliorare il margine
+- **Come pago i debiti (PDR)** con un piano sostenibile
+
+---
+
+## Stack Tecnico
+
+| Tecnologia | Utilizzo |
+|-----------|----------|
+| Next.js 16 (App Router) | Framework frontend + API routes |
+| React 19 + TypeScript | UI e logica |
+| Tailwind CSS v4 + shadcn/ui | Stili e componenti |
+| SQLite (better-sqlite3) | Database locale |
+| Drizzle ORM | Query e migrazioni |
+| Recharts | Grafici |
+| iron-session | Autenticazione sessioni |
+
+---
+
+## Requisiti
+
+- Node.js 18+
+- npm
+
+---
+
+## Installazione
+
+```bash
+git clone git@github.com:AlessioKarworx/karalisweb-finance.git
+cd karalisweb-finance
+npm install
+```
+
+---
+
+## Sviluppo
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+L'app gira su [http://localhost:3002](http://localhost:3002).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Build
 
-## Learn More
+```bash
+npm run build
+npm start
+```
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Database
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Il progetto usa SQLite con Drizzle ORM.
 
-## Deploy on Vercel
+```bash
+# Genera migrazioni
+npm run db:migrate
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+# Applica schema al database
+npm run db:push
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+# Apri Drizzle Studio (GUI)
+npm run db:studio
+```
+
+Il file database SQLite si trova in `data/`.
+
+---
+
+## Deploy
+
+Il deploy avviene tramite `deploy.sh` che esegue:
+
+1. Verifica stato Git
+2. Commit automatico delle modifiche
+3. Push su GitHub (`main`)
+4. Pull sul server VPS (Contabo)
+5. Build Next.js sul server
+6. Restart processo PM2
+
+```bash
+# Deploy standard
+./deploy.sh
+
+# Deploy con bump versione
+./deploy.sh --bump patch   # 2.1.0 → 2.1.1
+./deploy.sh --bump minor   # 2.1.0 → 2.2.0
+./deploy.sh --bump major   # 2.1.0 → 3.0.0
+```
+
+Per dettagli completi: `DEPLOY.md`
+
+---
+
+## Struttura Progetto
+
+```
+kw-cashflow/
+├── src/
+│   ├── app/               # Pages (App Router)
+│   │   ├── page.tsx        # Dashboard
+│   │   ├── forecast/       # Previsionale
+│   │   ├── transactions/   # Consuntivo
+│   │   ├── sales/          # Piano Commerciale
+│   │   ├── payment-plans/  # Piani di Rientro (PDR)
+│   │   ├── settings/       # Piano Annuale
+│   │   ├── guida/          # Guida utente
+│   │   ├── login/          # Autenticazione
+│   │   └── api/            # API routes
+│   ├── components/
+│   │   ├── Sidebar.tsx     # Navigazione desktop
+│   │   ├── MobileNav.tsx   # Navigazione mobile
+│   │   ├── dashboard/      # Componenti dashboard
+│   │   ├── transactions/   # Import/lista movimenti
+│   │   └── ui/             # shadcn components
+│   ├── lib/
+│   │   ├── db/             # Schema + connessione Drizzle
+│   │   └── utils/          # Helpers (currency, dates, splits)
+│   └── types/              # TypeScript types
+├── data/                   # SQLite database
+├── drizzle/                # Migrazioni
+├── deploy.sh               # Script deploy automatico
+├── DEPLOY.md               # Guida deploy completa
+├── DESIGN-SYSTEM.md        # Design system Karalisweb
+├── SERVER-CONFIG.md         # Configurazione server
+└── CLAUDE.md               # Istruzioni per Claude Code
+```
+
+---
+
+## Documentazione
+
+| File | Contenuto |
+|------|-----------|
+| `CLAUDE.md` | Specifiche funzionali e regole di business |
+| `DEPLOY.md` | Procedura deploy e troubleshooting |
+| `DESIGN-SYSTEM.md` | Design system grafico (palette, font, componenti) |
+| `SERVER-CONFIG.md` | Configurazione VPS, porte, PM2, Nginx |
+
+---
+
+## Informazioni Server
+
+| Parametro | Valore |
+|-----------|--------|
+| VPS | Contabo (185.192.97.108) |
+| Porta | 3002 |
+| PM2 | `karalisweb-finance` |
+| URL | https://finance.karalisdemo.it |
+| Path server | `/root/karalisweb-finance` |
+| Repository | `AlessioKarworx/karalisweb-finance` |
+
+---
+
+## Versione
+
+**v2.1.0**
+
+---
+
+*Karalisweb - KW Cashflow*
