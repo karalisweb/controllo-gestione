@@ -25,7 +25,24 @@ import {
   PartyPopper,
 } from "lucide-react";
 import Link from "next/link";
+import { motion } from "framer-motion";
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { QuickEntry } from "@/components/dashboard/QuickEntry";
+import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
+import { AnimatedNumber } from "@/components/ui/animated-number";
+
+const fadeInUp = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0 },
+};
+
+const staggerContainer = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.08 },
+  },
+};
 
 interface DashboardData {
   currentBalance: number;
@@ -142,11 +159,7 @@ export default function Home() {
   const formatMonth = (month: number) => MONTH_NAMES[month - 1];
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   if (error || !data) {
@@ -168,23 +181,28 @@ export default function Home() {
   return (
     <div className="min-h-screen pb-24">
       {/* Mobile Header */}
-      <header className="lg:hidden sticky top-0 z-30 bg-sidebar border-b border-sidebar-border">
+      <header className="lg:hidden sticky top-0 z-30 bg-card border-b border-border">
         <div className="flex items-center justify-between px-4 h-14">
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#0f172a]">
-              <span className="text-[#d4af37] font-bold text-sm">K</span>
-              <span className="text-[#d4af37] font-medium text-xs -ml-0.5">f</span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-background">
+              <Wallet size={16} className="text-primary" />
             </div>
             <span className="font-semibold text-foreground">Dashboard</span>
           </div>
-          <Button variant="ghost" size="icon" className="text-muted-foreground">
+          <Button variant="ghost" size="icon" className="text-muted-foreground" aria-label="Notifiche">
             <Bell className="h-5 w-5" />
           </Button>
         </div>
       </header>
 
-      <div className="p-4 lg:p-6 max-w-5xl mx-auto space-y-4">
+      <motion.div
+        className="p-4 lg:p-6 max-w-5xl mx-auto space-y-4"
+        variants={staggerContainer}
+        initial="hidden"
+        animate="visible"
+      >
         {/* ============ 1. HERO: VENDI ANCORA ============ */}
+        <motion.div variants={fadeInUp} transition={{ duration: 0.4 }}>
         <Card className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border-amber-200 dark:border-amber-800">
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center gap-2 mb-2">
@@ -200,7 +218,11 @@ export default function Home() {
             <div className="text-center py-4">
               <div className="text-xs text-muted-foreground mb-1">Vendi ancora</div>
               <div className="text-3xl sm:text-4xl font-bold font-mono text-amber-600 dark:text-amber-400">
-                {formatCurrency(data.quarterSales.remainingToSell)}
+                <AnimatedNumber
+                  value={data.quarterSales.remainingToSell}
+                  duration={1000}
+                  formatter={formatCurrency}
+                />
               </div>
             </div>
 
@@ -222,9 +244,10 @@ export default function Home() {
             </div>
           </CardContent>
         </Card>
+        </motion.div>
 
         {/* ============ 2. CASSA + RUNWAY ============ */}
-        <div className="grid grid-cols-2 gap-3">
+        <motion.div variants={fadeInUp} transition={{ duration: 0.4 }} className="grid grid-cols-2 gap-3">
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
@@ -272,9 +295,10 @@ export default function Home() {
               </div>
             </CardContent>
           </Card>
-        </div>
+        </motion.div>
 
         {/* ============ 3. SOSTENIBILITÀ MESE ============ */}
+        <motion.div variants={fadeInUp} transition={{ duration: 0.4 }}>
         <Card>
           <CardHeader className="pb-2 px-4">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -318,9 +342,10 @@ export default function Home() {
             </div>
           </CardContent>
         </Card>
+        </motion.div>
 
         {/* ============ 4. PROSSIMI 7GG + ULTIMI 7GG ============ */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <motion.div variants={fadeInUp} transition={{ duration: 0.4 }} className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {/* Prossimi 7 giorni */}
           <Card>
             <CardHeader className="pb-2 px-4">
@@ -344,7 +369,7 @@ export default function Home() {
                     <div key={income.id} className="flex justify-between items-center py-1 text-sm">
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-muted-foreground w-10">{formatDate(income.date)}</span>
-                        <span className="truncate max-w-[120px]">{income.clientName}</span>
+                        <span className="truncate max-w-[160px] sm:max-w-[200px]">{income.clientName}</span>
                       </div>
                       <span className="font-mono text-green-600">+{formatCurrency(income.amount)}</span>
                     </div>
@@ -361,7 +386,7 @@ export default function Home() {
                         {expense.type === "pdr" && <div className="w-2 h-2 rounded-full bg-amber-500" />}
                         {!expense.isEssential && expense.type !== "pdr" && <div className="w-2 h-2 rounded-full bg-muted" />}
                         <span className="text-xs text-muted-foreground w-10">{formatDate(expense.date)}</span>
-                        <span className="truncate max-w-[100px]">{expense.description}</span>
+                        <span className="truncate max-w-[140px] sm:max-w-[180px]">{expense.description}</span>
                       </div>
                       <span className="font-mono text-red-600">-{formatCurrency(expense.amount)}</span>
                     </div>
@@ -369,7 +394,15 @@ export default function Home() {
                 </div>
               )}
               {data.next7Days.incomes.length === 0 && data.next7Days.expenses.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-4">Nessun movimento previsto</p>
+                <div className="flex flex-col items-center py-6 text-center">
+                  <Calendar className="h-8 w-8 text-muted-foreground/40 mb-2" />
+                  <p className="text-sm text-muted-foreground">Nessun movimento previsto</p>
+                  <Link href="/forecast">
+                    <Button variant="link" size="sm" className="text-xs mt-1 text-primary">
+                      Aggiungi previsione <ArrowRight className="h-3 w-3 ml-1" />
+                    </Button>
+                  </Link>
+                </div>
               )}
               <Link href="/forecast" className="block mt-3">
                 <Button variant="ghost" size="sm" className="w-full text-xs">
@@ -402,7 +435,7 @@ export default function Home() {
                     <div key={income.id} className="flex justify-between items-center py-1 text-sm">
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-muted-foreground w-10">{formatDate(income.date)}</span>
-                        <span className="truncate max-w-[120px]">{income.description}</span>
+                        <span className="truncate max-w-[160px] sm:max-w-[200px]">{income.description}</span>
                       </div>
                       <span className="font-mono text-green-600">+{formatCurrency(income.amount)}</span>
                     </div>
@@ -416,7 +449,7 @@ export default function Home() {
                     <div key={expense.id} className="flex justify-between items-center py-1 text-sm">
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-muted-foreground w-10">{formatDate(expense.date)}</span>
-                        <span className="truncate max-w-[100px]">{expense.description}</span>
+                        <span className="truncate max-w-[140px] sm:max-w-[180px]">{expense.description}</span>
                       </div>
                       <span className="font-mono text-red-600">{formatCurrency(expense.amount)}</span>
                     </div>
@@ -424,7 +457,15 @@ export default function Home() {
                 </div>
               )}
               {data.last7Days.incomes.length === 0 && data.last7Days.expenses.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-4">Nessun movimento registrato</p>
+                <div className="flex flex-col items-center py-6 text-center">
+                  <Receipt className="h-8 w-8 text-muted-foreground/40 mb-2" />
+                  <p className="text-sm text-muted-foreground">Nessun movimento registrato</p>
+                  <Link href="/transactions?new=1">
+                    <Button variant="link" size="sm" className="text-xs mt-1 text-primary">
+                      Registra movimento <ArrowRight className="h-3 w-3 ml-1" />
+                    </Button>
+                  </Link>
+                </div>
               )}
               <Link href="/transactions" className="block mt-3">
                 <Button variant="ghost" size="sm" className="w-full text-xs">
@@ -433,10 +474,11 @@ export default function Home() {
               </Link>
             </CardContent>
           </Card>
-        </div>
+        </motion.div>
 
         {/* ============ 5. AZIONI RICHIESTE ============ */}
         {hasActions && (
+          <motion.div variants={fadeInUp} transition={{ duration: 0.4 }}>
           <Card className="border-amber-200 dark:border-amber-800">
             <CardHeader className="pb-2 px-4">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -463,7 +505,7 @@ export default function Home() {
                     {data.actions.overdueInstallments.slice(0, 3).map(i => i.creditorName).join(" • ")}
                   </div>
                   <Link href="/payment-plans">
-                    <Button size="sm" variant="outline" className="mt-2 h-7 text-xs border-red-300 text-red-600 hover:bg-red-100">
+                    <Button size="sm" variant="outline" className="mt-2 h-9 text-xs border-red-300 text-red-600 hover:bg-red-100">
                       Gestisci <ArrowRight className="h-3 w-3 ml-1" />
                     </Button>
                   </Link>
@@ -511,10 +553,12 @@ export default function Home() {
               )}
             </CardContent>
           </Card>
+          </motion.div>
         )}
 
         {/* ============ 6. PIANI DI RIENTRO ============ */}
         {data.pdr.plans.length > 0 && (
+          <motion.div variants={fadeInUp} transition={{ duration: 0.4 }}>
           <Card>
             <CardHeader className="pb-2 px-4">
               <CardTitle className="text-sm font-medium flex items-center justify-between">
@@ -575,66 +619,124 @@ export default function Home() {
               </div>
             </CardContent>
           </Card>
+          </motion.div>
         )}
 
         {/* ============ 7. TREND ============ */}
+        <motion.div variants={fadeInUp} transition={{ duration: 0.4 }}>
         <Card>
           <CardHeader className="pb-2 px-4">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />
               Trend ultimi 3 mesi
+              {data.trend.length >= 2 && (
+                <span className="ml-auto">
+                  {data.trend[data.trend.length - 1].margin > data.trend[data.trend.length - 2].margin ? (
+                    <Badge variant="outline" className="text-green-600 border-green-600/30 text-xs">
+                      <TrendingUp className="h-3 w-3 mr-1" /> In miglioramento
+                    </Badge>
+                  ) : data.trend[data.trend.length - 1].margin < data.trend[data.trend.length - 2].margin ? (
+                    <Badge variant="outline" className="text-red-600 border-red-600/30 text-xs">
+                      <TrendingDown className="h-3 w-3 mr-1" /> In peggioramento
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-muted-foreground text-xs">Stabile</Badge>
+                  )}
+                </span>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="px-4 pb-4">
-            <div className="grid grid-cols-3 gap-2">
-              {data.trend.map((month, idx) => {
-                const isCurrentMonth = idx === data.trend.length - 1;
-                return (
-                  <div
-                    key={`${month.month}-${month.year}`}
-                    className={`p-3 rounded-lg text-center ${
-                      isCurrentMonth ? "bg-muted" : "bg-muted/50"
-                    }`}
+            {data.trend.length > 0 && (
+              <div className="h-40">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart
+                    data={data.trend.map(m => ({
+                      name: formatMonth(m.month),
+                      entrate: m.income / 100,
+                      uscite: m.expenses / 100,
+                      margine: m.margin / 100,
+                    }))}
+                    margin={{ top: 5, right: 5, left: -20, bottom: 0 }}
                   >
-                    <div className="text-xs text-muted-foreground mb-1">
-                      {formatMonth(month.month)} {isCurrentMonth && "(prev)"}
-                    </div>
-                    <div className={`font-mono font-bold ${
-                      month.margin >= 0 ? "text-green-600" : "text-red-600"
-                    }`}>
-                      {month.margin >= 0 ? "+" : ""}{formatCurrency(month.margin)}
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      {month.margin >= 0 ? (
-                        <CheckCircle className="inline h-3 w-3 text-green-500" />
-                      ) : (
-                        <AlertTriangle className="inline h-3 w-3 text-red-500" />
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            {data.trend.length >= 2 && (
-              <div className="text-center text-xs text-muted-foreground mt-3">
-                {data.trend[data.trend.length - 1].margin > data.trend[data.trend.length - 2].margin ? (
-                  <span className="text-green-600 flex items-center justify-center gap-1">
-                    <TrendingUp className="h-3 w-3" /> In miglioramento
-                  </span>
-                ) : data.trend[data.trend.length - 1].margin < data.trend[data.trend.length - 2].margin ? (
-                  <span className="text-red-600 flex items-center justify-center gap-1">
-                    <TrendingDown className="h-3 w-3" /> In peggioramento
-                  </span>
-                ) : (
-                  <span>Stabile</span>
-                )}
+                    <defs>
+                      <linearGradient id="colorEntrate" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id="colorUscite" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <XAxis
+                      dataKey="name"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: "#71717a", fontSize: 12 }}
+                    />
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: "#71717a", fontSize: 10 }}
+                      tickFormatter={(v: number) => `${(v / 1000).toFixed(0)}k`}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "#132032",
+                        border: "1px solid #2a2a35",
+                        borderRadius: "8px",
+                        fontSize: "12px",
+                        color: "#f5f5f7",
+                      }}
+                      formatter={(value: number | undefined) => [value != null ? `${value.toLocaleString("it-IT", { minimumFractionDigits: 2 })} €` : ""]}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="entrate"
+                      stroke="#22c55e"
+                      fillOpacity={1}
+                      fill="url(#colorEntrate)"
+                      strokeWidth={2}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="uscite"
+                      stroke="#ef4444"
+                      fillOpacity={1}
+                      fill="url(#colorUscite)"
+                      strokeWidth={2}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
               </div>
             )}
+            {/* Margine per mese sotto il chart */}
+            <div className="grid grid-cols-3 gap-2 mt-3">
+              {data.trend.map((month, idx) => (
+                <div
+                  key={`${month.month}-${month.year}`}
+                  className={`p-2 rounded-lg text-center ${
+                    idx === data.trend.length - 1 ? "bg-muted" : "bg-muted/50"
+                  }`}
+                >
+                  <div className="text-xs text-muted-foreground">
+                    {formatMonth(month.month)} {idx === data.trend.length - 1 && "(prev)"}
+                  </div>
+                  <div className={`font-mono text-sm font-bold ${
+                    month.margin >= 0 ? "text-green-600" : "text-red-600"
+                  }`}>
+                    {month.margin >= 0 ? "+" : ""}{formatCurrency(month.margin)}
+                  </div>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
+        </motion.div>
 
         {/* Quick Links */}
-        <div className="grid grid-cols-4 gap-2">
+        <motion.div variants={fadeInUp} transition={{ duration: 0.4 }} className="grid grid-cols-4 gap-2">
           <Link href="/forecast" className="block">
             <Button variant="outline" className="w-full h-auto py-3 flex flex-col gap-1">
               <Calendar className="h-5 w-5" />
@@ -659,8 +761,8 @@ export default function Home() {
               <span className="text-[10px]">Piano</span>
             </Button>
           </Link>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
 
       {/* FAB Quick Entry */}
       <QuickEntry onSuccess={fetchData} />

@@ -12,6 +12,7 @@ import {
   ChevronRight,
   Zap,
 } from "lucide-react";
+import { APP_VERSION } from "@/lib/version";
 
 const sections = [
   {
@@ -122,7 +123,7 @@ export default function GuidaPage() {
         {/* Footer */}
         <div className="mt-10 pt-6 border-t border-border/50 text-center">
           <p className="text-xs text-muted-foreground">
-            KW Cashflow v2.1.0
+            KW Cashflow v{APP_VERSION}
           </p>
         </div>
       </div>

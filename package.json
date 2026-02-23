@@ -1,6 +1,6 @@
 {
   "name": "kw-cashflow",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "private": true,
   "scripts": {
     "dev": "next dev -p 3002",
@@ -24,6 +24,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.1",
+    "framer-motion": "^12.34.3",
     "iron-session": "^8.0.4",
     "lucide-react": "^0.562.0",
     "next": "16.1.1",
@@ -34,6 +35,7 @@
     "react-dom": "19.2.3",
     "react-hook-form": "^7.69.0",
     "recharts": "^3.6.0",
+    "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.0",
     "zod": "^4.3.4"
   },

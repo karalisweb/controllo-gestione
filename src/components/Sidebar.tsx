@@ -15,6 +15,7 @@ import {
   User,
   BookOpen,
 } from "lucide-react";
+import { APP_VERSION } from "@/lib/version";
 
 /* ═══════════════════════════════════════════
    Navigazione Principale (Zona 2)
@@ -77,31 +78,31 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="fixed left-0 top-0 z-40 hidden lg:flex h-screen w-[260px] flex-col border-r border-[#2a2a35] bg-[#132032]">
+    <aside className="fixed left-0 top-0 z-40 hidden lg:flex h-screen w-[260px] flex-col border-r border-sidebar-border bg-sidebar">
       {/* ═══ Zona 1 - Header App (Identita) ═══ */}
-      <div className="flex items-center gap-3 px-6 py-5 border-b border-[#2a2a35]">
+      <div className="flex items-center gap-3 px-6 py-5 border-b border-sidebar-border">
         {/* Icona app: Lucide Wallet su sfondo scuro */}
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#0d1521]">
-          <Wallet size={22} className="text-[#d4a726]" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-background">
+          <Wallet size={22} className="text-primary" />
         </div>
         <div className="flex flex-col">
-          <span className="font-semibold text-[0.95rem] text-[#f5f5f7]">
+          <span className="font-semibold text-[0.95rem] text-foreground">
             KW Cashflow
           </span>
-          <span className="text-xs text-[#71717a]">
-            v2.1.0
+          <span className="text-xs text-muted-foreground">
+            v{APP_VERSION}
           </span>
         </div>
       </div>
 
       {/* ═══ Zona 2 - Navigazione Principale ═══ */}
-      <nav className="flex-1 py-4 overflow-y-auto">
+      <nav aria-label="Navigazione principale" className="flex-1 py-4 overflow-y-auto">
         {navSections.map((section, idx) => (
           <div key={section.title}>
             {/* Titolo sezione UPPERCASE */}
             <div
               className={cn(
-                "px-6 mb-2 text-[0.7rem] font-semibold uppercase tracking-[0.05em] text-[#71717a]",
+                "px-6 mb-2 text-[0.7rem] font-semibold uppercase tracking-[0.05em] text-muted-foreground",
                 idx === 0 ? "mt-0" : "mt-4"
               )}
             >
@@ -118,11 +119,12 @@ export function Sidebar() {
                   <Link
                     key={item.href}
                     href={item.href}
+                    aria-current={active ? "page" : undefined}
                     className={cn(
-                      "flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg text-sm font-medium transition-all duration-200",
+                      "flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg text-sm font-medium transition-all duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
                       active
-                        ? "bg-[rgba(255,107,53,0.1)] text-[#d4a726]"
-                        : "text-[#a1a1aa] hover:bg-[#1a2d44] hover:text-[#f5f5f7]"
+                        ? "bg-primary/10 text-primary"
+                        : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                     )}
                   >
                     <Icon className={cn(
@@ -139,7 +141,7 @@ export function Sidebar() {
       </nav>
 
       {/* ═══ Zona 3 - Navigazione Fissa (Footer) ═══ */}
-      <div className="py-3 border-t border-[#2a2a35]">
+      <div className="py-3 border-t border-sidebar-border">
         <div className="space-y-0.5">
           {fixedNavItems.map((item) => {
             const Icon = item.icon;
@@ -149,11 +151,12 @@ export function Sidebar() {
               <Link
                 key={item.href}
                 href={item.href}
+                aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg text-sm font-medium transition-all duration-200",
+                  "flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg text-sm font-medium transition-all duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
                   active
-                    ? "bg-[rgba(255,107,53,0.1)] text-[#d4a726]"
-                    : "text-[#a1a1aa] hover:bg-[#1a2d44] hover:text-[#f5f5f7]"
+                    ? "bg-primary/10 text-primary"
+                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                 )}
               >
                 <Icon className={cn(
@@ -168,7 +171,8 @@ export function Sidebar() {
           {/* Esci (logout) */}
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg text-sm font-medium text-[#a1a1aa] hover:bg-[#1a2d44] hover:text-[#f5f5f7] transition-all duration-200 w-[calc(100%-1rem)] text-left"
+            aria-label="Esci dall'applicazione"
+            className="flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-all duration-200 w-[calc(100%-1rem)] text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             <LogOut className="h-5 w-5 opacity-70" />
             <span>Esci</span>

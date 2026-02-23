@@ -2,7 +2,7 @@
 
 ## Obiettivo
 
-App per decisioni rapide sul cashflow aziendale. Non contabilità, ma strumento decisionale.
+App per decisioni rapide sul cashflow aziendale. Non contabilita', ma strumento decisionale.
 
 **3 problemi da risolvere:**
 1. Quanto devo vendere? (per coprire costi + pagare debiti)
@@ -13,23 +13,38 @@ App per decisioni rapide sul cashflow aziendale. Non contabilità, ma strumento 
 
 ## Stack Tecnico
 
-- **Frontend**: Next.js 14 (App Router) + React + TypeScript
-- **UI**: Tailwind CSS + shadcn/ui
+- **Framework**: Next.js 16.1.1 (App Router) + React 19.2.3 + TypeScript 5.x
+- **UI**: Tailwind CSS v4 + shadcn/ui (Radix UI)
+- **Font**: Space Grotesk (testi) + JetBrains Mono (numeri mono)
+- **Animazioni**: Framer Motion (fade-in, stagger, count-up)
+- **Toast**: Sonner (notifiche dark-themed)
+- **Charts**: Recharts
 - **Database**: SQLite (locale, via better-sqlite3 + Drizzle ORM)
-- **Deploy futuro**: Server Contabo (185.192.97.108) con PostgreSQL
-- **Autenticazione**: Login semplice (username/password) - da implementare
+- **Autenticazione**: iron-session + bcryptjs + otplib (2FA TOTP) + OTP email
+- **Email**: nodemailer (SMTP)
+- **Deploy**: VPS Contabo (185.192.97.108) con PM2, porta 3002
+- **URL**: https://finance.karalisdemo.it
 
 ---
 
-## Struttura Dati Esistente
+## Struttura Dati
 
-Il progetto usa già:
-- `transactions` - movimenti reali importati da Qonto CSV
-- `budgetItems` - voci previsionali (entrate/uscite)
-- `costCenters` - centri di costo con budget annuale
-- `revenueCenters` - centri di ricavo con target
-- `paymentPlans` + `paymentPlanInstallments` - debiti PDR con rate
-- `incomeSplits` - ripartizioni incassi (IVA 22%, soci 30%, disponibile 48%)
+Il progetto usa:
+- `transactions` - movimenti reali (import CSV o manuali)
+- `budget_items` - voci previsionali mensili
+- `forecast_items` - voci forecast generate da template (expected_expenses/incomes) o manuali
+- `expected_expenses` / `expected_incomes` - template ricorrenti che generano forecast
+- `cost_centers` / `revenue_centers` - centri di costo e ricavo
+- `payment_plans` + `payment_plan_installments` - debiti PDR con rate
+- `sales_opportunities` + `sales_installments` - piano commerciale con rate
+- `income_splits` - ripartizioni incassi (IVA 22%, soci 30%, disponibile 48%)
+- `categories` - categorie movimenti (income/expense)
+- `settings` - configurazioni (saldo iniziale, data saldo)
+- `users` + `backup_codes` + `otp_codes` - autenticazione e 2FA
+
+**Importi**: sempre in centesimi (integer). Formattazione italiana via `formatCurrency()`.
+
+Per dettagli completi: vedi `TECHNICAL-MANUAL.md`
 
 ---
 
@@ -43,120 +58,36 @@ Il progetto usa già:
 
 ---
 
-## Dashboard Principale (da implementare)
+## Pagine dell'App
 
-### Layout
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  CASHFLOW                              [30g] [90g] [180g]  👤   │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  ⚠️ STATO: DIFESA | STABILIZZAZIONE | RICOSTRUZIONE            │
-│  (colori: Rosso / Giallo / Verde)                               │
-│                                                                 │
-│  ████████████░░░░░░░░░░░░░░░░  X giorni rimasti                │
-│  OGGI                          DIFFICOLTÀ                       │
-│                                                                 │
-│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐               │
-│  │  X GIORNI   │ │  € -X.XXX   │ │  € X.XXX    │               │
-│  │  prima      │ │  saldo fine │ │  devi       │               │
-│  │  difficoltà │ │  mese       │ │  fatturare  │               │
-│  └─────────────┘ └─────────────┘ └─────────────┘               │
-│                                                                 │
-│  PROSSIME SCADENZE (7gg)                                        │
-│  🔴 15 Gen  Server       €486    VITALE                        │
-│  🟡 15 Gen  Rata VW      €343    PDR                           │
-│  ...                                                            │
-│                                                                 │
-│  [+ INCASSO]  [- SPESA]  [✏️ MODIFICA]  [📊 ANALISI]           │
-│                                                                 │
-│  [Check Settimanale] [Check Mensile] [Debiti PDR]              │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### I 3 Numeri Chiave
-
-1. **Giorni alla difficoltà**: primo giorno in cui cassa < scadenza da pagare
-2. **Saldo previsto fine periodo**: proiezione basata su incassi certi - uscite
-3. **Target fatturato**: numero unico che include costi + rate debiti + eventuale buffer
-
-### Stati Azienda (calcolati automaticamente)
-
-- **DIFESA** (rosso): giorni alla difficoltà < 30
-- **STABILIZZAZIONE** (giallo): riesco a pagare ma senza margine
-- **RICOSTRUZIONE** (verde): ho buffer, posso investire
+| Path | Pagina | Descrizione |
+|------|--------|-------------|
+| `/` | Dashboard CEO | Metriche chiave, trend, azioni richieste |
+| `/forecast` | Previsionale | Entrate/uscite future con forecast |
+| `/transactions` | Consuntivo | Movimenti reali, import CSV |
+| `/payment-plans` | Piani di Rientro | Gestione debiti con rate |
+| `/sales` | Piano Commerciale | Opportunita' vendita con breakdown |
+| `/settings` | Piano Annuale | Centri di costo/ricavo, configurazioni |
+| `/profile` | Profilo | Dati utente, 2FA, cambio password |
+| `/guida` | Guida | Manuale utente con 6 sezioni |
+| `/login` | Login | Autenticazione con 2FA |
 
 ---
 
-## Flusso Input Incassi/Spese
+## Dashboard CEO
 
-### Scenario A: Evento PREVISTO
+La dashboard mostra in ordine:
+1. **Obiettivo vendite** - Quanto devo vendere questo trimestre (con progress bar)
+2. **Cassa attuale** - Saldo calcolato da saldo iniziale + transazioni
+3. **Runway** - Mesi di liquidita' (target: 3 mesi)
+4. **Sostenibilita' mese** - Entrate vs uscite vs PDR = margine
+5. **Prossimi 7 giorni** - Scadenze imminenti
+6. **Ultimi 7 giorni** - Movimenti recenti
+7. **Trend 3 mesi** - Andamento entrate/uscite/margine
+8. **Azioni richieste** - Rate scadute, fatture da emettere, incassi in ritardo
+9. **Quick Links** - Navigazione rapida
 
-Scadenza già in lista → click → form precompilato → conferma
-
-```
-CONFERMA INCASSO
-Cliente:     Colombo Palace (precompilato)
-Previsto:    € 317,20
-Effettivo:   [€ 317,20] (modificabile)
-Data:        [12/01/2026]
-
-CALCOLO AUTOMATICO:
-Lordo:       € 317,20
-- IVA 22%:   €  69,78
-- Soci 30%:  €  95,16
-= Disponibile: € 152,26
-
-[ANNULLA] [CONFERMA]
-```
-
-### Scenario B: Evento NON PREVISTO
-
-Click [+ INCASSO] o [- SPESA] → form vuoto
-
-```
-NUOVO INCASSO
-Cliente:    [🔍 Cerca o crea nuovo...]
-Importo:    [€ ___]
-Data:       [oggi]
-Tipo:       ○ Una tantum  ○ Ricorrente
-
-(stesso calcolo automatico split)
-
-[ANNULLA] [REGISTRA]
-```
-
-### Modifica Previsione
-
-Per spostare date, modificare importi, cambiare affidabilità incassi.
-
----
-
-## Check Settimanale (da implementare)
-
-- Confronto incassi previsti vs ricevuti
-- Confronto uscite previste vs pagate
-- Mini-grafico andamento cassa prossimi 30 giorni
-- Alert se qualcosa è saltato con azione rapida (sposta/segna incerto)
-
----
-
-## Check Mensile (da implementare)
-
-- Riepilogo mese: previsto vs reale
-- **Target fatturato prossimo mese** = costi + rate PDR + recupero deficit + buffer
-- Analisi costi: quali tagliare (software poco usati, ecc.)
-- Pipeline: incassi probabili già in lista
-
----
-
-## Gestione Debiti PDR
-
-- Lista debiti con rate già concordate (inserite manualmente)
-- Per debiti senza piano: app suggerisce rate sostenibili
-- Progresso: % completamento, mesi rimanenti
-- Priorità: prima debiti piccoli (effetto snowball)
+**Quick Entry FAB**: bottone flottante per inserimento rapido transazioni (solo mobile).
 
 ---
 
@@ -165,78 +96,116 @@ Per spostare date, modificare importi, cambiare affidabilità incassi.
 ### Split Incassi
 ```
 Incasso lordo
-- 22% IVA (da versare allo Stato)
-- 30% quota soci (non disponibile per spese)
-= 48% disponibile per cassa
+├── Netto = Lordo / 1,22
+├── IVA 22% (da versare)
+├── Soci 30% del netto (Daniela 10% + Alessio 20%)
+└── Disponibile 48% = Netto * 0,70
 ```
 
-### Affidabilità Incassi
-- **Alta**: conta 100% nelle proiezioni
-- **Media**: conta solo dopo aver sommato tutti gli "alta"
+### Affidabilita' Incassi
+- **Alta**: conta 100% (48% del lordo per giorno difficolta')
+- **Media**: conta dopo tutti gli "alta"
 - **Bassa**: conta ZERO (approccio pessimista)
 
-### Priorità Pagamenti (quando non bastano i soldi)
-1. Spese VITALI (server, strumenti essenziali)
-2. Importi più grossi
-3. Conseguenze legali (tasse)
-4. Rapporti umani (fornitori storici)
+### Priorita' Pagamenti
+1. `essential` - Spese vitali (server, strumenti)
+2. `important` - Importi rilevanti
+3. `investment` - Investimenti
+4. `normal` - Spese ordinarie
 
-### Giorno di Difficoltà
-Primo giorno in cui: `cassa disponibile < importo scadenza`
+### Giorno di Difficolta'
+Primo giorno in cui `cassa disponibile < importo scadenza da pagare`
 
----
-
-## Categorizzazione Movimenti Qonto
-
-Regole automatiche basate su controparte:
-
-| Controparte | Categoria | Note |
-|-------------|-----------|------|
-| Qonto (552€/-552€) | Rate anticipo fatture | Debito, non giroconto |
-| Alessio Loi | Quota socio + IVA | Uscita collegata a incassi |
-| Server Plan | Server | Costo fisso |
-| Apple, Asana, etc. | Software | Costi fissi |
-| Wind, MyCentralino | Telefonia | Costi fissi |
-| FastRent | Ufficio | Costo fisso |
+### Stati Azienda
+- **DIFESA** (rosso): giorni alla difficolta' < 30
+- **STABILIZZAZIONE** (giallo): saldo fine periodo < 1.000 EUR
+- **CRESCITA** (verde): liquidita' sufficiente
 
 ---
 
 ## File Progetto
 
 ```
-karalisweb-finance/
+kw-cashflow/
 ├── src/
 │   ├── app/
-│   │   ├── page.tsx          # Dashboard (da ristrutturare)
-│   │   ├── budget/           # Previsionale
-│   │   ├── transactions/     # Movimenti Qonto
-│   │   ├── payment-plans/    # PDR
-│   │   ├── settings/         # Centri costo/ricavo
-│   │   └── api/              # API routes
+│   │   ├── page.tsx              # Dashboard CEO
+│   │   ├── layout.tsx            # Layout root (dark mode, fonts, toaster)
+│   │   ├── login/page.tsx        # Login
+│   │   ├── forecast/page.tsx     # Previsionale
+│   │   ├── transactions/page.tsx # Consuntivo
+│   │   ├── payment-plans/page.tsx # PDR
+│   │   ├── sales/page.tsx        # Piano Commerciale
+│   │   ├── settings/page.tsx     # Piano Annuale
+│   │   ├── profile/page.tsx      # Profilo utente
+│   │   ├── guida/
+│   │   │   ├── page.tsx          # Indice guida
+│   │   │   └── [section]/page.tsx # 6 sotto-pagine dinamiche
+│   │   └── api/                  # API routes (vedi TECHNICAL-MANUAL.md)
 │   ├── components/
-│   │   ├── dashboard/        # Componenti dashboard
-│   │   ├── transactions/     # Import/lista movimenti
-│   │   └── ui/               # shadcn components
+│   │   ├── Sidebar.tsx           # Nav desktop
+│   │   ├── MobileNav.tsx         # Nav mobile (bottom nav)
+│   │   ├── AuthLayout.tsx        # Wrapper autenticazione
+│   │   ├── dashboard/
+│   │   │   ├── QuickEntry.tsx    # FAB inserimento rapido
+│   │   │   └── DashboardSkeleton.tsx # Skeleton loading
+│   │   ├── transactions/         # Import/lista movimenti
+│   │   └── ui/                   # shadcn + custom (animated-number)
 │   ├── lib/
-│   │   ├── db/               # Schema + connessione
-│   │   └── utils/            # Helpers (currency, dates, splits)
-│   └── types/                # TypeScript types
-├── data/                     # SQLite database
-└── drizzle/                  # Migrations
+│   │   ├── db/
+│   │   │   ├── schema.ts         # Schema DB completo (Drizzle)
+│   │   │   └── index.ts          # Connessione SQLite
+│   │   ├── auth/                 # Sessione, userService, otpService
+│   │   ├── email/                # emailService (nodemailer SMTP)
+│   │   ├── utils/                # currency, dates, splits
+│   │   ├── forecast-sync.ts      # Sync forecast da template
+│   │   ├── utils.ts              # cn() helper
+│   │   └── version.ts            # Versione app centralizzata
+│   └── middleware.ts             # Auth middleware
+├── data/finance.db               # Database SQLite
+├── drizzle/                      # Migrations
+├── deploy.sh                     # Deploy automatizzato + versioning + changelog
+├── CHANGELOG.md                  # Changelog (Keep a Changelog)
+├── DESIGN-SYSTEM.md              # Design system Karalisweb
+├── TECHNICAL-MANUAL.md           # Manuale tecnico completo
+└── package.json
 ```
 
 ---
 
-## Prossimi Step Sviluppo
+## Design System
 
-1. ✅ Definito layout dashboard con mockup
-2. 🔄 Aggiornare CLAUDE.md (questo file)
-3. ⬜ Ristrutturare dashboard con 3 numeri chiave
-4. ⬜ Implementare calcolo "giorni alla difficoltà"
-5. ⬜ Implementare flusso input previsto/non previsto
-6. ⬜ Aggiungere check settimanale con grafico
-7. ⬜ Aggiungere check mensile con target
-8. ⬜ Migliorare PDR con suggerimenti rate
+- **Tema**: sempre dark mode (classe `dark` su `<html>`)
+- **Colori**: definiti come CSS custom properties in `globals.css`
+  - Usare classi semantiche (`text-primary`, `bg-card`, `border-border`)
+  - MAI colori hardcoded (`text-[#d4a726]`)
+- **Brand**: oro `#d4a726` (primary), navy `#0d1521` (background), teal `#2d7d9a`
+- Riferimento completo: `DESIGN-SYSTEM.md`
+
+---
+
+## Deploy
+
+```bash
+./deploy.sh "messaggio commit"          # Deploy standard
+./deploy.sh --bump "messaggio commit"   # Con bump versione patch
+```
+
+Lo script: build locale → bump versione (opzionale) → changelog → commit/push → SSH VPS → pull → build → pm2 restart.
+
+La versione e' centralizzata in `src/lib/version.ts` e viene aggiornata automaticamente.
+
+---
+
+## Convenzioni
+
+- **Importi**: sempre in centesimi nel DB e API. Usare `formatCurrency()` per il display
+- **Date**: `YYYY-MM-DD` nel DB. Usare `formatDate()` / `formatDateShort()` per il display
+- **Soft delete**: campo `deleted_at` (null = attivo). Mai `DELETE` fisico
+- **CSS**: classi semantiche Tailwind via CSS variables. Vedi `globals.css` + `DESIGN-SYSTEM.md`
+- **Componenti UI**: shadcn/ui (Radix). Cartella `src/components/ui/`
+- **Animazioni**: Framer Motion con varianti `fadeInUp` + `staggerContainer`
+- **Toast**: `toast.success()` / `toast.error()` da sonner per feedback utente
 
 ---
 
@@ -248,4 +217,4 @@ karalisweb-finance/
 
 ---
 
-*Ultimo aggiornamento: 11 gennaio 2026*
+*Ultimo aggiornamento: 22 febbraio 2026*

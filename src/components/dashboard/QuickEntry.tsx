@@ -23,6 +23,7 @@ import {
   CreditCard,
   Receipt,
 } from "lucide-react";
+import { toast } from "sonner";
 
 interface ExpectedIncome {
   id: number;
@@ -183,10 +184,17 @@ export function QuickEntry({ onSuccess }: QuickEntryProps) {
       }
 
       // Chiudi e reset
+      const label = entryType === "income" ? "Entrata" : "Uscita";
+      toast.success(`${label} registrata`, {
+        description: `${description || "Movimento"} - €${parseFloat(amount).toFixed(2)}`,
+      });
       handleClose();
       onSuccess?.();
     } catch (error) {
       console.error("Errore:", error);
+      toast.error("Errore nel salvataggio", {
+        description: "Riprova tra qualche secondo",
+      });
     } finally {
       setSaving(false);
     }
@@ -212,7 +220,8 @@ export function QuickEntry({ onSuccess }: QuickEntryProps) {
       {/* FAB Button */}
       <button
         onClick={() => setFabOpen(true)}
-        className="fixed bottom-20 right-4 lg:bottom-6 lg:right-6 z-50 flex items-center gap-2 bg-primary text-primary-foreground shadow-lg rounded-full px-4 py-3 hover:bg-primary/90 transition-all hover:scale-105 active:scale-95"
+        aria-label="Registra nuovo movimento"
+        className="fixed bottom-20 right-4 lg:bottom-6 lg:right-6 z-50 flex items-center gap-2 bg-primary text-primary-foreground shadow-lg rounded-full px-4 py-3 hover:bg-primary/90 transition-all hover:scale-105 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
         <Plus className="h-5 w-5" />
         <span className="font-medium">Movimento</span>
