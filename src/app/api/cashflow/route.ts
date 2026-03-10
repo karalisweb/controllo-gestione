@@ -9,6 +9,7 @@ import {
   paymentPlans,
   paymentPlanInstallments,
   expectedIncomes,
+  forecastItems,
 } from "@/lib/db/schema";
 import { eq, and, gte, lte, isNull, or, asc, sql } from "drizzle-orm";
 
@@ -182,6 +183,16 @@ export async function GET(request: NextRequest) {
       currentBalance += tx.amount;
     }
 
+    // 2b. Carica forecast realizzati nel periodo (per evitare doppio conteggio)
+    const realizedForecasts = await db.select().from(forecastItems).where(
+      and(
+        eq(forecastItems.isRealized, true),
+        isNull(forecastItems.deletedAt),
+        gte(forecastItems.date, todayStr),
+        lte(forecastItems.date, horizonStr)
+      )
+    );
+
     // 3. Recupera spese previste attive e genera scadenze
     const activeExpenses = await db
       .select({
@@ -216,8 +227,15 @@ export async function GET(request: NextRequest) {
           const dueDate = new Date(today.getFullYear(), today.getMonth() + m, paymentDay);
           if (dueDate >= today && dueDate <= horizonDate &&
               dueDate >= startDate && dueDate <= endDate) {
-            // Verifica se già pagato (cerca transazione corrispondente)
-            const paid = pastTransactions.some(
+            // Verifica se già pagato tramite riconciliazione forecast
+            const dueDateStr = dueDate.toISOString().split("T")[0];
+            const isRealized = realizedForecasts.some(
+              (f) => f.sourceType === "expected_expense" && f.sourceId === expense.id &&
+                f.date.startsWith(`${dueDate.getFullYear()}-${String(dueDate.getMonth() + 1).padStart(2, "0")}`)
+            );
+
+            // Fallback: verifica anche con la logica originale
+            const paid = isRealized || pastTransactions.some(
               (tx) =>
                 tx.costCenterId === expense.costCenterId &&
                 tx.date.startsWith(
@@ -227,7 +245,7 @@ export async function GET(request: NextRequest) {
 
             upcomingExpenses.push({
               id: expense.id,
-              date: dueDate.toISOString().split("T")[0],
+              date: dueDateStr,
               description: expense.name + (costCenterName ? ` (${costCenterName})` : ""),
               amount: -expense.amount, // negativo
               type: expense.notes?.toLowerCase().includes("tasse") ? "tax" : "cost",
@@ -358,6 +376,12 @@ export async function GET(request: NextRequest) {
           const expectedDate = new Date(today.getFullYear(), today.getMonth() + m, expectedDay);
           if (expectedDate >= today && expectedDate <= horizonDate &&
               expectedDate >= startDate && expectedDate <= endDate) {
+            // Verifica se già incassato tramite riconciliazione forecast
+            const isRealized = realizedForecasts.some(
+              (f) => f.sourceType === "expected_income" && f.sourceId === income.id &&
+                f.date.startsWith(`${expectedDate.getFullYear()}-${String(expectedDate.getMonth() + 1).padStart(2, "0")}`)
+            );
+
             upcomingIncomes.push({
               id: income.id + m * 100000,
               date: expectedDate.toISOString().split("T")[0],
@@ -365,7 +389,7 @@ export async function GET(request: NextRequest) {
               amount: income.amount,
               clientName: income.clientName,
               reliability: (income.reliability as "high" | "medium" | "low") || "high",
-              isReceived: false,
+              isReceived: isRealized,
             });
           }
         }

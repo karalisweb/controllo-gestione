@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.2.0] - 2026-03-10
+
+### Modificato
+- aggiunto import CSV Qonto con riconciliazione previsionale e fix doppio conteggio dashboard
+
+---
+
 ## [2.1.1] - 2026-02-23
 
 ### Modificato

@@ -241,6 +241,10 @@ export const forecastItems = sqliteTable("forecast_items", {
   // Se spostata in piano di rientro
   paymentPlanId: integer("payment_plan_id").references(() => paymentPlans.id),
 
+  // Riconciliazione con consuntivo
+  matchedTransactionId: integer("matched_transaction_id"), // FK a transactions (non dichiarata per evitare ciclo)
+  isRealized: integer("is_realized", { mode: "boolean" }).default(false), // true = confermato con transazione reale
+
   // Per incassi: affidabilità
   reliability: text("reliability", { enum: ["high", "medium", "low"] }).default("high"),
 

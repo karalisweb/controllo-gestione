@@ -9,6 +9,7 @@ import {
   paymentPlanInstallments,
   paymentPlanCategories,
   salesOpportunities,
+  forecastItems,
 } from "@/lib/db/schema";
 import { eq, and, gte, lte, isNull, or, asc, desc, lt } from "drizzle-orm";
 
@@ -353,19 +354,37 @@ export async function GET(request: NextRequest) {
       and(eq(expectedIncomes.isActive, true), isNull(expectedIncomes.deletedAt))
     );
 
+    // Carica forecast realizzati per questo mese (per evitare doppio conteggio)
+    const realizedRangeStart = `${year}-${String(currentMonth).padStart(2, "0")}-01`;
+    const realizedRangeEnd = `${year}-${String(currentMonth).padStart(2, "0")}-31`;
+    const realizedForecasts = await db.select().from(forecastItems).where(
+      and(
+        eq(forecastItems.isRealized, true),
+        isNull(forecastItems.deletedAt),
+        gte(forecastItems.date, realizedRangeStart),
+        lte(forecastItems.date, realizedRangeEnd)
+      )
+    );
+
     for (const income of activeIncomes) {
       const expectedDay = income.expectedDay || 20;
       if (income.frequency === "monthly") {
         const dueDate = new Date(year, currentMonth - 1, expectedDay);
         const dueDateStr = dueDate.toISOString().split("T")[0];
         if (dueDateStr >= todayStr && dueDateStr <= next7DaysStr) {
-          upcomingIncomes.push({
-            id: income.id,
-            date: dueDateStr,
-            description: `Canone ${income.clientName}`,
-            amount: income.amount,
-            clientName: income.clientName,
-          });
+          // Verifica se il forecast corrispondente è già stato realizzato
+          const isRealized = realizedForecasts.some(
+            (f) => f.sourceType === "expected_income" && f.sourceId === income.id
+          );
+          if (!isRealized) {
+            upcomingIncomes.push({
+              id: income.id,
+              date: dueDateStr,
+              description: `Canone ${income.clientName}`,
+              amount: income.amount,
+              clientName: income.clientName,
+            });
+          }
         }
       }
     }
@@ -390,14 +409,20 @@ export async function GET(request: NextRequest) {
         const dueDate = new Date(year, currentMonth - 1, paymentDay);
         const dueDateStr = dueDate.toISOString().split("T")[0];
         if (dueDateStr >= todayStr && dueDateStr <= next7DaysStr) {
-          upcomingExpenses.push({
-            id: expense.id,
-            date: dueDateStr,
-            description: expense.name,
-            amount: expense.amount,
-            type: "cost",
-            isEssential: expense.priority === "essential",
-          });
+          // Verifica se il forecast corrispondente è già stato realizzato
+          const isRealized = realizedForecasts.some(
+            (f) => f.sourceType === "expected_expense" && f.sourceId === expense.id
+          );
+          if (!isRealized) {
+            upcomingExpenses.push({
+              id: expense.id,
+              date: dueDateStr,
+              description: expense.name,
+              amount: expense.amount,
+              type: "cost",
+              isEssential: expense.priority === "essential",
+            });
+          }
         }
       }
     }

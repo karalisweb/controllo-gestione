@@ -8,11 +8,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TransactionList } from "@/components/transactions/TransactionList";
 import { SplitCalculator } from "@/components/transactions/SplitCalculator";
 import { QuickTransactionInput } from "@/components/transactions/QuickTransactionInput";
+import { CsvImportWizard } from "@/components/transactions/CsvImportWizard";
 import { SplitsSummary } from "@/components/transactions/SplitsSummary";
 import { MobileHeader } from "@/components/MobileHeader";
 import { formatCurrency } from "@/lib/utils/currency";
 import type { Category } from "@/types";
-import { TrendingUp, TrendingDown, Wallet, Plus } from "lucide-react";
+import { TrendingUp, TrendingDown, Wallet, Plus, Upload } from "lucide-react";
 
 // Tipo per transazioni con centri di costo/ricavo
 interface TransactionWithCenters {
@@ -41,6 +42,7 @@ function TransactionsContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [quickInputOpen, setQuickInputOpen] = useState(false);
+  const [csvImportOpen, setCsvImportOpen] = useState(false);
 
   // Apri automaticamente il dialog se ?new=1
   useEffect(() => {
@@ -162,6 +164,11 @@ function TransactionsContent() {
             </p>
           </div>
           <div className="flex gap-2 w-full sm:w-auto">
+            <Button onClick={() => setCsvImportOpen(true)} size="sm" variant="outline" className="flex-1 sm:flex-none">
+              <Upload className="h-4 w-4 mr-1 lg:mr-2" />
+              <span className="hidden sm:inline">Importa CSV</span>
+              <span className="sm:hidden">CSV</span>
+            </Button>
             <Button onClick={() => setQuickInputOpen(true)} size="sm" className="flex-1 sm:flex-none">
               <Plus className="h-4 w-4 mr-1 lg:mr-2" />
               <span className="hidden sm:inline">Nuovo Movimento</span>
@@ -243,6 +250,12 @@ function TransactionsContent() {
         </Tabs>
 
         {/* Modali */}
+        <CsvImportWizard
+          open={csvImportOpen}
+          onOpenChange={setCsvImportOpen}
+          onComplete={fetchData}
+        />
+
         <QuickTransactionInput
           open={quickInputOpen}
           onOpenChange={setQuickInputOpen}
