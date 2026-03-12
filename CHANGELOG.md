@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.2.1] - 2026-03-12
+
+### Modificato
+- feat: crea automaticamente voci forecast per transazioni senza match durante import CSV
+
+---
+
 ## [2.2.0] - 2026-03-10
 
 ### Modificato

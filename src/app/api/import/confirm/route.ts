@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { transactions } from "@/lib/db/schema";
+import { transactions, forecastItems } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { reconcileTransaction } from "@/lib/reconciliation";
 
@@ -20,7 +20,9 @@ interface ImportItem {
  * POST /api/import/confirm
  *
  * Conferma l'import delle transazioni selezionate dall'utente.
- * Crea le transazioni e riconcilia quelle con match al forecast.
+ * Crea le transazioni, riconcilia quelle con match al forecast,
+ * e per quelle senza match crea automaticamente una voce forecast
+ * già realizzata per mantenere il saldo forecast allineato.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -36,6 +38,7 @@ export async function POST(request: NextRequest) {
 
     let created = 0;
     let reconciled = 0;
+    let forecastCreated = 0;
     let transfersCreated = 0;
     let skipped = 0;
     const errors: string[] = [];
@@ -100,6 +103,38 @@ export async function POST(request: NextRequest) {
             // Non blocca — la transazione è già creata
           }
         }
+        // Senza match e non è un trasferimento: crea voce forecast già realizzata
+        // per mantenere il saldo forecast allineato col consuntivo
+        else if (!item.matchedForecastItemId && !item.isTransfer) {
+          try {
+            await db.insert(forecastItems).values({
+              date: item.date,
+              description: item.description,
+              type: item.amount > 0 ? "income" : "expense",
+              amount: Math.abs(item.amount),
+              sourceType: "manual",
+              costCenterId: item.costCenterId || null,
+              revenueCenterId: item.revenueCenterId || null,
+              matchedTransactionId: inserted.id,
+              isRealized: true,
+              notes: "Creato automaticamente da import CSV (senza match forecast)",
+            });
+
+            // Segna anche la transazione come verificata
+            await db
+              .update(transactions)
+              .set({ isVerified: true })
+              .where(eq(transactions.id, inserted.id));
+
+            forecastCreated++;
+          } catch (forecastError) {
+            console.error(
+              `Errore creazione forecast per "${item.description}":`,
+              forecastError
+            );
+            // Non blocca — la transazione è già creata
+          }
+        }
       } catch (itemError) {
         errors.push(
           `Errore per "${item.description}": ${
@@ -112,6 +147,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       created,
       reconciled,
+      forecastCreated,
       transfers: transfersCreated,
       skipped,
       errors: errors.length > 0 ? errors : undefined,

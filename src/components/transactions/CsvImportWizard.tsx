@@ -81,6 +81,7 @@ export function CsvImportWizard({
   const [importResult, setImportResult] = useState<{
     created: number;
     reconciled: number;
+    forecastCreated: number;
     transfers: number;
     skipped: number;
     errors?: string[];
@@ -477,8 +478,10 @@ export function CsvImportWizard({
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Senza match</span>
-              <span className="font-semibold">
+              <span className="text-muted-foreground">
+                Aggiunti al forecast
+              </span>
+              <span className="font-semibold text-blue-500">
                 {selectedRows.length - matchedSelectedRows.length}
               </span>
             </div>
@@ -547,6 +550,16 @@ export function CsvImportWizard({
                 {importResult.reconciled}
               </span>
             </div>
+            {importResult.forecastCreated > 0 && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">
+                  Aggiunti al forecast
+                </span>
+                <span className="font-semibold text-blue-500">
+                  {importResult.forecastCreated}
+                </span>
+              </div>
+            )}
             {importResult.skipped > 0 && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Saltati (duplicati)</span>
