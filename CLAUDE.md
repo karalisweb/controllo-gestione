@@ -157,14 +157,23 @@ kw-cashflow/
 │   │   │   └── index.ts          # Connessione SQLite
 │   │   ├── auth/                 # Sessione, userService, otpService
 │   │   ├── email/                # emailService (nodemailer SMTP)
-│   │   ├── utils/                # currency, dates, splits
+│   │   ├── utils/                # currency, dates, splits, business
+│   │   │   ├── currency.ts       # centsToEuros, formatCurrency, parseItalianCurrency
+│   │   │   ├── dates.ts          # formatDate, getMonthName, getLastDayOfMonth
+│   │   │   ├── splits.ts         # calculateSplit, verifySplit
+│   │   │   ├── business.ts       # logica pura: runway, stato azienda, rate virtuali
+│   │   │   └── __tests__/        # Unit test (Vitest)
+│   │   ├── __tests__/            # Test CSV parser
 │   │   ├── forecast-sync.ts      # Sync forecast da template
+│   │   ├── reconciliation.ts     # Riconciliazione forecast ↔ consuntivo
+│   │   ├── csv-parser.ts         # Parser CSV Qonto
 │   │   ├── utils.ts              # cn() helper
 │   │   └── version.ts            # Versione app centralizzata
 │   └── middleware.ts             # Auth middleware
 ├── data/finance.db               # Database SQLite
 ├── drizzle/                      # Migrations
 ├── deploy.sh                     # Deploy automatizzato + versioning + changelog
+├── vitest.config.ts              # Configurazione test
 ├── CHANGELOG.md                  # Changelog (Keep a Changelog)
 ├── DESIGN-SYSTEM.md              # Design system Karalisweb
 ├── TECHNICAL-MANUAL.md           # Manuale tecnico completo
@@ -194,6 +203,22 @@ kw-cashflow/
 Lo script: build locale → bump versione (opzionale) → changelog → commit/push → SSH VPS → pull → build → pm2 restart.
 
 La versione e' centralizzata in `src/lib/version.ts` e viene aggiornata automaticamente.
+
+---
+
+## Test
+
+- **Framework**: Vitest (v4, zero config, compatibile Next.js/TypeScript)
+- **Comando**: `npm test` (run singolo) | `npm run test:watch` (watch mode)
+- **Convenzione**: ogni feature nuova o modificata include i test relativi
+- **Struttura**: test accanto ai file (`__tests__/nome.test.ts`)
+- **Copertura attuale**: 85 test su logica di business pura (no DB, no browser)
+  - `currency.test.ts` - conversioni, formattazione, parsing importi
+  - `splits.test.ts` - ripartizione incassi (IVA, soci, agenzia)
+  - `dates.test.ts` - formattazione e manipolazione date italiane
+  - `business.test.ts` - disponibile da lordo, rate virtuali, runway, stato azienda, occorrenze forecast, matching nomi
+  - `csv-parser.test.ts` - parsing CSV Qonto, trasferimenti interni, dedup
+- **Logica estratta**: `src/lib/utils/business.ts` contiene funzioni pure estratte dalle API routes per testabilita'
 
 ---
 

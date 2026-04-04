@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PaymentPlanForm } from "@/components/payment-plans/PaymentPlanForm";
 import { PaymentPlanList } from "@/components/payment-plans/PaymentPlanList";
 import { PaymentPlanCategoryManager } from "@/components/payment-plans/PaymentPlanCategoryManager";
+import { PaymentPlanRemodulateDialog } from "@/components/payment-plans/PaymentPlanRemodulateDialog";
 import { MobileHeader } from "@/components/MobileHeader";
 import { formatCurrency } from "@/lib/utils/currency";
 import type { PaymentPlan } from "@/types";
@@ -20,6 +21,8 @@ export default function PaymentPlansPage() {
   const [editingPlan, setEditingPlan] = useState<PaymentPlan | null>(null);
   const [activeTab, setActiveTab] = useState("active");
   const [categoryManagerOpen, setCategoryManagerOpen] = useState(false);
+  const [remodulateOpen, setRemodulateOpen] = useState(false);
+  const [remodulatingPlan, setRemodulatingPlan] = useState<PaymentPlan | null>(null);
 
   const fetchPlans = useCallback(async () => {
     try {
@@ -93,12 +96,13 @@ export default function PaymentPlansPage() {
 
   const handlePayInstallment = async (
     planId: number,
-    installmentId: number
+    installmentId: number,
+    paidDate?: string
   ) => {
     const res = await fetch(`/api/payment-plans/${planId}/installments`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ installmentId }),
+      body: JSON.stringify({ installmentId, paidDate }),
     });
 
     if (!res.ok) {
@@ -149,6 +153,51 @@ export default function PaymentPlansPage() {
 
     if (!res.ok) {
       throw new Error("Errore nella modifica della data");
+    }
+
+    await fetchPlans();
+  };
+
+  // Toggle attiva/disattiva piano
+  const handleToggleActive = async (planId: number, isActive: boolean) => {
+    const res = await fetch(`/api/payment-plans/${planId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isActive }),
+    });
+
+    if (!res.ok) {
+      throw new Error("Errore nel cambio stato del piano");
+    }
+
+    await fetchPlans();
+  };
+
+  // Apri dialog rimodulazione
+  const handleRemodulate = (plan: PaymentPlan) => {
+    setRemodulatingPlan(plan);
+    setRemodulateOpen(true);
+  };
+
+  // Conferma rimodulazione
+  const handleConfirmRemodulate = async (planId: number, data: {
+    remainingInstallments: number;
+    newInstallmentAmount: number;
+    nextDueDate: string;
+  }) => {
+    const res = await fetch(`/api/payment-plans/${planId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        rimodulateRemaining: true,
+        remainingInstallments: data.remainingInstallments,
+        newInstallmentAmount: data.newInstallmentAmount,
+        nextDueDate: data.nextDueDate,
+      }),
+    });
+
+    if (!res.ok) {
+      throw new Error("Errore nella rimodulazione del piano");
     }
 
     await fetchPlans();
@@ -266,6 +315,8 @@ export default function PaymentPlansPage() {
               onDeletePlan={handleDeletePlan}
               onEditPlan={handleEditPlan}
               onUpdateInstallmentDate={handleUpdateInstallmentDate}
+              onToggleActive={handleToggleActive}
+              onRemodulate={handleRemodulate}
             />
           </TabsContent>
 
@@ -277,6 +328,7 @@ export default function PaymentPlansPage() {
               onDeletePlan={handleDeletePlan}
               onEditPlan={handleEditPlan}
               onUpdateInstallmentDate={handleUpdateInstallmentDate}
+              onToggleActive={handleToggleActive}
             />
           </TabsContent>
         </Tabs>
@@ -291,6 +343,16 @@ export default function PaymentPlansPage() {
         <PaymentPlanCategoryManager
           open={categoryManagerOpen}
           onOpenChange={setCategoryManagerOpen}
+        />
+
+        <PaymentPlanRemodulateDialog
+          open={remodulateOpen}
+          onOpenChange={(open) => {
+            setRemodulateOpen(open);
+            if (!open) setRemodulatingPlan(null);
+          }}
+          plan={remodulatingPlan}
+          onConfirm={handleConfirmRemodulate}
         />
       </div>
     </div>

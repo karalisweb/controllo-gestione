@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -54,6 +54,8 @@ export default function SalesPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingSale, setEditingSale] = useState<SalesOpportunity | null>(null);
+  const [forecastItems, setForecastItems] = useState<{ date: string; type: string; amount: number }[]>([]);
+  const [initialBalance, setInitialBalance] = useState(0);
 
   const fetchData = useCallback(async () => {
     try {
@@ -70,6 +72,23 @@ export default function SalesPage() {
       const salesRes = await fetch(`/api/sales?year=${year}`);
       const salesData = await salesRes.json();
       setSales(salesData || []);
+
+      // Fetch forecast items per analisi cassa
+      const forecastRes = await fetch(`/api/forecast?startDate=${year}-01-01&endDate=${year}-12-31`);
+      if (forecastRes.ok) {
+        const forecastData = await forecastRes.json();
+        setForecastItems(forecastData || []);
+      }
+
+      // Fetch initial balance
+      const settingsRes = await fetch("/api/settings");
+      if (settingsRes.ok) {
+        const settings = await settingsRes.json();
+        const balanceSetting = settings.find((s: { key: string }) => s.key === "initial_balance");
+        if (balanceSetting) {
+          setInitialBalance(parseInt(balanceSetting.value) || 0);
+        }
+      }
     } catch (error) {
       console.error("Errore nel caricamento:", error);
     } finally {
@@ -165,6 +184,38 @@ export default function SalesPage() {
   const filteredSales = selectedMonth
     ? sales.filter((s) => s.month === selectedMonth)
     : sales;
+
+  // Analisi cassa mensile (5 colonne)
+  const cashRecap = useMemo(() => {
+    // Raggruppa forecast items per mese
+    const monthlyNets: number[] = new Array(12).fill(0);
+    for (const item of forecastItems) {
+      const month = new Date(item.date).getMonth(); // 0-based
+      if (month >= 0 && month < 12) {
+        monthlyNets[month] += item.type === "income" ? item.amount : -item.amount;
+      }
+    }
+
+    let cumulativeCash = initialBalance;
+    let progressiveCash = 0;
+    let progressiveCashWithTarget = 0;
+
+    return monthlyNets.map((monthNet, idx) => {
+      cumulativeCash += monthNet;
+      progressiveCash += monthNet;
+      const salesTarget = monthNet < 0 ? Math.round(Math.abs(monthNet) / 0.70 * 1.22) : 0;
+      progressiveCashWithTarget += Math.max(monthNet, 0);
+
+      return {
+        month: idx + 1,
+        cashBalance: cumulativeCash,        // col 1: disavanzo cassa mensile
+        monthNet,                            // col 2: disavanzo mese
+        salesTarget,                         // col 3: obiettivo vendita (lordo)
+        progressiveCash,                     // col 4: disp. cassa progressiva reale
+        progressiveCashWithTarget,           // col 5: disp. cassa con obiettivo
+      };
+    });
+  }, [forecastItems, initialBalance]);
 
   // Raggruppa per stato
   const objectives = filteredSales.filter((s) => s.status === "objective");
@@ -289,53 +340,38 @@ export default function SalesPage() {
         )}
       </div>
 
-      {/* Tabella riepilogo mensile */}
-      {!selectedMonth && (
+      {/* Analisi Cassa Mensile */}
+      {!selectedMonth && forecastItems.length > 0 && (
         <Card>
           <CardHeader className="pb-2 px-3 sm:px-6">
-            <CardTitle className="text-base sm:text-lg">Riepilogo Mensile</CardTitle>
+            <CardTitle className="text-base sm:text-lg">Analisi Cassa Mensile</CardTitle>
           </CardHeader>
           <CardContent className="px-3 sm:px-6">
             {/* Mobile: Card List */}
             <div className="sm:hidden space-y-2">
-              {monthlyGaps.map((gap) => (
-                <div
-                  key={gap.month}
-                  className="p-3 rounded-lg border cursor-pointer hover:bg-muted/50"
-                  onClick={() => setSelectedMonth(gap.month)}
-                >
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="font-medium">{MONTHS[gap.month - 1]}</span>
-                    <div className="flex items-center gap-2">
-                      <div className="w-12 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full ${
-                            gap.progress >= 100
-                              ? "bg-green-500"
-                              : gap.progress >= 50
-                              ? "bg-yellow-500"
-                              : gap.progress > 0
-                              ? "bg-red-500"
-                              : "bg-gray-300"
-                          }`}
-                          style={{ width: `${Math.min(100, gap.progress)}%` }}
-                        />
-                      </div>
-                      <span className="text-xs text-muted-foreground w-8">{gap.progress}%</span>
+              {cashRecap.map((row) => (
+                <div key={row.month} className="p-3 rounded-lg border">
+                  <div className="font-medium mb-2">{MONTHS[row.month - 1]}</div>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                    <div className="text-muted-foreground">Saldo cassa</div>
+                    <div className={`text-right font-mono font-medium ${row.cashBalance >= 0 ? "text-green-700" : "text-red-700"}`}>
+                      {formatCurrency(row.cashBalance)}
                     </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div>
-                      <span className="text-muted-foreground">Gap: </span>
-                      <span className="text-orange-600 font-medium">
-                        {gap.gap > 0 ? formatCurrency(gap.gap) : "-"}
-                      </span>
+                    <div className="text-muted-foreground">Netto mese</div>
+                    <div className={`text-right font-mono font-medium ${row.monthNet >= 0 ? "text-green-700" : "text-red-700"}`}>
+                      {formatCurrency(row.monthNet)}
                     </div>
-                    <div>
-                      <span className="text-muted-foreground">Target: </span>
-                      <span className="font-medium">
-                        {gap.salesTargetGross > 0 ? formatCurrency(gap.salesTargetGross) : "-"}
-                      </span>
+                    <div className="text-muted-foreground">Obiettivo vendita</div>
+                    <div className={`text-right font-mono font-medium ${row.salesTarget > 0 ? "text-amber-600" : "text-muted-foreground"}`}>
+                      {row.salesTarget > 0 ? formatCurrency(row.salesTarget) : "-"}
+                    </div>
+                    <div className="text-muted-foreground">Cassa progressiva</div>
+                    <div className={`text-right font-mono font-medium ${row.progressiveCash >= 0 ? "text-green-700" : "text-red-700"}`}>
+                      {formatCurrency(row.progressiveCash)}
+                    </div>
+                    <div className="text-muted-foreground">Cassa c/ obiettivo</div>
+                    <div className="text-right font-mono font-medium text-blue-600">
+                      {formatCurrency(row.progressiveCashWithTarget)}
                     </div>
                   </div>
                 </div>
@@ -348,49 +384,31 @@ export default function SalesPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Mese</TableHead>
-                    <TableHead className="text-right">Gap</TableHead>
-                    <TableHead className="text-right">Target</TableHead>
-                    <TableHead className="text-right">Pianificato</TableHead>
-                    <TableHead className="text-right">Disp.</TableHead>
-                    <TableHead className="text-center">Stato</TableHead>
+                    <TableHead className="text-right">Saldo Cassa</TableHead>
+                    <TableHead className="text-right">Netto Mese</TableHead>
+                    <TableHead className="text-right">Obiettivo Vendita</TableHead>
+                    <TableHead className="text-right">Cassa Progressiva</TableHead>
+                    <TableHead className="text-right">Cassa c/ Obiettivo</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {monthlyGaps.map((gap) => (
-                    <TableRow
-                      key={gap.month}
-                      className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => setSelectedMonth(gap.month)}
-                    >
-                      <TableCell className="font-medium">{MONTHS[gap.month - 1]}</TableCell>
-                      <TableCell className="text-right text-orange-600">
-                        {gap.gap > 0 ? formatCurrency(gap.gap) : "-"}
+                  {cashRecap.map((row) => (
+                    <TableRow key={row.month}>
+                      <TableCell className="font-medium">{MONTHS[row.month - 1]}</TableCell>
+                      <TableCell className={`text-right font-mono ${row.cashBalance >= 0 ? "text-green-700" : "text-red-700"}`}>
+                        {formatCurrency(row.cashBalance)}
                       </TableCell>
-                      <TableCell className="text-right">
-                        {gap.salesTargetGross > 0 ? formatCurrency(gap.salesTargetGross) : "-"}
+                      <TableCell className={`text-right font-mono ${row.monthNet >= 0 ? "text-green-700" : "text-red-700"}`}>
+                        {formatCurrency(row.monthNet)}
                       </TableCell>
-                      <TableCell className="text-right">
-                        {gap.sales.totalGross > 0 ? formatCurrency(gap.sales.totalGross) : "-"}
+                      <TableCell className={`text-right font-mono font-bold ${row.salesTarget > 0 ? "text-amber-600" : "text-muted-foreground"}`}>
+                        {row.salesTarget > 0 ? formatCurrency(row.salesTarget) : "-"}
                       </TableCell>
-                      <TableCell className="text-right text-green-600">
-                        {gap.sales.totalAvailable > 0 ? formatCurrency(gap.sales.totalAvailable) : "-"}
+                      <TableCell className={`text-right font-mono ${row.progressiveCash >= 0 ? "text-green-700" : "text-red-700"}`}>
+                        {formatCurrency(row.progressiveCash)}
                       </TableCell>
-                      <TableCell className="text-center">
-                        <div className="w-16 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mx-auto">
-                          <div
-                            className={`h-full ${
-                              gap.progress >= 100
-                                ? "bg-green-500"
-                                : gap.progress >= 50
-                                ? "bg-yellow-500"
-                                : gap.progress > 0
-                                ? "bg-red-500"
-                                : "bg-gray-300"
-                            }`}
-                            style={{ width: `${Math.min(100, gap.progress)}%` }}
-                          />
-                        </div>
-                        <span className="text-xs text-muted-foreground">{gap.progress}%</span>
+                      <TableCell className="text-right font-mono text-blue-600">
+                        {formatCurrency(row.progressiveCashWithTarget)}
                       </TableCell>
                     </TableRow>
                   ))}

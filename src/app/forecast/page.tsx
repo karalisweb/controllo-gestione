@@ -163,6 +163,25 @@ export default function ForecastPage() {
     }
   };
 
+  // Elimina voci multiple
+  const handleBulkDelete = async (ids: number[]) => {
+    if (!confirm(`Eliminare ${ids.length} voci?`)) return;
+
+    try {
+      const res = await fetch("/api/forecast/bulk-delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids }),
+      });
+
+      if (res.ok) {
+        await loadData();
+      }
+    } catch (error) {
+      console.error("Errore eliminazione multipla:", error);
+    }
+  };
+
   // Sposta in PDR
   const handleMoveToPDR = async (
     id: number,
@@ -253,15 +272,16 @@ export default function ForecastPage() {
 
         {/* Tabella Previsionale */}
         <ForecastTable
-        items={items}
-        paymentPlans={paymentPlans}
-        costCenters={costCenters}
-        revenueCenters={revenueCenters}
-        initialBalance={initialBalance}
-        onUpdate={handleUpdate}
-        onDelete={handleDelete}
-        onMoveToPDR={handleMoveToPDR}
-        onAdd={handleAdd}
+          items={items}
+          paymentPlans={paymentPlans}
+          costCenters={costCenters}
+          revenueCenters={revenueCenters}
+          initialBalance={initialBalance}
+          onUpdate={handleUpdate}
+          onDelete={handleDelete}
+          onBulkDelete={handleBulkDelete}
+          onMoveToPDR={handleMoveToPDR}
+          onAdd={handleAdd}
           onRefresh={loadData}
           onGenerate={handleGenerate}
         />

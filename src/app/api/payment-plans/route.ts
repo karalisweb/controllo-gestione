@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { paymentPlans, paymentPlanInstallments, paymentPlanCategories } from "@/lib/db/schema";
+import { paymentPlans, paymentPlanInstallments, paymentPlanCategories, forecastItems } from "@/lib/db/schema";
 import { eq, isNull, and } from "drizzle-orm";
 
 export async function GET(request: NextRequest) {
@@ -120,6 +120,20 @@ export async function POST(request: NextRequest) {
     .from(paymentPlanInstallments)
     .where(eq(paymentPlanInstallments.paymentPlanId, plan.id))
     .orderBy(paymentPlanInstallments.dueDate);
+
+  // Cascade: crea automaticamente le voci previsionale per ogni rata
+  for (const inst of installments) {
+    await db.insert(forecastItems).values({
+      date: inst.dueDate,
+      description: `PDR: ${plan.creditorName}`,
+      type: "expense",
+      amount: inst.amount,
+      sourceType: "pdr",
+      sourceId: inst.id,
+      paymentPlanId: plan.id,
+      priority: "essential",
+    });
+  }
 
   return NextResponse.json({ ...plan, installments }, { status: 201 });
 }

@@ -146,6 +146,13 @@ export function PaymentPlanForm({
 
   const handleFormSubmit = async (data: FormData) => {
     try {
+      // Rigenera le rate SOLO se cambiano i parametri finanziari (importo, rate, data inizio)
+      const financialParamsChanged = editingPlan ? (
+        eurosToCents(parseFloat(data.totalAmount)) !== editingPlan.totalAmount ||
+        parseInt(data.totalInstallments) !== editingPlan.totalInstallments ||
+        data.startDate !== editingPlan.startDate
+      ) : false;
+
       await onSubmit({
         creditorName: data.creditorName,
         categoryId: data.categoryId ? parseInt(data.categoryId) : undefined,
@@ -156,7 +163,7 @@ export function PaymentPlanForm({
           : undefined,
         startDate: data.startDate,
         notes: data.notes || undefined,
-        regenerateInstallments: !!editingPlan, // Rigenera rate solo in modifica
+        regenerateInstallments: financialParamsChanged,
       });
       reset();
       onOpenChange(false);
@@ -285,8 +292,8 @@ export function PaymentPlanForm({
           </div>
 
           {isEditing && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
-              <strong>Attenzione:</strong> Salvando le modifiche verranno rigenerate tutte le rate e lo stato dei pagamenti verrà azzerato.
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+              <strong>Nota:</strong> Modifiche a nome, categoria e note non alterano le rate. Se cambi importo totale, numero rate o data inizio, le rate verranno rigenerate e i pagamenti azzerati.
             </div>
           )}
 

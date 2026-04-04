@@ -25,15 +25,20 @@ import {
   Pencil,
   CalendarDays,
   X,
+  Pause,
+  Play,
+  RefreshCw,
 } from "lucide-react";
 
 interface PaymentPlanListProps {
   plans: PaymentPlan[];
-  onPayInstallment: (planId: number, installmentId: number) => Promise<void>;
+  onPayInstallment: (planId: number, installmentId: number, paidDate: string) => Promise<void>;
   onUnpayInstallment: (planId: number, installmentId: number) => Promise<void>;
   onDeletePlan: (planId: number) => Promise<void>;
   onEditPlan?: (plan: PaymentPlan) => void;
   onUpdateInstallmentDate?: (planId: number, installmentId: number, newDate: string) => Promise<void>;
+  onToggleActive?: (planId: number, isActive: boolean) => Promise<void>;
+  onRemodulate?: (plan: PaymentPlan) => void;
 }
 
 export function PaymentPlanList({
@@ -43,6 +48,8 @@ export function PaymentPlanList({
   onDeletePlan,
   onEditPlan,
   onUpdateInstallmentDate,
+  onToggleActive,
+  onRemodulate,
 }: PaymentPlanListProps) {
   const [expandedPlan, setExpandedPlan] = useState<number | null>(null);
   const [loading, setLoading] = useState<string | null>(null);
@@ -54,11 +61,12 @@ export function PaymentPlanList({
 
   const handlePayInstallment = async (
     planId: number,
-    installmentId: number
+    installmentId: number,
+    paidDate: string
   ) => {
     setLoading(`pay-${installmentId}`);
     try {
-      await onPayInstallment(planId, installmentId);
+      await onPayInstallment(planId, installmentId, paidDate);
     } finally {
       setLoading(null);
     }
@@ -71,6 +79,18 @@ export function PaymentPlanList({
     setLoading(`unpay-${installmentId}`);
     try {
       await onUnpayInstallment(planId, installmentId);
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const handleToggleActive = async (plan: PaymentPlan) => {
+    if (!onToggleActive) return;
+    const action = plan.isActive ? "Sospendere" : "Riattivare";
+    if (!confirm(`${action} questo piano di rientro?`)) return;
+    setLoading(`toggle-${plan.id}`);
+    try {
+      await onToggleActive(plan.id, !plan.isActive);
     } finally {
       setLoading(null);
     }
@@ -163,11 +183,45 @@ export function PaymentPlanList({
                       {plan.category.name}
                     </Badge>
                   )}
-                  <Badge variant={plan.isActive ? "default" : "secondary"}>
-                    {plan.isActive ? "Attivo" : "Completato"}
+                  <Badge variant={plan.isActive ? "default" : "secondary"} className={
+                    !plan.isActive && (plan.paidInstallments || 0) < plan.totalInstallments
+                      ? "bg-amber-100 text-amber-800 border-amber-300"
+                      : ""
+                  }>
+                    {plan.isActive
+                      ? "Attivo"
+                      : (plan.paidInstallments || 0) >= plan.totalInstallments
+                        ? "Completato"
+                        : "Sospeso"}
                   </Badge>
                 </div>
                 <div className="flex gap-1">
+                  {onRemodulate && plan.isActive && (plan.paidInstallments || 0) > 0 && (plan.paidInstallments || 0) < plan.totalInstallments && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-purple-500 hover:text-purple-700 hover:bg-purple-50"
+                      onClick={() => onRemodulate(plan)}
+                      title="Rimodula piano"
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                    </Button>
+                  )}
+                  {onToggleActive && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={plan.isActive
+                        ? "text-amber-500 hover:text-amber-700 hover:bg-amber-50"
+                        : "text-green-500 hover:text-green-700 hover:bg-green-50"
+                      }
+                      onClick={() => handleToggleActive(plan)}
+                      disabled={loading === `toggle-${plan.id}`}
+                      title={plan.isActive ? "Sospendi piano" : "Riattiva piano"}
+                    >
+                      {plan.isActive ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                    </Button>
+                  )}
                   {onEditPlan && (
                     <Button
                       variant="ghost"
@@ -373,7 +427,8 @@ export function PaymentPlanList({
                                   onClick={() =>
                                     handlePayInstallment(
                                       plan.id,
-                                      installment.id
+                                      installment.id,
+                                      installment.dueDate
                                     )
                                   }
                                   disabled={loading === `pay-${installment.id}`}

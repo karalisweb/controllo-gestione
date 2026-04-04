@@ -47,6 +47,7 @@ import {
   ArrowRight,
   Tag,
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ForecastSplitPreview } from "./ForecastSplitPreview";
 
 // Componente card per vista mobile
@@ -58,6 +59,8 @@ function ForecastCard({
   onOpenPDR,
   onShowSplit,
   onChangeCategory,
+  isSelected,
+  onToggleSelect,
 }: {
   item: ForecastItem;
   balance: number;
@@ -66,10 +69,18 @@ function ForecastCard({
   onOpenPDR: (id: number) => void;
   onShowSplit: (item: ForecastItem) => void;
   onChangeCategory: (item: ForecastItem) => void;
+  isSelected: boolean;
+  onToggleSelect: (id: number) => void;
 }) {
   return (
-    <div className="p-3 border-b last:border-b-0">
+    <div className={`p-3 border-b last:border-b-0 ${isSelected ? "bg-primary/5" : ""}`}>
       <div className="flex items-start justify-between gap-2">
+        <div className="flex items-start gap-2 flex-1 min-w-0">
+          <Checkbox
+            checked={isSelected}
+            onCheckedChange={() => onToggleSelect(item.id)}
+            className="mt-1 shrink-0"
+          />
         <div className="flex-1 min-w-0">
           {/* Data e Centro */}
           <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -124,6 +135,7 @@ function ForecastCard({
           )}
         </div>
         {/* Importo e Saldo */}
+        </div>
         <div className="text-right shrink-0">
           <div
             className={`font-mono font-bold ${
@@ -226,6 +238,7 @@ interface ForecastTableProps {
   initialBalance: number;
   onUpdate: (id: number, data: Partial<ForecastItem>) => Promise<void>;
   onDelete: (id: number) => Promise<void>;
+  onBulkDelete: (ids: number[]) => Promise<void>;
   onMoveToPDR: (
     id: number,
     planId?: number,
@@ -259,6 +272,7 @@ export function ForecastTable({
   initialBalance,
   onUpdate,
   onDelete,
+  onBulkDelete,
   onMoveToPDR,
   onAdd,
   onRefresh,
@@ -302,6 +316,9 @@ export function ForecastTable({
   const [categoryItem, setCategoryItem] = useState<ForecastItem | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
 
+  // Selezione multipla
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+
   const [newItemData, setNewItemData] = useState({
     date: new Date().toISOString().split("T")[0],
     description: "",
@@ -332,6 +349,37 @@ export function ForecastTable({
 
     return filtered;
   }, [items, filter, selectedMonth]);
+
+  // Reset selezione quando cambiano filtri
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [filter, selectedMonth]);
+
+  // Toggle selezione singola
+  const toggleSelect = useCallback((id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }, []);
+
+  // Seleziona/deseleziona tutto (voci filtrate)
+  const toggleSelectAll = useCallback(() => {
+    setSelectedIds((prev) => {
+      const allFilteredIds = filteredItems.map((i) => i.id);
+      const allSelected = allFilteredIds.every((id) => prev.has(id));
+      if (allSelected) {
+        return new Set();
+      } else {
+        return new Set(allFilteredIds);
+      }
+    });
+  }, [filteredItems]);
 
   // Calcola saldo iniziale per il mese selezionato
   const monthInitialBalance = useMemo(() => {
@@ -603,6 +651,25 @@ export function ForecastTable({
     };
   }, [filteredItems]);
 
+  // Calcola vendite necessarie per portare il mese in attivo
+  // Se il Saldo Finale è positivo → non serve vendere nulla
+  // Se il Saldo Finale è negativo → calcola il lordo da vendere tenendo conto
+  // che da ogni vendita, dopo IVA (22%) e soci (30% del netto), resta il 57,38%
+  const salesNeeded = useMemo(() => {
+    const saldoFinale = monthInitialBalance + monthTotals.net;
+
+    if (saldoFinale >= 0) {
+      return { needed: false, grossAmount: 0 };
+    }
+
+    const deficit = Math.abs(saldoFinale);
+    // netto necessario = deficit / 0.70 (perché il 70% del netto resta all'agenzia)
+    // lordo necessario = netto * 1.22 (aggiungi IVA)
+    const grossNeeded = Math.round(deficit / 0.70 * 1.22);
+
+    return { needed: true, grossAmount: grossNeeded };
+  }, [monthInitialBalance, monthTotals]);
+
   return (
     <div className="space-y-4">
       {/* Header con azioni */}
@@ -678,7 +745,7 @@ export function ForecastTable({
 
         <CardContent>
           {/* Riepilogo - Desktop */}
-          <div className="hidden sm:grid grid-cols-4 gap-4 mb-4 p-3 bg-muted/30 rounded-lg">
+          <div className={`hidden sm:grid ${selectedMonth !== "all" ? "grid-cols-5" : "grid-cols-4"} gap-4 mb-4 p-3 bg-muted/30 rounded-lg`}>
             <div>
               <div className="text-xs text-muted-foreground">Saldo Iniziale</div>
               <div className={`font-mono font-bold ${monthInitialBalance >= 0 ? "text-green-700" : "text-red-700"}`}>
@@ -703,10 +770,18 @@ export function ForecastTable({
                 {formatCurrency(monthInitialBalance + monthTotals.net)}
               </div>
             </div>
+            {selectedMonth !== "all" && (
+              <div>
+                <div className="text-xs text-muted-foreground">Da Vendere (lordo)</div>
+                <div className={`font-mono font-bold ${salesNeeded.needed ? "text-amber-600" : "text-green-700"}`}>
+                  {formatCurrency(salesNeeded.grossAmount)}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Riepilogo - Mobile (compatto) */}
-          <div className="sm:hidden grid grid-cols-3 gap-2 mb-4 p-2 bg-muted/30 rounded-lg text-center">
+          <div className={`sm:hidden grid ${selectedMonth !== "all" ? "grid-cols-3" : "grid-cols-3"} gap-2 mb-4 p-2 bg-muted/30 rounded-lg text-center`}>
             <div>
               <div className="text-xs text-muted-foreground">Saldo Iniziale</div>
               <div className={`font-mono text-sm font-bold ${monthInitialBalance >= 0 ? "text-green-700" : "text-red-700"}`}>
@@ -725,6 +800,22 @@ export function ForecastTable({
                 -{formatCurrency(monthTotals.expenses)}
               </div>
             </div>
+            {selectedMonth !== "all" && (
+              <>
+                <div>
+                  <div className="text-xs text-muted-foreground">Saldo Finale</div>
+                  <div className={`font-mono text-sm font-bold ${monthInitialBalance + monthTotals.net >= 0 ? "text-green-700" : "text-red-700"}`}>
+                    {formatCurrency(monthInitialBalance + monthTotals.net)}
+                  </div>
+                </div>
+                <div className="col-span-2">
+                  <div className="text-xs text-muted-foreground">Da Vendere (lordo)</div>
+                  <div className={`font-mono text-sm font-bold ${salesNeeded.needed ? "text-amber-600" : "text-green-700"}`}>
+                    {formatCurrency(salesNeeded.grossAmount)}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Riepilogo Ripartizioni Previste */}
@@ -826,6 +917,8 @@ export function ForecastTable({
                   onOpenPDR={openPDRDialog}
                   onShowSplit={openSplitDialog}
                   onChangeCategory={openCategoryDialog}
+                  isSelected={selectedIds.has(item.id)}
+                  onToggleSelect={toggleSelect}
                 />
               ))
             )}
@@ -836,6 +929,12 @@ export function ForecastTable({
             <Table>
               <TableHeader className="sticky top-0 bg-background z-10">
                 <TableRow>
+                  <TableHead className="w-[40px]">
+                    <Checkbox
+                      checked={filteredItems.length > 0 && filteredItems.every((i) => selectedIds.has(i.id))}
+                      onCheckedChange={toggleSelectAll}
+                    />
+                  </TableHead>
                   <TableHead className="w-[100px]">Data</TableHead>
                   <TableHead className="w-[120px]">Tipo</TableHead>
                   <TableHead>Descrizione</TableHead>
@@ -847,7 +946,7 @@ export function ForecastTable({
               <TableBody>
                 {itemsWithBalance.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                       Nessuna voce. Clicca "Genera da Piano" per popolare il previsionale.
                     </TableCell>
                   </TableRow>
@@ -864,8 +963,15 @@ export function ForecastTable({
                     <TableRow
                       key={item.id}
                       ref={isToday ? todayRowRef : undefined}
-                      className={`group ${isToday ? "bg-primary/10 border-l-4 border-l-primary" : isPast ? "opacity-50" : ""}`}
+                      className={`group ${selectedIds.has(item.id) ? "bg-primary/5" : ""} ${isToday ? "bg-primary/10 border-l-4 border-l-primary" : isPast ? "opacity-50" : ""}`}
                     >
+                      {/* Checkbox */}
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedIds.has(item.id)}
+                          onCheckedChange={() => toggleSelect(item.id)}
+                        />
+                      </TableCell>
                       {/* Data */}
                       <TableCell>
                         {editingId === item.id && editingField === "date" ? (
@@ -1081,6 +1187,34 @@ export function ForecastTable({
               </TableBody>
             </Table>
           </div>
+          {/* Barra selezione multipla */}
+          {selectedIds.size > 0 && (
+            <div className="sticky bottom-0 bg-background border-t p-3 flex items-center justify-between gap-2">
+              <span className="text-sm font-medium">
+                {selectedIds.size} {selectedIds.size === 1 ? "voce selezionata" : "voci selezionate"}
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedIds(new Set())}
+                >
+                  Deseleziona
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => {
+                    onBulkDelete(Array.from(selectedIds));
+                    setSelectedIds(new Set());
+                  }}
+                >
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Elimina selezionati
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

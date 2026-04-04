@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Mail, Loader2, ArrowLeft, CheckCircle } from "lucide-react";
 import Image from "next/image";
+import { APP_VERSION } from "@/lib/version";
 
 type Step = "loading" | "init" | "credentials" | "2fa" | "forgot-password" | "reset-password" | "reset-success";
 
@@ -305,13 +306,13 @@ function LoginForm() {
 
   return (
     <div className="min-h-screen flex items-center justify-center px-8" style={{ background: '#0d1521' }}>
-      {/* Login Box - Ref: DESIGN-SYSTEM.md sezione 6.1 */}
+      {/* Login Box - Stile KW PM Intelligente */}
       <div
-        className="w-full max-w-[400px] rounded-xl p-12"
+        className="w-full max-w-[420px] rounded-2xl p-10"
         style={{
           background: '#132032',
-          border: '1px solid #2a2a35',
-          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)',
+          border: '1px solid rgba(212, 167, 38, 0.15)',
+          boxShadow: '0 0 0 1px rgba(42, 42, 53, 0.6), 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 60px rgba(212, 167, 38, 0.04)',
         }}
       >
         {/* Logo negativo Karalisweb (giallo su sfondo scuro) */}
@@ -328,7 +329,7 @@ function LoginForm() {
 
         {/* Titolo app con gradiente oro > teal */}
         <h1
-          className="text-center text-[1.75rem] font-semibold mb-1"
+          className="text-center text-[1.75rem] font-semibold mb-2"
           style={{
             background: 'linear-gradient(135deg, #d4a726, #2d7d9a)',
             WebkitBackgroundClip: 'text',
@@ -337,8 +338,8 @@ function LoginForm() {
         >
           KW Cashflow
         </h1>
-        <p className="text-center text-[0.9rem] text-[#a1a1aa] mb-8">
-          {getDescription()}
+        <p className="text-center text-[0.85rem] text-[#a1a1aa] mb-8">
+          {getDescription()}  |  v{APP_VERSION}
         </p>
 
         {/* Step: Init - Creazione primo admin */}
@@ -402,9 +403,9 @@ function LoginForm() {
 
         {/* Step: Credentials - Login normale */}
         {step === "credentials" && (
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={handleLogin} className="space-y-5">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium mb-1 text-[#a1a1aa]">
+              <label htmlFor="email" className="block text-sm font-medium mb-2 text-[#a1a1aa]">
                 Email
               </label>
               <Input
@@ -412,15 +413,27 @@ function LoginForm() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="email@esempio.com"
+                placeholder="nome@karalisweb.net"
                 required
                 autoComplete="email"
               />
             </div>
             <div>
-              <label htmlFor="password" className="block text-sm font-medium mb-1 text-[#a1a1aa]">
-                Password
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label htmlFor="password" className="text-sm font-medium text-[#a1a1aa]">
+                  Password
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStep("forgot-password");
+                    setError("");
+                  }}
+                  className="text-xs text-[#a1a1aa] hover:text-[#d4a726] transition-colors"
+                >
+                  Password dimenticata?
+                </button>
+              </div>
               <Input
                 id="password"
                 type="password"
@@ -434,21 +447,9 @@ function LoginForm() {
             {error && (
               <div className="text-[#ef4444] text-sm text-center">{error}</div>
             )}
-            <Button type="submit" variant="gradient" className="w-full" disabled={loading}>
+            <Button type="submit" variant="gradient" className="w-full mt-2" disabled={loading}>
               {loading ? "Accesso in corso..." : "Accedi"}
             </Button>
-            <div className="text-center">
-              <button
-                type="button"
-                onClick={() => {
-                  setStep("forgot-password");
-                  setError("");
-                }}
-                className="text-sm text-[#a1a1aa] hover:text-[#d4a726] transition-colors"
-              >
-                Password dimenticata?
-              </button>
-            </div>
           </form>
         )}
 

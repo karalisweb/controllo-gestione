@@ -7,6 +7,20 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.0] - 2026-03-17
+
+### Aggiunto
+- Suite di test automatizzati con Vitest (85 test)
+- Test per: currency, splits, dates, business logic, CSV parser
+- File `src/lib/utils/business.ts` con logica pura estratta dalle API routes
+- Script `npm test`, `npm run test:watch`, `npm run test:coverage`
+- Configurazione `vitest.config.ts`
+
+### Modificato
+- Aggiornato CLAUDE.md con sezione Test e struttura file aggiornata
+
+---
+
 ## [2.2.1] - 2026-03-12
 
 ### Modificato

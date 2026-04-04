@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { paymentPlans, paymentPlanInstallments } from "@/lib/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { paymentPlans, paymentPlanInstallments, forecastItems } from "@/lib/db/schema";
+import { eq, and, isNull, sql } from "drizzle-orm";
 
 // Segna una rata come pagata
 export async function POST(
@@ -56,6 +56,18 @@ export async function POST(
       paidInstallments: sql`${paymentPlans.paidInstallments} + 1`,
     })
     .where(eq(paymentPlans.id, planId));
+
+  // Cascade: marca la voce previsionale come realizzata
+  await db
+    .update(forecastItems)
+    .set({ isRealized: true })
+    .where(
+      and(
+        eq(forecastItems.sourceType, "pdr"),
+        eq(forecastItems.sourceId, installmentId),
+        isNull(forecastItems.deletedAt)
+      )
+    );
 
   // Verifica se tutte le rate sono pagate e disattiva il piano
   const planArr = await db
@@ -116,6 +128,18 @@ export async function PUT(
     .returning();
 
   const updated = Array.isArray(updateResult) ? updateResult[0] : null;
+
+  // Cascade: aggiorna la data anche nella voce previsionale
+  await db
+    .update(forecastItems)
+    .set({ date: dueDate })
+    .where(
+      and(
+        eq(forecastItems.sourceType, "pdr"),
+        eq(forecastItems.sourceId, installmentId),
+        isNull(forecastItems.deletedAt)
+      )
+    );
 
   return NextResponse.json(updated);
 }
@@ -180,6 +204,18 @@ export async function DELETE(
       isActive: true, // Riattiva il piano se era stato disattivato
     })
     .where(eq(paymentPlans.id, planId));
+
+  // Cascade: torna la voce previsionale come non realizzata
+  await db
+    .update(forecastItems)
+    .set({ isRealized: false })
+    .where(
+      and(
+        eq(forecastItems.sourceType, "pdr"),
+        eq(forecastItems.sourceId, installmentId),
+        isNull(forecastItems.deletedAt)
+      )
+    );
 
   return NextResponse.json(updated2);
 }
