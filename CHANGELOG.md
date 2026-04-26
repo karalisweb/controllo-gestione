@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.9] - 2026-04-26
+
+### Modificato
+- fase 1.4: aggiunto servizio 'Campagna Marketing' (contenitore generico per prezzi non standard)
+
+---
+
 ## [2.3.8] - 2026-04-26
 
 ### Modificato

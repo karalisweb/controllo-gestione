@@ -35,6 +35,15 @@ const DEPRECATED_NAMES = ["Marketing mensile", "Marketing trimestrale"];
 // Tutti gli importi sono LORDI IVA (la lordizzazione da netto x1.22 e' gia'
 // stata fatta a tavolino sui valori del listino "Singolo OK" dell'Excel).
 const CATALOG: SeedSpec[] = [
+  // ═══ MARKETING - contenitore generico per condizioni non standard ═══
+  {
+    name: "Campagna Marketing",
+    type: "recurring",
+    revenueCenterName: "Marketing",
+    description: "Servizio Marketing generico — usalo quando il cliente ha prezzi/condizioni storiche o non standardizzate. Importo variabile per cliente.",
+    defaultIntervalMonths: 1,
+  },
+
   // ═══ MARKETING - 8 pacchetti specifici da listino ═══
   {
     name: "SMM",
