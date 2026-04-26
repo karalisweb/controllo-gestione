@@ -30,6 +30,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency, eurosToCents, centsToEuros } from "@/lib/utils/currency";
 import { MONTHS_SHORT } from "@/lib/utils/dates";
 import { calculateSplit } from "@/lib/utils/splits";
+import { useSplitConfig } from "@/lib/hooks/useSplitConfig";
 import {
   Calendar,
   Pencil,
@@ -278,6 +279,7 @@ export function ForecastTable({
   onRefresh,
   onGenerate,
 }: ForecastTableProps) {
+  const { config: splitConfig } = useSplitConfig();
   const [filter, setFilter] = useState<"all" | "expense" | "income">("all");
   // Inizializza con il mese corrente
   const [selectedMonth, setSelectedMonth] = useState<number | "all">(() => {
@@ -616,7 +618,7 @@ export function ForecastTable({
     // Calcola ripartizioni aggregate sugli incassi
     const splitTotals = incomeItems.reduce(
       (acc, item) => {
-        const split = calculateSplit(item.amount);
+        const split = calculateSplit(item.amount, splitConfig);
         return {
           grossAmount: acc.grossAmount + split.grossAmount,
           netAmount: acc.netAmount + split.netAmount,
@@ -649,7 +651,7 @@ export function ForecastTable({
         totaleBonifico,
       },
     };
-  }, [filteredItems]);
+  }, [filteredItems, splitConfig]);
 
   // Calcola vendite necessarie per portare il mese in attivo
   // Se il Saldo Finale è positivo → non serve vendere nulla

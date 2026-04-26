@@ -18,6 +18,7 @@ import { RevenueCenterForm } from "@/components/settings/RevenueCenterForm";
 import { ExpectedIncomeForm } from "@/components/settings/ExpectedIncomeForm";
 import { ExpectedExpenseForm } from "@/components/settings/ExpectedExpenseForm";
 import { TerminateDialog } from "@/components/settings/TerminateDialog";
+import { PercentagesConfig } from "@/components/settings/PercentagesConfig";
 import { MobileHeader } from "@/components/MobileHeader";
 import { formatCurrency } from "@/lib/utils/currency";
 import type { CostCenter, RevenueCenter, ExpectedIncome, ExpectedExpense } from "@/types";
@@ -402,12 +403,15 @@ export default function SettingsPage() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="w-full grid grid-cols-2">
+          <TabsList className="w-full grid grid-cols-3">
             <TabsTrigger value="cost" className="text-xs sm:text-sm">
               Spese ({expectedExpenses.length})
             </TabsTrigger>
             <TabsTrigger value="revenue" className="text-xs sm:text-sm">
               Incassi ({expectedIncomes.length})
+            </TabsTrigger>
+            <TabsTrigger value="config" className="text-xs sm:text-sm">
+              Configurazione
             </TabsTrigger>
           </TabsList>
 
@@ -1349,6 +1353,10 @@ export default function SettingsPage() {
                 </div>
               </Card>
             )}
+          </TabsContent>
+          {/* === TAB CONFIGURAZIONE === */}
+          <TabsContent value="config" className="space-y-4 mt-4">
+            <PercentagesConfig />
           </TabsContent>
         </Tabs>
       </div>

@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.1] - 2026-04-26
+
+### Modificato
+- fase 1.1: percentuali soci/IVA configurabili da Impostazioni
+
+---
+
 ## [2.3.0] - 2026-03-17
 
 ### Aggiunto

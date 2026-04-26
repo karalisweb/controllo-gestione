@@ -13,6 +13,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { formatCurrency, eurosToCents, centsToEuros } from "@/lib/utils/currency";
 import { formatDate } from "@/lib/utils/dates";
 import { calculateSplit, type SplitResult } from "@/lib/utils/splits";
+import { useSplitConfig } from "@/lib/hooks/useSplitConfig";
 import { Calculator, CheckCircle, User, Building2, Receipt, Users, ArrowRight } from "lucide-react";
 
 interface TransactionForSplit {
@@ -42,6 +43,8 @@ export function SplitCalculator({
   onOpenChange,
   onComplete,
 }: SplitCalculatorProps) {
+  const { config } = useSplitConfig();
+  const agencyPct = Math.max(0, 100 - config.alessioPct - config.danielaPct);
   const [baseSplit, setBaseSplit] = useState<SplitResult | null>(null);
   const [editedAmounts, setEditedAmounts] = useState<EditableSplit | null>(null);
   const [saving, setSaving] = useState(false);
@@ -50,7 +53,7 @@ export function SplitCalculator({
 
   useEffect(() => {
     if (transaction && transaction.amount > 0) {
-      const calculated = calculateSplit(transaction.amount);
+      const calculated = calculateSplit(transaction.amount, config);
       setBaseSplit(calculated);
       setEditedAmounts({
         danielaAmount: calculated.danielaAmount,
@@ -61,7 +64,7 @@ export function SplitCalculator({
       setSaved(false);
       setError(null);
     }
-  }, [transaction]);
+  }, [transaction, config]);
 
   const handleAmountChange = (field: keyof EditableSplit, euroValue: string) => {
     if (!editedAmounts) return;
@@ -150,7 +153,7 @@ export function SplitCalculator({
                   </div>
                   <div>
                     <div className="font-medium">Daniela</div>
-                    <div className="text-xs text-muted-foreground">10% del netto</div>
+                    <div className="text-xs text-muted-foreground">{config.danielaPct}% del netto</div>
                   </div>
                 </div>
                 {saved ? (
@@ -178,7 +181,7 @@ export function SplitCalculator({
                   </div>
                   <div>
                     <div className="font-medium">Alessio</div>
-                    <div className="text-xs text-muted-foreground">20% del netto</div>
+                    <div className="text-xs text-muted-foreground">{config.alessioPct}% del netto</div>
                   </div>
                 </div>
                 {saved ? (
@@ -219,7 +222,7 @@ export function SplitCalculator({
                   </div>
                   <div>
                     <div className="font-medium">Fondo IVA</div>
-                    <div className="text-xs text-muted-foreground">22% del netto</div>
+                    <div className="text-xs text-muted-foreground">{config.vatPct}% del netto</div>
                   </div>
                 </div>
                 {saved ? (
@@ -265,7 +268,7 @@ export function SplitCalculator({
               </div>
               <div>
                 <div className="font-medium">Disponibile Agenzia</div>
-                <div className="text-xs text-muted-foreground">70% del netto</div>
+                <div className="text-xs text-muted-foreground">{agencyPct}% del netto</div>
               </div>
             </div>
             {saved ? (

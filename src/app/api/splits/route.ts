@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { incomeSplits, transactions } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { calculateSplit } from "@/lib/utils/splits";
+import { getSplitConfig } from "@/lib/utils/settings-server";
 
 // GET - Recupera tutte le ripartizioni o filtra per transazione
 export async function GET(request: NextRequest) {
@@ -69,8 +70,9 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Usa importi custom se forniti, altrimenti calcola
-  const baseSplit = calculateSplit(transaction.amount);
+  // Usa importi custom se forniti, altrimenti calcola con percentuali configurate
+  const splitConfig = await getSplitConfig();
+  const baseSplit = calculateSplit(transaction.amount, splitConfig);
   const split = customAmounts ? {
     grossAmount: transaction.amount,
     netAmount: baseSplit.netAmount,

@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatCurrency, eurosToCents, centsToEuros } from "@/lib/utils/currency";
 import { calculateSplit } from "@/lib/utils/splits";
+import { useSplitConfig } from "@/lib/hooks/useSplitConfig";
 import { User, Building2, Receipt, Users, ArrowRight } from "lucide-react";
 
 interface ForecastSplitPreviewProps {
@@ -20,11 +21,14 @@ export function ForecastSplitPreview({
   fromEuros = false,
   compact = false,
 }: ForecastSplitPreviewProps) {
+  const { config } = useSplitConfig();
+  const agencyPct = Math.max(0, 100 - config.alessioPct - config.danielaPct);
+
   const split = useMemo(() => {
     if (!amount || amount <= 0) return null;
     const amountCents = fromEuros ? eurosToCents(amount) : amount;
-    return calculateSplit(amountCents);
-  }, [amount, fromEuros]);
+    return calculateSplit(amountCents, config);
+  }, [amount, fromEuros, config]);
 
   if (!split) return null;
 
@@ -71,7 +75,7 @@ export function ForecastSplitPreview({
               </div>
               <div>
                 <div className="text-sm">Daniela</div>
-                <div className="text-xs text-muted-foreground">10%</div>
+                <div className="text-xs text-muted-foreground">{config.danielaPct}%</div>
               </div>
             </div>
             <div className="font-mono text-sm text-purple-600">
@@ -87,7 +91,7 @@ export function ForecastSplitPreview({
               </div>
               <div>
                 <div className="text-sm">Alessio</div>
-                <div className="text-xs text-muted-foreground">20%</div>
+                <div className="text-xs text-muted-foreground">{config.alessioPct}%</div>
               </div>
             </div>
             <div className="font-mono text-sm text-blue-600">
@@ -116,7 +120,7 @@ export function ForecastSplitPreview({
               </div>
               <div>
                 <div className="text-sm">Fondo IVA</div>
-                <div className="text-xs text-muted-foreground">22%</div>
+                <div className="text-xs text-muted-foreground">{config.vatPct}%</div>
               </div>
             </div>
             <div className="font-mono text-sm text-orange-600">
@@ -149,7 +153,7 @@ export function ForecastSplitPreview({
             </div>
             <div>
               <div className="text-sm font-bold">Disponibile</div>
-              <div className="text-xs text-muted-foreground">70% del netto</div>
+              <div className="text-xs text-muted-foreground">{agencyPct}% del netto</div>
             </div>
           </div>
           <div className="font-mono font-bold text-lg text-green-600">
