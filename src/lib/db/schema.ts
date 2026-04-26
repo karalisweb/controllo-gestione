@@ -1,6 +1,33 @@
 import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
+// Catalogo Servizi: i "pacchetti" che l'agenzia vende.
+// Definito una volta, riusato per generare le sottoscrizioni cliente x servizio.
+// Esempi: MSD pacchetto (acconto+saldo), Sito Web 50/50, Marketing mensile,
+// Dominio annuale, Pacchetto Assistenza.
+//
+// Pattern recurring: importo + intervallo mesi (es. ogni 1/3/6/12 mesi).
+// Pattern installments: due rate (acconto + saldo) con percentuale e offset gg.
+//
+// I default sono indicativi; ogni sottoscrizione (Phase 1.4) puo' overrideare.
+export const services = sqliteTable("services", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull(),
+  type: text("type", { enum: ["recurring", "installments"] }).notNull(),
+  revenueCenterId: integer("revenue_center_id").references(() => revenueCenters.id),
+  description: text("description"),
+  // Default per pattern recurring
+  defaultAmount: integer("default_amount").default(0), // centesimi (0 = variabile per cliente)
+  defaultIntervalMonths: integer("default_interval_months").default(1), // 1, 3, 6, 12, o custom
+  // Default per pattern installments
+  defaultFirstPct: integer("default_first_pct").default(50), // % acconto sul totale (es. 50 per 50/50, 30 per 30/70)
+  defaultOffsetDays: integer("default_offset_days").default(60), // giorni tra acconto e saldo
+  // Comune
+  isActive: integer("is_active", { mode: "boolean" }).default(true),
+  createdAt: integer("created_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
+  deletedAt: integer("deleted_at", { mode: "timestamp" }),
+});
+
 // Anagrafica unica: clienti, fornitori, ex-fornitori (e altri contatti)
 // Un soggetto che è sia cliente che fornitore non viene duplicato (campo type
 // indica il ruolo prevalente; in futuro si puo' estendere a multi-ruolo).
@@ -334,6 +361,9 @@ export const otpRateLimits = sqliteTable("otp_rate_limits", {
 });
 
 // Types per le tabelle
+export type Service = typeof services.$inferSelect;
+export type NewService = typeof services.$inferInsert;
+
 export type Contact = typeof contacts.$inferSelect;
 export type NewContact = typeof contacts.$inferInsert;
 

@@ -1,3 +1,24 @@
+// Catalogo Servizi: i pacchetti che l'agenzia vende
+export type ServiceType = "recurring" | "installments";
+
+export interface Service {
+  id: number;
+  name: string;
+  type: ServiceType;
+  revenueCenterId: number | null;
+  description: string | null;
+  defaultAmount: number | null; // centesimi
+  defaultIntervalMonths: number | null;
+  defaultFirstPct: number | null;
+  defaultOffsetDays: number | null;
+  isActive: boolean | null;
+  createdAt: Date | null;
+  // Relazioni
+  revenueCenter?: RevenueCenter | null;
+  // Campi calcolati
+  subscriptionsCount?: number;
+}
+
 // Anagrafica: clienti, fornitori, ex-fornitori, altri contatti
 export type ContactType = "client" | "supplier" | "ex_supplier" | "other";
 

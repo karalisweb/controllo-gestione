@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.6] - 2026-04-26
+
+### Modificato
+- fase 1.3: catalogo servizi + sidebar + seed iniziale (Marketing/MSD/Sito Web/Dominio/Assistenza)
+
+---
+
 ## [2.3.5] - 2026-04-26
 
 ### Modificato
