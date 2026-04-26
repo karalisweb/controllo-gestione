@@ -189,7 +189,8 @@ export default function ServiziPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
       const { summary } = data;
-      let msg = `Creati ${summary.created} servizi (${summary.skippedExisting} già presenti).`;
+      const deprecatedNote = summary.deprecated > 0 ? `Deprecati ${summary.deprecated} servizi generici. ` : "";
+      let msg = `${deprecatedNote}Creati ${summary.created} servizi (${summary.skippedExisting} già presenti).`;
       if (summary.missingRevenueCenter?.length) {
         msg += ` Centri di ricavo mancanti per: ${summary.missingRevenueCenter.join(", ")}.`;
       }
@@ -345,7 +346,7 @@ export default function ServiziPage() {
                       <span className="inline-flex items-center gap-1">Intervallo / Schema <SortIcon col="interval" /></span>
                     </TableHead>
                     <TableHead className="text-right cursor-pointer select-none hover:bg-muted/50" onClick={() => handleSort("amount")}>
-                      <span className="inline-flex items-center gap-1">Importo standard <SortIcon col="amount" /></span>
+                      <span className="inline-flex items-center gap-1">Importo standard <span className="text-[10px] text-muted-foreground font-normal">(IVA incl.)</span> <SortIcon col="amount" /></span>
                     </TableHead>
                     <TableHead className="text-right w-[100px]">Azioni</TableHead>
                   </TableRow>

@@ -195,7 +195,7 @@ export function ServiceForm({
 
           {/* Importo default */}
           <div className="space-y-2">
-            <Label htmlFor="defaultAmountEuros">Importo standard (€)</Label>
+            <Label htmlFor="defaultAmountEuros">Importo standard (€) <span className="text-xs text-muted-foreground font-normal">— IVA inclusa</span></Label>
             <Input
               id="defaultAmountEuros"
               type="number"
@@ -206,8 +206,8 @@ export function ServiceForm({
             />
             <p className="text-xs text-muted-foreground">
               {watchType === "installments"
-                ? "Importo TOTALE lordo del pacchetto. Lascia 0 se varia per cliente."
-                : "Importo per ogni occorrenza. Lascia 0 se varia per cliente."}
+                ? "Importo TOTALE lordo IVA del pacchetto. Lascia 0 se varia per cliente."
+                : "Importo lordo IVA per ogni occorrenza. Lascia 0 se varia per cliente."}
             </p>
           </div>
 
