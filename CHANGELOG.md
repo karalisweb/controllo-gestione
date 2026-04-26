@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.19] - 2026-04-26
+
+### Modificato
+- fase 1.5.A.1: scheda cliente da Piano Annuale, sezione 'Da chiarire' con bottone Saltato
+
+---
+
 ## [2.3.18] - 2026-04-26
 
 ### Modificato

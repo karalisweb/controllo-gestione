@@ -16,6 +16,7 @@ import {
 import { ExpectedIncomeForm } from "@/components/settings/ExpectedIncomeForm";
 import { ExpectedExpenseForm } from "@/components/settings/ExpectedExpenseForm";
 import { TerminateDialog } from "@/components/settings/TerminateDialog";
+import { ContactSheet } from "@/components/anagrafica/ContactSheet";
 import { PercentagesConfig } from "@/components/settings/PercentagesConfig";
 import { EditableCell } from "@/components/ui/editable-cell";
 import { MobileHeader } from "@/components/MobileHeader";
@@ -346,6 +347,23 @@ export default function SettingsPage() {
     });
     if (!res.ok) throw new Error("Errore salvataggio override");
     await fetchData();
+  };
+
+  // Scheda cliente (apre dal click sul nome del cliente nella vista mensile incassi)
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [sheetContactId, setSheetContactId] = useState<number | null>(null);
+
+  const clientIdByName: Record<string, number> = {};
+  for (const c of clients) {
+    clientIdByName[c.name.toLowerCase()] = c.id;
+  }
+
+  const openSheetForClientName = (clientName: string) => {
+    const id = clientIdByName[clientName.toLowerCase()];
+    if (id) {
+      setSheetContactId(id);
+      setSheetOpen(true);
+    }
   };
 
   if (loading) {
@@ -722,7 +740,18 @@ export default function SettingsPage() {
                           return (
                             <TableRow key={income.id}>
                               <TableCell className="text-xs p-2">
-                                <div className="font-medium truncate max-w-[90px]">{income.clientName}</div>
+                                {clientIdByName[income.clientName.toLowerCase()] ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => openSheetForClientName(income.clientName)}
+                                    className="font-medium truncate max-w-[90px] text-left hover:text-primary hover:underline cursor-pointer"
+                                    title="Apri scheda cliente"
+                                  >
+                                    {income.clientName}
+                                  </button>
+                                ) : (
+                                  <div className="font-medium truncate max-w-[90px]">{income.clientName}</div>
+                                )}
                               </TableCell>
                               {quarterMonths.map((mIdx) => {
                                 const month = mIdx + 1;
@@ -804,7 +833,18 @@ export default function SettingsPage() {
                       {incomesWithAnnual.map((income) => (
                         <TableRow key={income.id}>
                           <TableCell className="sticky left-0 bg-background z-10">
-                            <div className="text-xs font-medium truncate max-w-[100px]">{income.clientName}</div>
+                            {clientIdByName[income.clientName.toLowerCase()] ? (
+                              <button
+                                type="button"
+                                onClick={() => openSheetForClientName(income.clientName)}
+                                className="text-xs font-medium truncate max-w-[100px] text-left hover:text-primary hover:underline cursor-pointer"
+                                title="Apri scheda cliente"
+                              >
+                                {income.clientName}
+                              </button>
+                            ) : (
+                              <div className="text-xs font-medium truncate max-w-[100px]">{income.clientName}</div>
+                            )}
                           </TableCell>
                           {MONTHS.map((_, monthIdx) => {
                             const month = monthIdx + 1;
@@ -908,6 +948,17 @@ export default function SettingsPage() {
           }
         />
       )}
+
+      {/* Scheda cliente — apribile dal click sul nome cliente nella vista mensile incassi */}
+      <ContactSheet
+        open={sheetOpen}
+        onOpenChange={(open) => {
+          setSheetOpen(open);
+          if (!open) setSheetContactId(null);
+        }}
+        contactId={sheetContactId}
+        onChanged={fetchData}
+      />
     </div>
   );
 }
