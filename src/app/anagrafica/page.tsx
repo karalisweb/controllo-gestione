@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/table";
 import { ContactForm } from "@/components/anagrafica/ContactForm";
 import { MobileHeader } from "@/components/MobileHeader";
-import { Plus, Edit2, Trash2, Search, Download, Users, Building2, UserMinus, HelpCircle, RefreshCcw } from "lucide-react";
+import { Plus, Edit2, Trash2, Search, Download, Users, Building2, UserMinus, HelpCircle, RefreshCcw, UserCheck } from "lucide-react";
 import { toast } from "sonner";
 import type { Contact, ContactType, CostCenter } from "@/types";
 
@@ -138,6 +138,24 @@ export default function AnagraficaPage() {
       return;
     }
     toast.success("Contatto eliminato");
+    await fetchContacts();
+  };
+
+  const handleToggleSupplierStatus = async (contact: Contact) => {
+    const newType: ContactType =
+      contact.type === "supplier" ? "ex_supplier" : "supplier";
+    const newLabel = newType === "ex_supplier" ? "Ex Fornitore" : "Fornitore";
+    const res = await fetch(`/api/contacts/${contact.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: newType }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      toast.error(err.error || "Errore aggiornamento");
+      return;
+    }
+    toast.success(`"${contact.name}" spostato in ${newLabel}`);
     await fetchContacts();
   };
 
@@ -311,6 +329,28 @@ export default function AnagraficaPage() {
                       </div>
                     </div>
                     <div className="flex gap-1 shrink-0">
+                      {c.type === "supplier" && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-orange-500"
+                          title="Sposta in Ex Fornitori"
+                          onClick={() => handleToggleSupplierStatus(c)}
+                        >
+                          <UserMinus className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {c.type === "ex_supplier" && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-blue-500"
+                          title="Riporta tra Fornitori attivi"
+                          onClick={() => handleToggleSupplierStatus(c)}
+                        >
+                          <UserCheck className="h-4 w-4" />
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="icon"
@@ -401,6 +441,28 @@ export default function AnagraficaPage() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1">
+                            {c.type === "supplier" && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-orange-500"
+                                title="Sposta in Ex Fornitori"
+                                onClick={() => handleToggleSupplierStatus(c)}
+                              >
+                                <UserMinus className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {c.type === "ex_supplier" && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-blue-500"
+                                title="Riporta tra Fornitori attivi"
+                                onClick={() => handleToggleSupplierStatus(c)}
+                              >
+                                <UserCheck className="h-4 w-4" />
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               size="icon"

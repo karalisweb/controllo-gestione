@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.4] - 2026-04-26
+
+### Modificato
+- fase 1.2: bottone rapido sposta fornitore ↔ ex fornitore
+
+---
+
 ## [2.3.3] - 2026-04-26
 
 ### Modificato
