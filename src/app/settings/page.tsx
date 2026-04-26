@@ -178,9 +178,7 @@ export default function SettingsPage() {
   const [expectedIncomes, setExpectedIncomes] = useState<ExpectedIncome[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("cost");
-  const [expenseView, setExpenseView] = useState<"aggregate" | "monthly">("aggregate");
-  const [incomeView, setIncomeView] = useState<"aggregate" | "monthly">("aggregate");
-  const [expenseQuarter, setExpenseQuarter] = useState(0); // 0-3 per Q1-Q4
+      const [expenseQuarter, setExpenseQuarter] = useState(0); // 0-3 per Q1-Q4
   const [incomeQuarter, setIncomeQuarter] = useState(0);
 
   // Form state
@@ -380,23 +378,7 @@ export default function SettingsPage() {
             {/* Controlli Vista + Aggiungi Spesa */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <div className="flex gap-1">
-                <Button
-                  variant={expenseView === "aggregate" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setExpenseView("aggregate")}
-                  className="text-xs h-8 flex-1 sm:flex-none"
-                >
-                  Lista
-                </Button>
-                <Button
-                  variant={expenseView === "monthly" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setExpenseView("monthly")}
-                  className="text-xs h-8 flex-1 sm:flex-none"
-                >
-                  Mensile
-                </Button>
-              </div>
+  </div>
               <Button size="sm" onClick={() => setExpenseFormOpen(true)} className="h-8 text-xs">
                 <Plus className="h-3.5 w-3.5 mr-1" />
                 Nuova Spesa
@@ -404,94 +386,7 @@ export default function SettingsPage() {
             </div>
 
             {/* Lista Spese */}
-            {expenseView === "aggregate" ? (
-              <Card className="overflow-hidden">
-                {/* Mobile: Cards */}
-                <div className="sm:hidden max-h-[400px] overflow-y-auto">
-                  {expensesWithAnnual.length === 0 ? (
-                    <p className="text-sm text-muted-foreground py-8 text-center">
-                      Nessuna spesa configurata
-                    </p>
-                  ) : (
-                    expensesWithAnnual.map((expense) => (
-                      <ExpenseCard
-                        key={expense.id}
-                        expense={expense}
-                        onEdit={() => {
-                          setEditingExpense(expense);
-                          setExpenseFormOpen(true);
-                        }}
-                        onDelete={() => handleDeleteExpense(expense)}
-                      />
-                    ))
-                  )}
-                </div>
-
-                {/* Desktop: Tabella */}
-                <div className="hidden sm:block overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Nome</TableHead>
-                        <TableHead>Centro</TableHead>
-                        <TableHead className="text-right">Importo</TableHead>
-                        <TableHead className="text-right">Annuale</TableHead>
-                        <TableHead>Freq.</TableHead>
-                        <TableHead>Priorità</TableHead>
-                        <TableHead className="text-right">Azioni</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {expensesWithAnnual.map((expense) => (
-                        <TableRow key={expense.id}>
-                          <TableCell className="font-medium">{expense.name}</TableCell>
-                          <TableCell>
-                            {expense.costCenter ? (
-                              <div className="flex items-center gap-1">
-                                <div
-                                  className="w-2 h-2 rounded-full"
-                                  style={{ backgroundColor: expense.costCenter.color || "#6b7280" }}
-                                />
-                                <span className="text-sm">{expense.costCenter.name}</span>
-                              </div>
-                            ) : "-"}
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-red-600">
-                            {formatCurrency(expense.amount)}
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-red-600 font-bold">
-                            {formatCurrency(expense.annualAmount)}
-                          </TableCell>
-                          <TableCell>{FREQUENCY_LABELS[expense.frequency]}</TableCell>
-                          <TableCell>
-                            {expense.priority && expense.priority !== "normal" ? (
-                              <Badge className={PRIORITY_COLORS[expense.priority]}>
-                                {PRIORITY_LABELS[expense.priority]}
-                              </Badge>
-                            ) : "-"}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-1">
-                              <Button variant="ghost" size="sm" onClick={() => {
-                                setEditingExpense(expense);
-                                setExpenseFormOpen(true);
-                              }}>
-                                <Edit2 className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="sm" className="text-red-500" onClick={() => handleDeleteExpense(expense)}>
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </Card>
-            ) : (
-              /* Vista Mensile */
-              <Card>
+            <Card>
                 {/* Mobile: Vista Trimestrale */}
                 <div className="sm:hidden">
                   {/* Navigazione Trimestre */}
@@ -656,7 +551,6 @@ export default function SettingsPage() {
                   </Table>
                 </div>
               </Card>
-            )}
           </TabsContent>
 
           {/* === TAB INCASSI === */}
@@ -686,23 +580,7 @@ export default function SettingsPage() {
             {/* Controlli Vista + Aggiungi Incasso */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <div className="flex gap-1">
-                <Button
-                  variant={incomeView === "aggregate" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setIncomeView("aggregate")}
-                  className="text-xs h-8 flex-1 sm:flex-none"
-                >
-                  Lista
-                </Button>
-                <Button
-                  variant={incomeView === "monthly" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setIncomeView("monthly")}
-                  className="text-xs h-8 flex-1 sm:flex-none"
-                >
-                  Mensile
-                </Button>
-              </div>
+  </div>
               <Button size="sm" onClick={() => setIncomeFormOpen(true)} className="h-8 text-xs">
                 <Plus className="h-3.5 w-3.5 mr-1" />
                 Nuovo Incasso
@@ -710,92 +588,7 @@ export default function SettingsPage() {
             </div>
 
             {/* Lista Incassi */}
-            {incomeView === "aggregate" ? (
-              <Card className="overflow-hidden">
-                {/* Mobile: Cards */}
-                <div className="sm:hidden max-h-[400px] overflow-y-auto">
-                  {incomesWithAnnual.length === 0 ? (
-                    <p className="text-sm text-muted-foreground py-8 text-center">
-                      Nessun incasso configurato
-                    </p>
-                  ) : (
-                    incomesWithAnnual.map((income) => (
-                      <IncomeCard
-                        key={income.id}
-                        income={income}
-                        onEdit={() => {
-                          setEditingIncome(income);
-                          setIncomeFormOpen(true);
-                        }}
-                        onDelete={() => handleDeleteIncome(income)}
-                      />
-                    ))
-                  )}
-                </div>
-
-                {/* Desktop: Tabella */}
-                <div className="hidden sm:block overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Cliente</TableHead>
-                        <TableHead>Centro</TableHead>
-                        <TableHead className="text-right">Importo</TableHead>
-                        <TableHead className="text-right">Annuale</TableHead>
-                        <TableHead>Freq.</TableHead>
-                        <TableHead>Affidabilità</TableHead>
-                        <TableHead className="text-right">Azioni</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {incomesWithAnnual.map((income) => (
-                        <TableRow key={income.id}>
-                          <TableCell className="font-medium">{income.clientName}</TableCell>
-                          <TableCell>
-                            {income.revenueCenter ? (
-                              <div className="flex items-center gap-1">
-                                <div
-                                  className="w-2 h-2 rounded-full"
-                                  style={{ backgroundColor: income.revenueCenter.color || "#6b7280" }}
-                                />
-                                <span className="text-sm">{income.revenueCenter.name}</span>
-                              </div>
-                            ) : "-"}
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-green-600">
-                            {formatCurrency(income.amount)}
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-green-600 font-bold">
-                            {formatCurrency(income.annualAmount)}
-                          </TableCell>
-                          <TableCell>{FREQUENCY_LABELS[income.frequency]}</TableCell>
-                          <TableCell>
-                            <Badge className={RELIABILITY_COLORS[income.reliability || "high"]}>
-                              {income.reliability === "high" ? "Alta" : income.reliability === "low" ? "Bassa" : "Media"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-1">
-                              <Button variant="ghost" size="sm" onClick={() => {
-                                setEditingIncome(income);
-                                setIncomeFormOpen(true);
-                              }}>
-                                <Edit2 className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="sm" className="text-red-500" onClick={() => handleDeleteIncome(income)}>
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </Card>
-            ) : (
-              /* Vista Mensile */
-              <Card>
+            <Card>
                 {/* Mobile: Vista Trimestrale */}
                 <div className="sm:hidden">
                   {/* Navigazione Trimestre */}
@@ -960,7 +753,6 @@ export default function SettingsPage() {
                   </Table>
                 </div>
               </Card>
-            )}
           </TabsContent>
           {/* === TAB CONFIGURAZIONE === */}
           <TabsContent value="config" className="space-y-4 mt-4">

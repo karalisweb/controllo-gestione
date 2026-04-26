@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.15] - 2026-04-26
+
+### Modificato
+- passo 1: rimossa vista Lista da Piano Annuale (resta solo Mensile)
+
+---
+
 ## [2.3.14] - 2026-04-26
 
 ### Modificato
