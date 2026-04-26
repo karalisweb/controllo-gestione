@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.5] - 2026-04-26
+
+### Modificato
+- fase 1.2: tabella anagrafica ordinabile + 6 centri di costo (Formazione, Attrezzature, Affitto, Commissioni, Viaggi, Privacy)
+
+---
+
 ## [2.3.4] - 2026-04-26
 
 ### Modificato

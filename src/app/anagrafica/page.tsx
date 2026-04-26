@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/table";
 import { ContactForm } from "@/components/anagrafica/ContactForm";
 import { MobileHeader } from "@/components/MobileHeader";
-import { Plus, Edit2, Trash2, Search, Download, Users, Building2, UserMinus, HelpCircle, RefreshCcw, UserCheck } from "lucide-react";
+import { Plus, Edit2, Trash2, Search, Download, Users, Building2, UserMinus, HelpCircle, RefreshCcw, UserCheck, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { toast } from "sonner";
 import type { Contact, ContactType, CostCenter } from "@/types";
 
@@ -46,6 +46,33 @@ const TYPE_ICONS: Record<ContactType, React.ComponentType<{ className?: string }
 };
 
 type TypeFilter = "all" | ContactType;
+type SortKey = "name" | "type" | "costCenter" | "isMovable" | "email";
+type SortDir = "asc" | "desc";
+
+const TYPE_ORDER: Record<ContactType, number> = {
+  client: 1,
+  supplier: 2,
+  ex_supplier: 3,
+  other: 4,
+};
+
+function compareStrings(a: string | null | undefined, b: string | null | undefined, dir: SortDir): number {
+  const va = (a ?? "").toLowerCase();
+  const vb = (b ?? "").toLowerCase();
+  if (va === vb) return 0;
+  // Vuoti in fondo sempre
+  if (va === "") return 1;
+  if (vb === "") return -1;
+  const cmp = va.localeCompare(vb, "it");
+  return dir === "asc" ? cmp : -cmp;
+}
+
+function compareBoolean(a: boolean | null | undefined, b: boolean | null | undefined, dir: SortDir): number {
+  const va = a === true ? 1 : 0;
+  const vb = b === true ? 1 : 0;
+  if (va === vb) return 0;
+  return dir === "asc" ? va - vb : vb - va;
+}
 
 export default function AnagraficaPage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -54,8 +81,26 @@ export default function AnagraficaPage() {
   const [seeding, setSeeding] = useState(false);
   const [filter, setFilter] = useState<TypeFilter>("all");
   const [search, setSearch] = useState("");
+  const [sortKey, setSortKey] = useState<SortKey>("name");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Contact | null>(null);
+
+  const handleSort = (key: SortKey) => {
+    if (key === sortKey) {
+      setSortDir(sortDir === "asc" ? "desc" : "asc");
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  };
+
+  const SortIcon = ({ col }: { col: SortKey }) => {
+    if (col !== sortKey) return <ArrowUpDown className="h-3 w-3 opacity-40" />;
+    return sortDir === "asc"
+      ? <ArrowUp className="h-3 w-3 text-primary" />
+      : <ArrowDown className="h-3 w-3 text-primary" />;
+  };
 
   const fetchContacts = useCallback(async () => {
     try {
@@ -88,15 +133,38 @@ export default function AnagraficaPage() {
     return c;
   }, [contacts]);
 
-  // Filtrati per tab + search
+  // Filtrati per tab + search + ordinati per sortKey/sortDir
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase();
-    return contacts.filter((c) => {
+    const list = contacts.filter((c) => {
       if (filter !== "all" && c.type !== filter) return false;
       if (s && !c.name.toLowerCase().includes(s)) return false;
       return true;
     });
-  }, [contacts, filter, search]);
+
+    const sorted = [...list].sort((a, b) => {
+      switch (sortKey) {
+        case "name":
+          return compareStrings(a.name, b.name, sortDir);
+        case "type": {
+          const va = TYPE_ORDER[a.type] ?? 99;
+          const vb = TYPE_ORDER[b.type] ?? 99;
+          if (va !== vb) return sortDir === "asc" ? va - vb : vb - va;
+          return compareStrings(a.name, b.name, "asc");
+        }
+        case "costCenter":
+          return compareStrings(a.costCenter?.name, b.costCenter?.name, sortDir);
+        case "isMovable":
+          return compareBoolean(a.isMovable, b.isMovable, sortDir);
+        case "email":
+          return compareStrings(a.email, b.email, sortDir);
+        default:
+          return 0;
+      }
+    });
+
+    return sorted;
+  }, [contacts, filter, search, sortKey, sortDir]);
 
   const handleCreate = async (data: Partial<Contact>) => {
     const res = await fetch("/api/contacts", {
@@ -379,11 +447,36 @@ export default function AnagraficaPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-[40px]"></TableHead>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Centro di costo</TableHead>
-                    <TableHead>Spostabile</TableHead>
-                    <TableHead>Email / Telefono</TableHead>
+                    <TableHead
+                      className="cursor-pointer select-none hover:bg-muted/50 transition-colors"
+                      onClick={() => handleSort("name")}
+                    >
+                      <span className="inline-flex items-center gap-1">Nome <SortIcon col="name" /></span>
+                    </TableHead>
+                    <TableHead
+                      className="cursor-pointer select-none hover:bg-muted/50 transition-colors"
+                      onClick={() => handleSort("type")}
+                    >
+                      <span className="inline-flex items-center gap-1">Tipo <SortIcon col="type" /></span>
+                    </TableHead>
+                    <TableHead
+                      className="cursor-pointer select-none hover:bg-muted/50 transition-colors"
+                      onClick={() => handleSort("costCenter")}
+                    >
+                      <span className="inline-flex items-center gap-1">Centro di costo <SortIcon col="costCenter" /></span>
+                    </TableHead>
+                    <TableHead
+                      className="cursor-pointer select-none hover:bg-muted/50 transition-colors"
+                      onClick={() => handleSort("isMovable")}
+                    >
+                      <span className="inline-flex items-center gap-1">Spostabile <SortIcon col="isMovable" /></span>
+                    </TableHead>
+                    <TableHead
+                      className="cursor-pointer select-none hover:bg-muted/50 transition-colors"
+                      onClick={() => handleSort("email")}
+                    >
+                      <span className="inline-flex items-center gap-1">Email / Telefono <SortIcon col="email" /></span>
+                    </TableHead>
                     <TableHead className="text-right w-[100px]">Azioni</TableHead>
                   </TableRow>
                 </TableHeader>
