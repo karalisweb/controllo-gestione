@@ -22,7 +22,7 @@ import { ContactForm } from "@/components/anagrafica/ContactForm";
 import { MobileHeader } from "@/components/MobileHeader";
 import { Plus, Edit2, Trash2, Search, Download, Users, Building2, UserMinus, HelpCircle, RefreshCcw, UserCheck, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { toast } from "sonner";
-import type { Contact, ContactType, CostCenter } from "@/types";
+import type { Contact, ContactType, CostCenter, RevenueCenter } from "@/types";
 
 const TYPE_LABELS: Record<ContactType, string> = {
   client: "Cliente",
@@ -77,6 +77,7 @@ function compareBoolean(a: boolean | null | undefined, b: boolean | null | undef
 export default function AnagraficaPage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [costCenters, setCostCenters] = useState<CostCenter[]>([]);
+  const [revenueCenters, setRevenueCenters] = useState<RevenueCenter[]>([]);
   const [loading, setLoading] = useState(true);
   const [seeding, setSeeding] = useState(false);
   const [filter, setFilter] = useState<TypeFilter>("all");
@@ -105,12 +106,14 @@ export default function AnagraficaPage() {
   const fetchContacts = useCallback(async () => {
     try {
       setLoading(true);
-      const [contactsRes, ccRes] = await Promise.all([
+      const [contactsRes, ccRes, rcRes] = await Promise.all([
         fetch("/api/contacts"),
         fetch("/api/cost-centers?year=2026"),
+        fetch("/api/revenue-centers?year=2026"),
       ]);
       if (contactsRes.ok) setContacts(await contactsRes.json());
       if (ccRes.ok) setCostCenters(await ccRes.json());
+      if (rcRes.ok) setRevenueCenters(await rcRes.json());
     } finally {
       setLoading(false);
     }
@@ -601,6 +604,7 @@ export default function AnagraficaPage() {
         onSubmit={editing ? handleUpdate : handleCreate}
         editing={editing}
         costCenters={costCenters}
+        revenueCenters={revenueCenters}
         defaultType={filter !== "all" ? filter : undefined}
       />
     </div>

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { contacts, costCenters } from "@/lib/db/schema";
-import { eq, isNull, and, or, like, asc } from "drizzle-orm";
+import { contacts, costCenters, revenueCenters } from "@/lib/db/schema";
+import { eq, isNull, and, like, asc } from "drizzle-orm";
 
 /**
  * GET /api/contacts
@@ -9,7 +9,7 @@ import { eq, isNull, and, or, like, asc } from "drizzle-orm";
  *   - type: client | supplier | ex_supplier | other (filtra per tipo)
  *   - q: stringa di ricerca su nome (LIKE)
  *   - includeInactive: "1" per includere anche i disattivati
- * Risposta: array di Contact con join al costCenter associato (per fornitori)
+ * Risposta: array di Contact con join a costCenter (per fornitori) e revenueCenter (per clienti)
  */
 export async function GET(request: NextRequest) {
   try {
@@ -31,6 +31,7 @@ export async function GET(request: NextRequest) {
         email: contacts.email,
         phone: contacts.phone,
         costCenterId: contacts.costCenterId,
+        revenueCenterId: contacts.revenueCenterId,
         isMovable: contacts.isMovable,
         notes: contacts.notes,
         isActive: contacts.isActive,
@@ -40,9 +41,15 @@ export async function GET(request: NextRequest) {
           name: costCenters.name,
           color: costCenters.color,
         },
+        revenueCenter: {
+          id: revenueCenters.id,
+          name: revenueCenters.name,
+          color: revenueCenters.color,
+        },
       })
       .from(contacts)
       .leftJoin(costCenters, eq(contacts.costCenterId, costCenters.id))
+      .leftJoin(revenueCenters, eq(contacts.revenueCenterId, revenueCenters.id))
       .where(and(...conditions))
       .orderBy(asc(contacts.type), asc(contacts.name));
 
@@ -54,13 +61,13 @@ export async function GET(request: NextRequest) {
 
 /**
  * POST /api/contacts
- * Body: { name, type?, email?, phone?, costCenterId?, isMovable?, notes? }
+ * Body: { name, type?, email?, phone?, costCenterId?, revenueCenterId?, isMovable?, notes? }
  * Crea un nuovo contatto. Verifica unicità soft del nome+type per evitare doppioni.
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, type = "other", email, phone, costCenterId, isMovable, notes } = body;
+    const { name, type = "other", email, phone, costCenterId, revenueCenterId, isMovable, notes } = body;
 
     if (!name || typeof name !== "string" || name.trim() === "") {
       return NextResponse.json({ error: "Nome obbligatorio" }, { status: 400 });
@@ -100,6 +107,7 @@ export async function POST(request: NextRequest) {
         email: email || null,
         phone: phone || null,
         costCenterId: costCenterId || null,
+        revenueCenterId: revenueCenterId || null,
         isMovable: isMovable === undefined ? true : Boolean(isMovable),
         notes: notes || null,
       })

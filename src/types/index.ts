@@ -59,13 +59,15 @@ export interface Contact {
   type: ContactType;
   email: string | null;
   phone: string | null;
-  costCenterId: number | null;
+  costCenterId: number | null; // per fornitori
+  revenueCenterId: number | null; // per clienti
   isMovable: boolean | null;
   notes: string | null;
   isActive: boolean | null;
   createdAt: Date | null;
   // Relazioni
   costCenter?: CostCenter | null;
+  revenueCenter?: RevenueCenter | null;
 }
 
 export interface Category {

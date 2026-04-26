@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.16] - 2026-04-26
+
+### Modificato
+- anagrafica clienti: campo centro di ricavo + auto-fill su nuovo incasso (datalist + match)
+
+---
+
 ## [2.3.15] - 2026-04-26
 
 ### Modificato

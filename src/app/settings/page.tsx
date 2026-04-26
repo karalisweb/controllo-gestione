@@ -19,7 +19,7 @@ import { TerminateDialog } from "@/components/settings/TerminateDialog";
 import { PercentagesConfig } from "@/components/settings/PercentagesConfig";
 import { MobileHeader } from "@/components/MobileHeader";
 import { formatCurrency } from "@/lib/utils/currency";
-import type { CostCenter, RevenueCenter, ExpectedIncome, ExpectedExpense } from "@/types";
+import type { CostCenter, RevenueCenter, ExpectedIncome, ExpectedExpense, Contact } from "@/types";
 import { Plus, Edit2, Trash2, AlertTriangle, ChevronRight, ChevronLeft, TrendingDown, TrendingUp } from "lucide-react";
 
 const MONTHS = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"];
@@ -176,6 +176,7 @@ export default function SettingsPage() {
   const [expectedExpenses, setExpectedExpenses] = useState<ExpectedExpense[]>([]);
   const [revenueCenters, setRevenueCenters] = useState<RevenueCenter[]>([]);
   const [expectedIncomes, setExpectedIncomes] = useState<ExpectedIncome[]>([]);
+  const [clients, setClients] = useState<Contact[]>([]); // Anagrafica clienti per autocomplete + auto-fill revenue center
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("cost");
       const [expenseQuarter, setExpenseQuarter] = useState(0); // 0-3 per Q1-Q4
@@ -194,13 +195,15 @@ export default function SettingsPage() {
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const [costRes, expenseRes, revenueRes, incomesRes] = await Promise.all([
+      const [costRes, expenseRes, revenueRes, incomesRes, clientsRes] = await Promise.all([
         fetch("/api/cost-centers?year=2026"),
         fetch("/api/expected-expenses?year=2026"),
         fetch("/api/revenue-centers?year=2026"),
         fetch("/api/expected-incomes?year=2026"),
+        fetch("/api/contacts?type=client"),
       ]);
 
+      if (clientsRes.ok) setClients(await clientsRes.json());
       if (costRes.ok) setCostCenters(await costRes.json());
       if (expenseRes.ok) setExpectedExpenses(await expenseRes.json());
       if (revenueRes.ok) setRevenueCenters(await revenueRes.json());
@@ -782,6 +785,7 @@ export default function SettingsPage() {
         onSubmit={editingIncome ? handleUpdateIncome : handleCreateIncome}
         editingIncome={editingIncome}
         revenueCenters={revenueCenters}
+        clients={clients}
       />
 
       {/* Dialog per terminazione incassi/spese */}

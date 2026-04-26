@@ -21,7 +21,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { eurosToCents, centsToEuros } from "@/lib/utils/currency";
-import type { ExpectedIncome, RevenueCenter } from "@/types";
+import type { ExpectedIncome, RevenueCenter, Contact } from "@/types";
 
 const schema = z.object({
   clientName: z.string().min(1, "Nome cliente obbligatorio"),
@@ -57,6 +57,8 @@ interface ExpectedIncomeFormProps {
   onSubmit: (data: Partial<ExpectedIncome>) => Promise<void>;
   editingIncome?: ExpectedIncome | null;
   revenueCenters: RevenueCenter[];
+  /** Clienti in anagrafica per autocomplete + auto-fill revenue center */
+  clients?: Contact[];
 }
 
 export function ExpectedIncomeForm({
@@ -65,6 +67,7 @@ export function ExpectedIncomeForm({
   onSubmit,
   editingIncome,
   revenueCenters,
+  clients = [],
 }: ExpectedIncomeFormProps) {
   const {
     register,
@@ -103,6 +106,18 @@ export function ExpectedIncomeForm({
   const frequency = watch("frequency");
   const reliability = watch("reliability");
   const revenueCenterId = watch("revenueCenterId");
+
+  // Auto-fill revenue center quando il clientName combacia con un cliente in anagrafica
+  // che ha un revenueCenterId predefinito. Solo se il campo è ancora vuoto (non sovrascrivo
+  // una scelta esplicita dell'utente).
+  const handleClientNameChange = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) return;
+    const matched = clients.find((c) => c.name.toLowerCase() === trimmed.toLowerCase());
+    if (matched?.revenueCenterId && !revenueCenterId) {
+      setValue("revenueCenterId", String(matched.revenueCenterId));
+    }
+  };
 
   // Reset form when editingIncome changes
   useEffect(() => {
@@ -168,10 +183,24 @@ export function ExpectedIncomeForm({
               <Input
                 id="clientName"
                 placeholder="Es. Colombo Palace"
-                {...register("clientName")}
+                list="clients-datalist"
+                {...register("clientName", {
+                  onChange: (e) => handleClientNameChange(e.target.value),
+                  onBlur: (e) => handleClientNameChange(e.target.value),
+                })}
               />
+              <datalist id="clients-datalist">
+                {clients.map((c) => (
+                  <option key={c.id} value={c.name} />
+                ))}
+              </datalist>
               {errors.clientName && (
                 <p className="text-sm text-red-500">{errors.clientName.message}</p>
+              )}
+              {clients.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Inizia a digitare per selezionare da {clients.length} client{clients.length === 1 ? "e" : "i"} in anagrafica.
+                </p>
               )}
             </div>
 

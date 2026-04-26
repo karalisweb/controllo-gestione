@@ -69,6 +69,8 @@ export const contacts = sqliteTable("contacts", {
   phone: text("phone"),
   // Per fornitori: collegamento al centro di costo predefinito (auto-assegna su movimenti)
   costCenterId: integer("cost_center_id").references(() => costCenters.id),
+  // Per clienti: collegamento al centro di ricavo predefinito (auto-fill su nuovo incasso)
+  revenueCenterId: integer("revenue_center_id").references(() => revenueCenters.id),
   // Per fornitori: se true, le date di pagamento sono negoziabili
   isMovable: integer("is_movable", { mode: "boolean" }).default(true),
   notes: text("notes"),

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { contacts, costCenters } from "@/lib/db/schema";
+import { contacts, costCenters, revenueCenters } from "@/lib/db/schema";
 import { eq, isNull, and } from "drizzle-orm";
 
 interface RouteParams {
@@ -27,6 +27,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
         email: contacts.email,
         phone: contacts.phone,
         costCenterId: contacts.costCenterId,
+        revenueCenterId: contacts.revenueCenterId,
         isMovable: contacts.isMovable,
         notes: contacts.notes,
         isActive: contacts.isActive,
@@ -36,9 +37,15 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
           name: costCenters.name,
           color: costCenters.color,
         },
+        revenueCenter: {
+          id: revenueCenters.id,
+          name: revenueCenters.name,
+          color: revenueCenters.color,
+        },
       })
       .from(contacts)
       .leftJoin(costCenters, eq(contacts.costCenterId, costCenters.id))
+      .leftJoin(revenueCenters, eq(contacts.revenueCenterId, revenueCenters.id))
       .where(and(eq(contacts.id, id), isNull(contacts.deletedAt)))
       .limit(1);
 
@@ -65,7 +72,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     const body = await request.json();
-    const { name, type, email, phone, costCenterId, isMovable, notes, isActive } = body;
+    const { name, type, email, phone, costCenterId, revenueCenterId, isMovable, notes, isActive } = body;
 
     const updates: Record<string, unknown> = {};
     if (name !== undefined) {
@@ -84,6 +91,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     if (email !== undefined) updates.email = email || null;
     if (phone !== undefined) updates.phone = phone || null;
     if (costCenterId !== undefined) updates.costCenterId = costCenterId || null;
+    if (revenueCenterId !== undefined) updates.revenueCenterId = revenueCenterId || null;
     if (isMovable !== undefined) updates.isMovable = Boolean(isMovable);
     if (notes !== undefined) updates.notes = notes || null;
     if (isActive !== undefined) updates.isActive = Boolean(isActive);

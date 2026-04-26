@@ -22,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Contact, ContactType, CostCenter } from "@/types";
+import type { Contact, ContactType, CostCenter, RevenueCenter } from "@/types";
 
 const schema = z.object({
   name: z.string().min(1, "Nome obbligatorio").max(120, "Massimo 120 caratteri"),
@@ -30,6 +30,7 @@ const schema = z.object({
   email: z.string().email("Email non valida").or(z.literal("")).optional(),
   phone: z.string().optional(),
   costCenterId: z.string().optional(),
+  revenueCenterId: z.string().optional(),
   isMovable: z.boolean().optional(),
   notes: z.string().optional(),
 });
@@ -49,6 +50,7 @@ interface ContactFormProps {
   onSubmit: (data: Partial<Contact>) => Promise<void>;
   editing?: Contact | null;
   costCenters: CostCenter[];
+  revenueCenters: RevenueCenter[];
   defaultType?: ContactType;
 }
 
@@ -58,6 +60,7 @@ export function ContactForm({
   onSubmit,
   editing,
   costCenters,
+  revenueCenters,
   defaultType,
 }: ContactFormProps) {
   const {
@@ -75,6 +78,7 @@ export function ContactForm({
       email: "",
       phone: "",
       costCenterId: "",
+      revenueCenterId: "",
       isMovable: true,
       notes: "",
     },
@@ -82,8 +86,10 @@ export function ContactForm({
 
   const watchType = watch("type");
   const watchCostCenterId = watch("costCenterId");
+  const watchRevenueCenterId = watch("revenueCenterId");
   const watchIsMovable = watch("isMovable");
   const isSupplierLike = watchType === "supplier" || watchType === "ex_supplier";
+  const isClient = watchType === "client";
 
   // Reset quando cambia editing o si apre per un nuovo
   useEffect(() => {
@@ -94,6 +100,7 @@ export function ContactForm({
         email: editing.email || "",
         phone: editing.phone || "",
         costCenterId: editing.costCenterId ? String(editing.costCenterId) : "",
+        revenueCenterId: editing.revenueCenterId ? String(editing.revenueCenterId) : "",
         isMovable: editing.isMovable ?? true,
         notes: editing.notes || "",
       });
@@ -104,6 +111,7 @@ export function ContactForm({
         email: "",
         phone: "",
         costCenterId: "",
+        revenueCenterId: "",
         isMovable: true,
         notes: "",
       });
@@ -117,7 +125,8 @@ export function ContactForm({
         type: data.type,
         email: data.email || null,
         phone: data.phone || null,
-        costCenterId: data.costCenterId ? parseInt(data.costCenterId, 10) : null,
+        costCenterId: isSupplierLike && data.costCenterId ? parseInt(data.costCenterId, 10) : null,
+        revenueCenterId: isClient && data.revenueCenterId ? parseInt(data.revenueCenterId, 10) : null,
         isMovable: isSupplierLike ? Boolean(data.isMovable) : true,
         notes: data.notes || null,
       });
@@ -178,6 +187,32 @@ export function ContactForm({
               </SelectContent>
             </Select>
           </div>
+
+          {/* Centro di ricavo (solo per clienti) */}
+          {isClient && (
+            <div className="space-y-2">
+              <Label htmlFor="revenueCenterId">Centro di ricavo</Label>
+              <Select
+                value={watchRevenueCenterId || "none"}
+                onValueChange={(v) => setValue("revenueCenterId", v === "none" ? "" : v)}
+              >
+                <SelectTrigger id="revenueCenterId">
+                  <SelectValue placeholder="Nessuno" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nessuno</SelectItem>
+                  {revenueCenters.map((rc) => (
+                    <SelectItem key={rc.id} value={String(rc.id)}>
+                      {rc.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Se impostato, gli incassi da questo cliente vanno in questo centro di default.
+              </p>
+            </div>
+          )}
 
           {/* Centro di costo (solo per fornitori/ex-fornitori) */}
           {isSupplierLike && (
