@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.10] - 2026-04-26
+
+### Modificato
+- fase 1.4: Marketing → 'Campagna Marketing' come default migrazione + bottone pulisci/re-importa sottoscrizioni
+
+---
+
 ## [2.3.9] - 2026-04-26
 
 ### Modificato

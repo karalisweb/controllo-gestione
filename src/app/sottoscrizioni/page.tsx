@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/table";
 import { SubscriptionForm } from "@/components/sottoscrizioni/SubscriptionForm";
 import { MobileHeader } from "@/components/MobileHeader";
-import { Plus, Edit2, Trash2, Search, Download, Link as LinkIcon, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
+import { Plus, Edit2, Trash2, Search, Download, Link as LinkIcon, ArrowUp, ArrowDown, ArrowUpDown, RefreshCcw } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils/currency";
 import { formatDate } from "@/lib/utils/dates";
@@ -167,15 +167,22 @@ export default function SottoscrizioniPage() {
     await fetchData();
   };
 
-  const handleMigrate = async () => {
-    if (!confirm("Migra tutti gli incassi previsti esistenti in sottoscrizioni cliente×servizio.\n\nÈ idempotente. I clienti senza match in anagrafica e i centri di ricavo senza servizio mappato verranno saltati e segnalati. Procedo?")) return;
+  const runMigrate = async (clear: boolean) => {
+    const confirmMsg = clear
+      ? "ATTENZIONE: cancellerò tutte le sottoscrizioni esistenti (anche quelle aggiunte a mano) e le ricreerò dagli incassi previsti.\n\nProcedo?"
+      : "Migra tutti gli incassi previsti esistenti in sottoscrizioni cliente×servizio.\n\nÈ idempotente. I clienti senza match in anagrafica e i centri di ricavo senza servizio mappato verranno saltati e segnalati. Procedo?";
+    if (!confirm(confirmMsg)) return;
     setMigrating(true);
     try {
-      const res = await fetch("/api/subscriptions/migrate-from-expected-incomes", { method: "POST" });
+      const url = clear
+        ? "/api/subscriptions/migrate-from-expected-incomes?clear=1"
+        : "/api/subscriptions/migrate-from-expected-incomes";
+      const res = await fetch(url, { method: "POST" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
       const { summary } = data;
-      let msg = `Migrate ${summary.created} sottoscrizioni su ${summary.total} expected_incomes (${summary.skippedExisting} già presenti).`;
+      const clearedNote = clear ? `Cancellate ${summary.cleared} sottoscrizioni precedenti. ` : "";
+      let msg = `${clearedNote}Migrate ${summary.created} sottoscrizioni su ${summary.total} incassi previsti (${summary.skippedExisting} già presenti).`;
       if (summary.skippedNoContact?.length) {
         msg += ` Senza contact: ${summary.skippedNoContact.length}.`;
       }
@@ -184,7 +191,6 @@ export default function SottoscrizioniPage() {
       }
       toast.success(msg, { duration: 12000 });
       if (summary.skippedNoContact?.length || summary.skippedNoService?.length) {
-        // Mostra anche il dettaglio in console per debug
         console.log("Skipped no contact:", summary.skippedNoContact);
         console.log("Skipped no service:", summary.skippedNoService);
       }
@@ -195,6 +201,9 @@ export default function SottoscrizioniPage() {
       setMigrating(false);
     }
   };
+
+  const handleMigrate = () => runMigrate(false);
+  const handleResetAndMigrate = () => runMigrate(true);
 
   const renderInterval = (sub: Subscription & { effectiveAmount: number }) => {
     const svc = sub.service;
@@ -233,9 +242,27 @@ export default function SottoscrizioniPage() {
             </p>
           </div>
           <div className="flex gap-2 flex-wrap">
-            <Button variant="outline" size="sm" onClick={handleMigrate} disabled={migrating} className="text-xs">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleMigrate}
+              disabled={migrating}
+              className="text-xs"
+              title="Importa gli incassi previsti come sottoscrizioni (idempotente, salta i duplicati)"
+            >
               <Download className="h-4 w-4 mr-1.5" />
               {migrating ? "Migro..." : "Migra incassi previsti"}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleResetAndMigrate}
+              disabled={migrating}
+              className="text-xs text-orange-600 border-orange-600/40 hover:bg-orange-500/10"
+              title="Cancella tutte le sottoscrizioni e le ricrea da zero"
+            >
+              <RefreshCcw className="h-4 w-4 mr-1.5" />
+              Pulisci e re-importa
             </Button>
             <Button size="sm" onClick={() => { setEditing(null); setFormOpen(true); }} className="text-xs">
               <Plus className="h-4 w-4 mr-1.5" />

@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import {
   subscriptions,
@@ -10,7 +10,7 @@ import {
 import { eq, isNull, and } from "drizzle-orm";
 
 /**
- * POST /api/subscriptions/migrate-from-expected-incomes
+ * POST /api/subscriptions/migrate-from-expected-incomes[?clear=1]
  *
  * Crea sottoscrizioni a partire dai `expected_incomes` esistenti.
  *
@@ -18,20 +18,23 @@ import { eq, isNull, and } from "drizzle-orm";
  * di tipo client con quel nome.
  *
  * Mappatura servizio: in base a revenueCenter del expected_income, sceglie
- * un servizio "default" del catalogo. L'utente potra' poi cambiare il servizio
- * assegnato dalla UI per i casi piu' specifici (es. SMM vs SEO vs Blog all'interno
- * del centro Marketing).
+ * un servizio "default" del catalogo. Per il centro Marketing usiamo
+ * "Campagna Marketing" (servizio neutro, contenitore di prezzi storici)
+ * invece di SMM, perche' i clienti del passato hanno spesso prezzi/condizioni
+ * non standardizzate. L'utente potra' poi spostarli ai servizi specifici
+ * (SMM, SEO, GMB, Blog, ecc.) quando ha tempo di riguardarli.
  *
  * Idempotente: salta se esiste gia' una subscription con stesso (contactId,
  * serviceId, startDate).
  *
- * NOTA: questa migrazione NON disattiva i `expected_incomes` originali — verra'
- * fatto in Fase 1.5 quando la pagina Movimenti usera' direttamente le subscriptions.
+ * Se `?clear=1`: soft-delete TUTTE le subscriptions esistenti prima di rifare
+ * l'import. Utile per ri-eseguire dopo cambi di mapping (es. quando si passa
+ * da "Marketing → SMM" a "Marketing → Campagna Marketing").
  */
 
 const REVENUE_TO_SERVICE_DEFAULTS: Record<string, string> = {
   domini: "Dominio annuale",
-  marketing: "SMM", // default fra i servizi marketing — l'utente cambia se serve
+  marketing: "Campagna Marketing", // contenitore generico per condizioni non standard
   "pacchetto assistenza": "Pacchetto Assistenza 10h",
   msd: "MSD pacchetto",
   "siti web": "Sito Web 50/50",
@@ -43,15 +46,28 @@ function normalizeClientName(raw: string): string {
   return raw.replace(/\s*-\s*Dominio\s*$/i, "").trim();
 }
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const clear = searchParams.get("clear") === "1";
+
     const summary = {
+      cleared: 0,
       total: 0,
       created: 0,
       skippedExisting: 0,
       skippedNoContact: [] as string[],
       skippedNoService: [] as string[],
     };
+
+    if (clear) {
+      const cleared = await db
+        .update(subscriptions)
+        .set({ deletedAt: new Date(), isActive: false })
+        .where(isNull(subscriptions.deletedAt))
+        .returning({ id: subscriptions.id });
+      summary.cleared = cleared.length;
+    }
 
     // Carica catalogo servizi (cerca per nome, case-insensitive)
     const allServices = await db
