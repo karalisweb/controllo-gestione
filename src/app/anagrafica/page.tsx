@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/table";
 import { ContactForm } from "@/components/anagrafica/ContactForm";
 import { MobileHeader } from "@/components/MobileHeader";
-import { Plus, Edit2, Trash2, Search, Download, Users, Building2, UserMinus, HelpCircle } from "lucide-react";
+import { Plus, Edit2, Trash2, Search, Download, Users, Building2, UserMinus, HelpCircle, RefreshCcw } from "lucide-react";
 import { toast } from "sonner";
 import type { Contact, ContactType, CostCenter } from "@/types";
 
@@ -141,16 +141,19 @@ export default function AnagraficaPage() {
     await fetchContacts();
   };
 
-  const handleSeed = async () => {
-    if (
-      !confirm(
-        "Importerò clienti dagli incassi previsti e creditori dai piani di rientro esistenti.\n\nÈ idempotente: i contatti già presenti non verranno duplicati. Procedo?",
-      )
-    )
-      return;
+  const runSeed = async (clear: boolean) => {
+    const confirmMsg = clear
+      ? "ATTENZIONE: cancellerò tutti i contatti esistenti (anche quelli aggiunti a mano) e li ricreerò dai dati di clienti, fornitori e creditori esistenti.\n\nProcedo?"
+      : "Importerò clienti, fornitori e creditori dagli incassi previsti, spese previste e piani di rientro esistenti.\n\nÈ idempotente: i contatti già presenti non verranno duplicati. Procedo?";
+
+    if (!confirm(confirmMsg)) return;
+
     setSeeding(true);
     try {
-      const res = await fetch("/api/contacts/seed-from-existing", { method: "POST" });
+      const url = clear
+        ? "/api/contacts/seed-from-existing?clear=1"
+        : "/api/contacts/seed-from-existing";
+      const res = await fetch(url, { method: "POST" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
       const { summary } = data;
@@ -159,10 +162,13 @@ export default function AnagraficaPage() {
         summary.created.supplier +
         summary.created.ex_supplier +
         summary.created.other;
+      const clearedNote = clear
+        ? `Cancellati: ${summary.cleared.contacts} contatti precedenti, ${summary.cleared.paymentPlansUnlinked} pdr e ${summary.cleared.expectedExpensesUnlinked} spese unlinked. `
+        : "";
       toast.success(
-        `Importati ${total} contatti (${summary.created.client} clienti, ${summary.created.supplier} fornitori, ${summary.created.ex_supplier} ex-fornitori). ` +
-          `${summary.skippedExisting} già presenti. ${summary.paymentPlansLinked} piani di rientro linkati.`,
-        { duration: 8000 },
+        `${clearedNote}Importati ${total} contatti (${summary.created.client} clienti, ${summary.created.supplier} fornitori, ${summary.created.ex_supplier} ex-fornitori). ` +
+          `${summary.skippedExisting} già presenti. Linkati: ${summary.paymentPlansLinked} pdr, ${summary.expectedExpensesLinked} spese.`,
+        { duration: 10000 },
       );
       await fetchContacts();
     } catch (e) {
@@ -171,6 +177,9 @@ export default function AnagraficaPage() {
       setSeeding(false);
     }
   };
+
+  const handleSeed = () => runSeed(false);
+  const handleResetAndReseed = () => runSeed(true);
 
   if (loading) {
     return (
@@ -198,16 +207,28 @@ export default function AnagraficaPage() {
               Clienti, fornitori, ex-fornitori e altri contatti.
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Button
               variant="outline"
               size="sm"
               onClick={handleSeed}
               disabled={seeding}
               className="text-xs"
+              title="Aggiunge i contatti mancanti dai dati esistenti (idempotente)"
             >
               <Download className="h-4 w-4 mr-1.5" />
               {seeding ? "Importo..." : "Importa esistenti"}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleResetAndReseed}
+              disabled={seeding}
+              className="text-xs text-orange-600 border-orange-600/40 hover:bg-orange-500/10"
+              title="Cancella tutti i contatti e li reimporta da zero (utile per applicare normalizzazioni nuove)"
+            >
+              <RefreshCcw className="h-4 w-4 mr-1.5" />
+              Pulisci e re-importa
             </Button>
             <Button size="sm" onClick={() => { setEditing(null); setFormOpen(true); }} className="text-xs">
               <Plus className="h-4 w-4 mr-1.5" />

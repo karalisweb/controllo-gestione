@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.3] - 2026-04-26
+
+### Modificato
+- fase 1.2 fix: import fornitori spese mensili + accorpa FIN→Qonto + bottone pulisci/re-importa
+
+---
+
 ## [2.3.2] - 2026-04-26
 
 ### Modificato
