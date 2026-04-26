@@ -1,3 +1,34 @@
+// Sottoscrizioni: cliente x servizio del catalogo
+export interface Subscription {
+  id: number;
+  contactId: number;
+  serviceId: number;
+  startDate: string; // YYYY-MM-DD
+  endDate: string | null;
+  customAmount: number | null; // centesimi
+  customIntervalMonths: number | null;
+  customFirstPct: number | null;
+  customOffsetDays: number | null;
+  notes: string | null;
+  isActive: boolean | null;
+  createdAt: Date | null;
+  // Relazioni
+  contact?: Contact | null;
+  service?: Service | null;
+  // Campi derivati
+  effectiveAmount?: number; // customAmount ?? service.defaultAmount
+  occurrencesCount?: number; // numero occorrenze nel range start-end
+}
+
+// Una "occorrenza" generata da una sottoscrizione: data + importo previsto
+export interface SubscriptionOccurrence {
+  date: string; // YYYY-MM-DD
+  amount: number; // centesimi, lordo IVA
+  description: string; // es. "MSD Cliente X - acconto" o "SMM Cliente Y mese 3"
+  index: number; // 0-based numero occorrenza nella subscription
+  isFinal: boolean; // true se ultima rata (per installments: il saldo)
+}
+
 // Catalogo Servizi: i pacchetti che l'agenzia vende
 export type ServiceType = "recurring" | "installments";
 

@@ -1,6 +1,33 @@
 import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
+// Sottoscrizioni: cliente x servizio del catalogo.
+// Ogni riga rappresenta un contratto: "Cliente X compra Servizio Y da data inizio
+// a data fine, con eventuali override su importo/intervallo/percentuali rispetto
+// ai default del servizio".
+//
+// Le occorrenze concrete (date + importi delle singole rate/incassi) vengono
+// generate on-the-fly da una funzione pura `generateOccurrences()` quando servono
+// (es. quando si renderizza la pagina Movimenti). Non sono salvate qui per
+// evitare sync stantio: cambiando una sottoscrizione, le occorrenze future
+// vengono ricalcolate automaticamente al rendering.
+export const subscriptions = sqliteTable("subscriptions", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  contactId: integer("contact_id").notNull().references(() => contacts.id),
+  serviceId: integer("service_id").notNull().references(() => services.id),
+  startDate: text("start_date").notNull(), // YYYY-MM-DD
+  endDate: text("end_date"), // YYYY-MM-DD, nullable (indefinito); utente preferisce sempre messa
+  // Override dei default del servizio (nullable = usa il default del servizio)
+  customAmount: integer("custom_amount"), // centesimi, lordo IVA
+  customIntervalMonths: integer("custom_interval_months"), // per recurring
+  customFirstPct: integer("custom_first_pct"), // per installments
+  customOffsetDays: integer("custom_offset_days"), // per installments
+  notes: text("notes"),
+  isActive: integer("is_active", { mode: "boolean" }).default(true),
+  createdAt: integer("created_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
+  deletedAt: integer("deleted_at", { mode: "timestamp" }),
+});
+
 // Catalogo Servizi: i "pacchetti" che l'agenzia vende.
 // Definito una volta, riusato per generare le sottoscrizioni cliente x servizio.
 // Esempi: MSD pacchetto (acconto+saldo), Sito Web 50/50, Marketing mensile,
@@ -363,6 +390,9 @@ export const otpRateLimits = sqliteTable("otp_rate_limits", {
 // Types per le tabelle
 export type Service = typeof services.$inferSelect;
 export type NewService = typeof services.$inferInsert;
+
+export type Subscription = typeof subscriptions.$inferSelect;
+export type NewSubscription = typeof subscriptions.$inferInsert;
 
 export type Contact = typeof contacts.$inferSelect;
 export type NewContact = typeof contacts.$inferInsert;

@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.8] - 2026-04-26
+
+### Modificato
+- fase 1.4: sottoscrizioni cliente x servizio + generator occorrenze + migrazione expected_incomes
+
+---
+
 ## [2.3.7] - 2026-04-26
 
 ### Modificato
