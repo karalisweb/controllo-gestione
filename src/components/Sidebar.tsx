@@ -14,6 +14,7 @@ import {
   LogOut,
   User,
   BookOpen,
+  Users,
 } from "lucide-react";
 import { APP_VERSION } from "@/lib/version";
 
@@ -34,6 +35,7 @@ const navSections = [
   {
     title: "STRUMENTI",
     items: [
+      { href: "/anagrafica", label: "Anagrafica", icon: Users },
       { href: "/payment-plans", label: "Piani di Rientro", icon: CreditCard },
       { href: "/sales", label: "Piano Commerciale", icon: Target },
       { href: "/settings", label: "Piano Annuale", icon: Wallet },

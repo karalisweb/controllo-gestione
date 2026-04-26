@@ -1,3 +1,21 @@
+// Anagrafica: clienti, fornitori, ex-fornitori, altri contatti
+export type ContactType = "client" | "supplier" | "ex_supplier" | "other";
+
+export interface Contact {
+  id: number;
+  name: string;
+  type: ContactType;
+  email: string | null;
+  phone: string | null;
+  costCenterId: number | null;
+  isMovable: boolean | null;
+  notes: string | null;
+  isActive: boolean | null;
+  createdAt: Date | null;
+  // Relazioni
+  costCenter?: CostCenter | null;
+}
+
 export interface Category {
   id: number;
   name: string;

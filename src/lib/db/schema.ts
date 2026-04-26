@@ -1,6 +1,28 @@
 import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
+// Anagrafica unica: clienti, fornitori, ex-fornitori (e altri contatti)
+// Un soggetto che è sia cliente che fornitore non viene duplicato (campo type
+// indica il ruolo prevalente; in futuro si puo' estendere a multi-ruolo).
+export const contacts = sqliteTable("contacts", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull(),
+  type: text("type", {
+    enum: ["client", "supplier", "ex_supplier", "other"],
+  }).notNull().default("other"),
+  // Contatti opzionali
+  email: text("email"),
+  phone: text("phone"),
+  // Per fornitori: collegamento al centro di costo predefinito (auto-assegna su movimenti)
+  costCenterId: integer("cost_center_id").references(() => costCenters.id),
+  // Per fornitori: se true, le date di pagamento sono negoziabili
+  isMovable: integer("is_movable", { mode: "boolean" }).default(true),
+  notes: text("notes"),
+  isActive: integer("is_active", { mode: "boolean" }).default(true),
+  createdAt: integer("created_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
+  deletedAt: integer("deleted_at", { mode: "timestamp" }),
+});
+
 // Categorie per entrate e uscite (mantenute per compatibilità)
 export const categories = sqliteTable("categories", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -27,6 +49,7 @@ export const costCenters = sqliteTable("cost_centers", {
 export const expectedExpenses = sqliteTable("expected_expenses", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   name: text("name").notNull(), // nome spesa (es. "Wind Telefonia", "Asana", "FastRent Ufficio")
+  contactId: integer("contact_id").references(() => contacts.id), // fornitore in anagrafica (nullable per retrocompat)
   costCenterId: integer("cost_center_id").references(() => costCenters.id), // aggregatore
   amount: integer("amount").notNull(), // centesimi - importo singola spesa
   frequency: text("frequency", {
@@ -156,6 +179,7 @@ export const paymentPlanCategories = sqliteTable("payment_plan_categories", {
 export const paymentPlans = sqliteTable("payment_plans", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   creditorName: text("creditor_name").notNull(),
+  contactId: integer("contact_id").references(() => contacts.id), // creditore in anagrafica (nullable per retrocompat)
   categoryId: integer("category_id").references(() => paymentPlanCategories.id), // categoria piano
   totalAmount: integer("total_amount").notNull(), // centesimi
   installmentAmount: integer("installment_amount").notNull(), // centesimi
@@ -310,6 +334,9 @@ export const otpRateLimits = sqliteTable("otp_rate_limits", {
 });
 
 // Types per le tabelle
+export type Contact = typeof contacts.$inferSelect;
+export type NewContact = typeof contacts.$inferInsert;
+
 export type Category = typeof categories.$inferSelect;
 export type NewCategory = typeof categories.$inferInsert;
 
