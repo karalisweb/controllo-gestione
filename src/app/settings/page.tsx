@@ -13,8 +13,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CostCenterForm } from "@/components/settings/CostCenterForm";
-import { RevenueCenterForm } from "@/components/settings/RevenueCenterForm";
 import { ExpectedIncomeForm } from "@/components/settings/ExpectedIncomeForm";
 import { ExpectedExpenseForm } from "@/components/settings/ExpectedExpenseForm";
 import { TerminateDialog } from "@/components/settings/TerminateDialog";
@@ -186,13 +184,9 @@ export default function SettingsPage() {
   const [incomeQuarter, setIncomeQuarter] = useState(0);
 
   // Form state
-  const [costFormOpen, setCostFormOpen] = useState(false);
   const [expenseFormOpen, setExpenseFormOpen] = useState(false);
-  const [revenueFormOpen, setRevenueFormOpen] = useState(false);
   const [incomeFormOpen, setIncomeFormOpen] = useState(false);
-  const [editingCostCenter, setEditingCostCenter] = useState<CostCenter | null>(null);
   const [editingExpense, setEditingExpense] = useState<ExpectedExpense | null>(null);
-  const [editingRevenueCenter, setEditingRevenueCenter] = useState<RevenueCenter | null>(null);
   const [editingIncome, setEditingIncome] = useState<ExpectedIncome | null>(null);
 
   // State per dialog terminazione
@@ -223,34 +217,6 @@ export default function SettingsPage() {
   }, [fetchData]);
 
   // Handlers
-  const handleCreateCostCenter = async (data: Partial<CostCenter>) => {
-    const res = await fetch("/api/cost-centers", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) throw new Error("Errore nella creazione");
-    await fetchData();
-  };
-
-  const handleUpdateCostCenter = async (data: Partial<CostCenter>) => {
-    if (!editingCostCenter) return;
-    const res = await fetch(`/api/cost-centers/${editingCostCenter.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) throw new Error("Errore nell'aggiornamento");
-    setEditingCostCenter(null);
-    await fetchData();
-  };
-
-  const handleDeleteCostCenter = async (id: number) => {
-    if (!confirm("Eliminare questo centro di costo?")) return;
-    await fetch(`/api/cost-centers/${id}`, { method: "DELETE" });
-    await fetchData();
-  };
-
   const handleCreateExpense = async (data: Partial<ExpectedExpense>) => {
     const res = await fetch("/api/expected-expenses", {
       method: "POST",
@@ -289,34 +255,6 @@ export default function SettingsPage() {
     if (!terminatingItem) return;
     await fetch(`/api/expected-expenses/${terminatingItem.id}?terminateDate=${date}`, { method: "DELETE" });
     setTerminatingItem(null);
-    await fetchData();
-  };
-
-  const handleCreateRevenueCenter = async (data: Partial<RevenueCenter>) => {
-    const res = await fetch("/api/revenue-centers", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) throw new Error("Errore nella creazione");
-    await fetchData();
-  };
-
-  const handleUpdateRevenueCenter = async (data: Partial<RevenueCenter>) => {
-    if (!editingRevenueCenter) return;
-    const res = await fetch(`/api/revenue-centers/${editingRevenueCenter.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) throw new Error("Errore nell'aggiornamento");
-    setEditingRevenueCenter(null);
-    await fetchData();
-  };
-
-  const handleDeleteRevenueCenter = async (id: number) => {
-    if (!confirm("Eliminare questo centro di ricavo?")) return;
-    await fetch(`/api/revenue-centers/${id}`, { method: "DELETE" });
     await fetchData();
   };
 
@@ -438,171 +376,6 @@ export default function SettingsPage() {
                 </p>
               </Card>
             </div>
-
-            {/* Centri di Costo */}
-            <Card>
-              <CardHeader className="p-3 sm:p-4 pb-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <TrendingDown className="h-5 w-5 text-red-500" />
-                    <CardTitle className="text-base sm:text-lg">Centri di Costo</CardTitle>
-                    <Badge variant="outline" className="ml-2">{costCenters.length}</Badge>
-                  </div>
-                  <Button size="sm" variant="outline" onClick={() => setCostFormOpen(true)} className="h-8 text-xs">
-                    <Plus className="h-3.5 w-3.5 mr-1" />
-                    Nuovo
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="p-0">
-                {costCenters.length === 0 ? (
-                  <div className="p-6 text-center text-muted-foreground">
-                    <TrendingDown className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p>Nessun centro di costo configurato</p>
-                    <p className="text-xs mt-1">Crea il primo centro di costo per categorizzare le spese</p>
-                  </div>
-                ) : (
-                  <>
-                    {/* Mobile: Cards */}
-                    <div className="sm:hidden divide-y">
-                      {costCenters.map((center) => (
-                        <div key={center.id} className="p-3 flex items-center justify-between">
-                          <div className="flex items-center gap-3 min-w-0 flex-1">
-                            <div
-                              className="w-4 h-4 rounded-full shrink-0"
-                              style={{ backgroundColor: center.color || "#6b7280" }}
-                            />
-                            <div className="min-w-0">
-                              <p className="font-medium text-sm truncate">{center.name}</p>
-                              {center.description && (
-                                <p className="text-xs text-muted-foreground truncate">{center.description}</p>
-                              )}
-                              <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                                <span>{center.expectedExpensesCount || 0} voci</span>
-                                <span>•</span>
-                                <span className="font-mono text-red-500">{formatCurrency(center.totalExpected || 0)}</span>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex gap-1 shrink-0">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => {
-                                setEditingCostCenter(center);
-                                setCostFormOpen(true);
-                              }}
-                            >
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-red-500"
-                              onClick={() => handleDeleteCostCenter(center.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Desktop: Tabella dettagliata */}
-                    <div className="hidden sm:block overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className="w-[40px]"></TableHead>
-                            <TableHead>Nome</TableHead>
-                            <TableHead>Descrizione</TableHead>
-                            <TableHead className="text-center">Voci Collegate</TableHead>
-                            <TableHead className="text-right">Budget Annuale</TableHead>
-                            <TableHead className="text-right">Speso</TableHead>
-                            <TableHead className="text-right">Rimanente</TableHead>
-                            <TableHead className="text-right w-[100px]">Azioni</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {costCenters.map((center) => {
-                            const remaining = (center.totalExpected || 0) - (center.spent || 0);
-                            return (
-                              <TableRow key={center.id}>
-                                <TableCell>
-                                  <div
-                                    className="w-4 h-4 rounded-full"
-                                    style={{ backgroundColor: center.color || "#6b7280" }}
-                                  />
-                                </TableCell>
-                                <TableCell className="font-medium">{center.name}</TableCell>
-                                <TableCell className="text-muted-foreground text-sm max-w-[200px] truncate">
-                                  {center.description || "-"}
-                                </TableCell>
-                                <TableCell className="text-center">
-                                  <Badge variant="secondary">{center.expectedExpensesCount || 0}</Badge>
-                                </TableCell>
-                                <TableCell className="text-right font-mono text-red-600">
-                                  {formatCurrency(center.totalExpected || 0)}
-                                </TableCell>
-                                <TableCell className="text-right font-mono">
-                                  {formatCurrency(center.spent || 0)}
-                                </TableCell>
-                                <TableCell className={`text-right font-mono font-bold ${remaining >= 0 ? "text-green-600" : "text-red-600"}`}>
-                                  {formatCurrency(remaining)}
-                                </TableCell>
-                                <TableCell className="text-right">
-                                  <div className="flex justify-end gap-1">
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8"
-                                      onClick={() => {
-                                        setEditingCostCenter(center);
-                                        setCostFormOpen(true);
-                                      }}
-                                    >
-                                      <Edit2 className="h-4 w-4" />
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8 text-red-500"
-                                      onClick={() => handleDeleteCostCenter(center.id)}
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                  </div>
-                                </TableCell>
-                              </TableRow>
-                            );
-                          })}
-                          {/* Totale */}
-                          <TableRow className="bg-muted/50 font-bold">
-                            <TableCell></TableCell>
-                            <TableCell>TOTALE</TableCell>
-                            <TableCell></TableCell>
-                            <TableCell className="text-center">
-                              <Badge>{expectedExpenses.length}</Badge>
-                            </TableCell>
-                            <TableCell className="text-right font-mono text-red-600">
-                              {formatCurrency(totalExpectedExpenses)}
-                            </TableCell>
-                            <TableCell className="text-right font-mono">
-                              {formatCurrency(totalSpent)}
-                            </TableCell>
-                            <TableCell className={`text-right font-mono ${totalExpectedExpenses - totalSpent >= 0 ? "text-green-600" : "text-red-600"}`}>
-                              {formatCurrency(totalExpectedExpenses - totalSpent)}
-                            </TableCell>
-                            <TableCell></TableCell>
-                          </TableRow>
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
 
             {/* Controlli Vista + Aggiungi Spesa */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
@@ -910,171 +683,6 @@ export default function SettingsPage() {
               </Card>
             </div>
 
-            {/* Centri di Ricavo */}
-            <Card>
-              <CardHeader className="p-3 sm:p-4 pb-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 text-green-500" />
-                    <CardTitle className="text-base sm:text-lg">Centri di Ricavo</CardTitle>
-                    <Badge variant="outline" className="ml-2">{revenueCenters.length}</Badge>
-                  </div>
-                  <Button size="sm" variant="outline" onClick={() => setRevenueFormOpen(true)} className="h-8 text-xs">
-                    <Plus className="h-3.5 w-3.5 mr-1" />
-                    Nuovo
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="p-0">
-                {revenueCenters.length === 0 ? (
-                  <div className="p-6 text-center text-muted-foreground">
-                    <TrendingUp className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p>Nessun centro di ricavo configurato</p>
-                    <p className="text-xs mt-1">Crea il primo centro di ricavo per categorizzare gli incassi</p>
-                  </div>
-                ) : (
-                  <>
-                    {/* Mobile: Cards */}
-                    <div className="sm:hidden divide-y">
-                      {revenueCenters.map((center) => (
-                        <div key={center.id} className="p-3 flex items-center justify-between">
-                          <div className="flex items-center gap-3 min-w-0 flex-1">
-                            <div
-                              className="w-4 h-4 rounded-full shrink-0"
-                              style={{ backgroundColor: center.color || "#6b7280" }}
-                            />
-                            <div className="min-w-0">
-                              <p className="font-medium text-sm truncate">{center.name}</p>
-                              {center.description && (
-                                <p className="text-xs text-muted-foreground truncate">{center.description}</p>
-                              )}
-                              <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                                <span>{center.expectedIncomesCount || 0} voci</span>
-                                <span>•</span>
-                                <span className="font-mono text-green-500">{formatCurrency(center.totalExpected || 0)}</span>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex gap-1 shrink-0">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => {
-                                setEditingRevenueCenter(center);
-                                setRevenueFormOpen(true);
-                              }}
-                            >
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-red-500"
-                              onClick={() => handleDeleteRevenueCenter(center.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Desktop: Tabella dettagliata */}
-                    <div className="hidden sm:block overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className="w-[40px]"></TableHead>
-                            <TableHead>Nome</TableHead>
-                            <TableHead>Descrizione</TableHead>
-                            <TableHead className="text-center">Voci Collegate</TableHead>
-                            <TableHead className="text-right">Target Annuale</TableHead>
-                            <TableHead className="text-right">Incassato</TableHead>
-                            <TableHead className="text-right">Da Incassare</TableHead>
-                            <TableHead className="text-right w-[100px]">Azioni</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {revenueCenters.map((center) => {
-                            const remaining = (center.totalExpected || 0) - (center.collected || 0);
-                            return (
-                              <TableRow key={center.id}>
-                                <TableCell>
-                                  <div
-                                    className="w-4 h-4 rounded-full"
-                                    style={{ backgroundColor: center.color || "#6b7280" }}
-                                  />
-                                </TableCell>
-                                <TableCell className="font-medium">{center.name}</TableCell>
-                                <TableCell className="text-muted-foreground text-sm max-w-[200px] truncate">
-                                  {center.description || "-"}
-                                </TableCell>
-                                <TableCell className="text-center">
-                                  <Badge variant="secondary">{center.expectedIncomesCount || 0}</Badge>
-                                </TableCell>
-                                <TableCell className="text-right font-mono text-green-600">
-                                  {formatCurrency(center.totalExpected || 0)}
-                                </TableCell>
-                                <TableCell className="text-right font-mono">
-                                  {formatCurrency(center.collected || 0)}
-                                </TableCell>
-                                <TableCell className={`text-right font-mono font-bold ${remaining >= 0 ? "text-orange-500" : "text-green-600"}`}>
-                                  {formatCurrency(remaining)}
-                                </TableCell>
-                                <TableCell className="text-right">
-                                  <div className="flex justify-end gap-1">
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8"
-                                      onClick={() => {
-                                        setEditingRevenueCenter(center);
-                                        setRevenueFormOpen(true);
-                                      }}
-                                    >
-                                      <Edit2 className="h-4 w-4" />
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8 text-red-500"
-                                      onClick={() => handleDeleteRevenueCenter(center.id)}
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                  </div>
-                                </TableCell>
-                              </TableRow>
-                            );
-                          })}
-                          {/* Totale */}
-                          <TableRow className="bg-muted/50 font-bold">
-                            <TableCell></TableCell>
-                            <TableCell>TOTALE</TableCell>
-                            <TableCell></TableCell>
-                            <TableCell className="text-center">
-                              <Badge>{expectedIncomes.length}</Badge>
-                            </TableCell>
-                            <TableCell className="text-right font-mono text-green-600">
-                              {formatCurrency(totalExpectedIncomes)}
-                            </TableCell>
-                            <TableCell className="text-right font-mono">
-                              {formatCurrency(totalCollected)}
-                            </TableCell>
-                            <TableCell className={`text-right font-mono ${totalExpectedIncomes - totalCollected >= 0 ? "text-orange-500" : "text-green-600"}`}>
-                              {formatCurrency(totalExpectedIncomes - totalCollected)}
-                            </TableCell>
-                            <TableCell></TableCell>
-                          </TableRow>
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-
             {/* Controlli Vista + Aggiungi Incasso */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <div className="flex gap-1">
@@ -1362,16 +970,6 @@ export default function SettingsPage() {
       </div>
 
       {/* Form modali */}
-      <CostCenterForm
-        open={costFormOpen}
-        onOpenChange={(open) => {
-          setCostFormOpen(open);
-          if (!open) setEditingCostCenter(null);
-        }}
-        onSubmit={editingCostCenter ? handleUpdateCostCenter : handleCreateCostCenter}
-        editingCenter={editingCostCenter}
-      />
-
       <ExpectedExpenseForm
         open={expenseFormOpen}
         onOpenChange={(open) => {
@@ -1381,16 +979,6 @@ export default function SettingsPage() {
         onSubmit={editingExpense ? handleUpdateExpense : handleCreateExpense}
         editingExpense={editingExpense}
         costCenters={costCenters}
-      />
-
-      <RevenueCenterForm
-        open={revenueFormOpen}
-        onOpenChange={(open) => {
-          setRevenueFormOpen(open);
-          if (!open) setEditingRevenueCenter(null);
-        }}
-        onSubmit={editingRevenueCenter ? handleUpdateRevenueCenter : handleCreateRevenueCenter}
-        editingCenter={editingRevenueCenter}
       />
 
       <ExpectedIncomeForm

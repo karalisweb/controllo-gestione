@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.14] - 2026-04-26
+
+### Modificato
+- passo 3c: rimuovo sezioni Centri di Costo/Ricavo da /settings (gestione solo nelle pagine dedicate)
+
+---
+
 ## [2.3.13] - 2026-04-26
 
 ### Modificato
