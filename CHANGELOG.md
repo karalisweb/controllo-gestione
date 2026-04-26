@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.11] - 2026-04-26
+
+### Modificato
+- cleanup: rimuovo /sottoscrizioni dalla sidebar (resta come URL per backend)
+
+---
+
 ## [2.3.10] - 2026-04-26
 
 ### Modificato

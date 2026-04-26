@@ -39,7 +39,6 @@ const navSections = [
     items: [
       { href: "/anagrafica", label: "Anagrafica", icon: Users },
       { href: "/servizi", label: "Catalogo Servizi", icon: Package },
-      { href: "/sottoscrizioni", label: "Sottoscrizioni", icon: LinkIcon },
       { href: "/payment-plans", label: "Piani di Rientro", icon: CreditCard },
       { href: "/sales", label: "Piano Commerciale", icon: Target },
       { href: "/settings", label: "Piano Annuale", icon: Wallet },
