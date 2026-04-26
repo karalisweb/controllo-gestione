@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.12] - 2026-04-26
+
+### Modificato
+- passo 3a: pagina dedicata /centri-costo + sezione CONFIGURAZIONE in sidebar
+
+---
+
 ## [2.3.11] - 2026-04-26
 
 ### Modificato

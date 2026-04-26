@@ -17,6 +17,7 @@ import {
   Users,
   Package,
   Link as LinkIcon,
+  TrendingDown,
 } from "lucide-react";
 import { APP_VERSION } from "@/lib/version";
 
@@ -42,6 +43,12 @@ const navSections = [
       { href: "/payment-plans", label: "Piani di Rientro", icon: CreditCard },
       { href: "/sales", label: "Piano Commerciale", icon: Target },
       { href: "/settings", label: "Piano Annuale", icon: Wallet },
+    ],
+  },
+  {
+    title: "CONFIGURAZIONE",
+    items: [
+      { href: "/centri-costo", label: "Centri di Costo", icon: TrendingDown },
     ],
   },
   {
