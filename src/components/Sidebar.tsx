@@ -18,6 +18,7 @@ import {
   Package,
   Link as LinkIcon,
   TrendingDown,
+  TrendingUp,
 } from "lucide-react";
 import { APP_VERSION } from "@/lib/version";
 
@@ -49,6 +50,7 @@ const navSections = [
     title: "CONFIGURAZIONE",
     items: [
       { href: "/centri-costo", label: "Centri di Costo", icon: TrendingDown },
+      { href: "/centri-ricavo", label: "Centri di Ricavo", icon: TrendingUp },
     ],
   },
   {

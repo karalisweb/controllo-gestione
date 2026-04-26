@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.13] - 2026-04-26
+
+### Modificato
+- passo 3b: pagina dedicata /centri-ricavo + sidebar
+
+---
+
 ## [2.3.12] - 2026-04-26
 
 ### Modificato
