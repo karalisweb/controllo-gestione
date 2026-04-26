@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.18] - 2026-04-26
+
+### Modificato
+- fase 1.5.A: pagina /movimenti — ledger mensile sola lettura con saldo running
+
+---
+
 ## [2.3.17] - 2026-04-26
 
 ### Modificato

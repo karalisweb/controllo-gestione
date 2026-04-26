@@ -32,6 +32,7 @@ const navSections = [
     title: "MENU",
     items: [
       { href: "/", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/movimenti", label: "Movimenti", icon: CalendarRange },
       { href: "/forecast", label: "Previsionale", icon: CalendarRange },
       { href: "/transactions", label: "Consuntivo", icon: Receipt },
     ],
