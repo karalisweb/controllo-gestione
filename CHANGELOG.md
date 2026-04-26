@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.20] - 2026-04-26
+
+### Modificato
+- movimenti: nascondi previsti con data < oggi (mostra solo realtà per il passato)
+
+---
+
 ## [2.3.19] - 2026-04-26
 
 ### Modificato

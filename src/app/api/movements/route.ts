@@ -97,6 +97,14 @@ export async function GET(request: NextRequest) {
     const lastDayDate = new Date(Date.UTC(year, month, 0));
     const lastOfMonth = `${year}-${pad2(month)}-${pad2(lastDayDate.getUTCDate())}`;
 
+    // "Oggi" — i previsti con data strettamente PRIMA di oggi vengono nascosti dal ledger
+    // (saranno gestiti separatamente via scheda cliente / mesi passati = solo realtà).
+    // Override con ?today=YYYY-MM-DD per test/debug.
+    const todayParam = searchParams.get("today");
+    const today = todayParam && /^\d{4}-\d{2}-\d{2}$/.test(todayParam)
+      ? todayParam
+      : new Date().toISOString().slice(0, 10);
+
     // ───── 1. Saldo iniziale: settings.initial_balance + transactions con date < firstOfMonth ─────
     const settingsRows = await db.select().from(settings);
     const initialBalanceSetting = settingsRows.find((r) => r.key === "initial_balance");
@@ -159,8 +167,12 @@ export async function GET(request: NextRequest) {
       if (!monthMatches(e.startDate, e.endDate, e.frequency, year, month)) continue;
       const day = Math.min(Math.max(e.expectedDay || 1, 1), lastDayDate.getUTCDate());
       const date = `${year}-${pad2(month)}-${pad2(day)}`;
+      // Skip previsti con data < oggi (passato già "successo" — vedi solo la realtà)
+      if (date < today) continue;
       const overrideAmount = expenseOverridesMap[e.id];
       const amount = overrideAmount !== undefined ? overrideAmount : e.amount;
+      // Skip override esplicitamente saltati (amount=0)
+      if (amount === 0) continue;
       plannedExpenseRows.push({
         id: `ee-${e.id}`,
         date,
@@ -215,8 +227,12 @@ export async function GET(request: NextRequest) {
       if (!monthMatches(i.startDate, i.endDate, i.frequency, year, month)) continue;
       const day = Math.min(Math.max(i.expectedDay || 1, 1), lastDayDate.getUTCDate());
       const date = `${year}-${pad2(month)}-${pad2(day)}`;
+      // Skip previsti con data < oggi (passato già "successo" — vedi solo la realtà)
+      if (date < today) continue;
       const overrideAmount = incomeOverridesMap[i.id];
       const amount = overrideAmount !== undefined ? overrideAmount : i.amount;
+      // Skip override esplicitamente saltati (amount=0)
+      if (amount === 0) continue;
       plannedIncomeRows.push({
         id: `ei-${i.id}`,
         date,
