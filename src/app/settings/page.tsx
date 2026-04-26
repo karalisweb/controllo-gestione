@@ -17,6 +17,7 @@ import { ExpectedIncomeForm } from "@/components/settings/ExpectedIncomeForm";
 import { ExpectedExpenseForm } from "@/components/settings/ExpectedExpenseForm";
 import { TerminateDialog } from "@/components/settings/TerminateDialog";
 import { PercentagesConfig } from "@/components/settings/PercentagesConfig";
+import { EditableCell } from "@/components/ui/editable-cell";
 import { MobileHeader } from "@/components/MobileHeader";
 import { formatCurrency } from "@/lib/utils/currency";
 import type { CostCenter, RevenueCenter, ExpectedIncome, ExpectedExpense, Contact } from "@/types";
@@ -306,15 +307,46 @@ export default function SettingsPage() {
   const totalExpectedIncomes = revenueCenters.reduce((sum, c) => sum + (c.totalExpected || 0), 0);
   const totalCollected = revenueCenters.reduce((sum, c) => sum + (c.collected || 0), 0);
 
-  // Spese con importo annuale
+  // Helper: somma annua considerando gli override mensili (se manca, usa default).
+  const annualWithOverrides = (item: { amount: number; monthlyOccurrences?: number[]; monthlyOverrides?: Record<number, number> }): number => {
+    return (item.monthlyOccurrences || []).reduce((sum, m) => {
+      const override = item.monthlyOverrides?.[m];
+      return sum + (override ?? item.amount);
+    }, 0);
+  };
+
+  // Spese con importo annuale (override-aware)
   const expensesWithAnnual = expectedExpenses
-    .map((e) => ({ ...e, annualAmount: e.amount * (e.monthlyOccurrences?.length || 0) }))
+    .map((e) => ({ ...e, annualAmount: annualWithOverrides(e as never) }))
     .sort((a, b) => b.annualAmount - a.annualAmount);
 
-  // Incassi con importo annuale
+  // Incassi con importo annuale (override-aware)
   const incomesWithAnnual = expectedIncomes
-    .map((i) => ({ ...i, annualAmount: i.amount * (i.monthlyOccurrences?.length || 0) }))
+    .map((i) => ({ ...i, annualAmount: annualWithOverrides(i as never) }))
     .sort((a, b) => b.annualAmount - a.annualAmount);
+
+  // Year corrente (per ora hardcoded a 2026 come il resto della pagina)
+  const currentYear = 2026;
+
+  const handleSaveExpenseOverride = async (expenseId: number, month: number, amountCents: number) => {
+    const res = await fetch(`/api/expected-expenses/${expenseId}/override`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ year: currentYear, month, amount: amountCents }),
+    });
+    if (!res.ok) throw new Error("Errore salvataggio override");
+    await fetchData();
+  };
+
+  const handleSaveIncomeOverride = async (incomeId: number, month: number, amountCents: number) => {
+    const res = await fetch(`/api/expected-incomes/${incomeId}/override`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ year: currentYear, month, amount: amountCents }),
+    });
+    if (!res.ok) throw new Error("Errore salvataggio override");
+    await fetchData();
+  };
 
   if (loading) {
     return (
@@ -445,7 +477,11 @@ export default function SettingsPage() {
                         {expensesWithAnnual.map((expense) => {
                           const quarterMonths = QUARTERS[expenseQuarter].months;
                           const quarterTotal = quarterMonths.reduce((sum, mIdx) => {
-                            if (expense.monthlyOccurrences?.includes(mIdx + 1)) return sum + expense.amount;
+                            const m = mIdx + 1;
+                            if (expense.monthlyOccurrences?.includes(m)) {
+                              const ov = (expense as ExpectedExpense & { monthlyOverrides?: Record<number, number> }).monthlyOverrides?.[m];
+                              return sum + (ov ?? expense.amount);
+                            }
                             return sum;
                           }, 0);
                           return (
@@ -454,11 +490,20 @@ export default function SettingsPage() {
                                 <div className="font-medium truncate max-w-[90px]">{expense.name}</div>
                               </TableCell>
                               {quarterMonths.map((mIdx) => {
-                                const hasExpense = expense.monthlyOccurrences?.includes(mIdx + 1);
+                                const month = mIdx + 1;
+                                const hasExpense = expense.monthlyOccurrences?.includes(month);
+                                const ov = (expense as ExpectedExpense & { monthlyOverrides?: Record<number, number> }).monthlyOverrides?.[month];
+                                const cellValue = ov ?? expense.amount;
                                 return (
                                   <TableCell key={mIdx} className="text-center text-xs p-1">
                                     {hasExpense ? (
-                                      <span className="font-mono text-red-600 dark:text-red-400">{formatCurrency(expense.amount)}</span>
+                                      <EditableCell
+                                        value={cellValue}
+                                        defaultValue={expense.amount}
+                                        colorClass="text-red-600 dark:text-red-400"
+                                        onSave={(cents) => handleSaveExpenseOverride(expense.id, month, cents)}
+                                        align="left"
+                                      />
                                     ) : "-"}
                                   </TableCell>
                                 );
@@ -472,8 +517,12 @@ export default function SettingsPage() {
                         <TableRow className="bg-muted font-bold">
                           <TableCell className="text-xs p-2">TOTALE</TableCell>
                           {QUARTERS[expenseQuarter].months.map((mIdx) => {
+                            const m = mIdx + 1;
                             const monthTotal = expectedExpenses.reduce((sum, exp) => {
-                              if (exp.monthlyOccurrences?.includes(mIdx + 1)) return sum + exp.amount;
+                              if (exp.monthlyOccurrences?.includes(m)) {
+                                const ov = (exp as ExpectedExpense & { monthlyOverrides?: Record<number, number> }).monthlyOverrides?.[m];
+                                return sum + (ov ?? exp.amount);
+                              }
                               return sum;
                             }, 0);
                             return (
@@ -485,8 +534,12 @@ export default function SettingsPage() {
                           <TableCell className="text-right font-mono text-red-600 dark:text-red-400 text-xs p-1">
                             {formatCurrency(
                               QUARTERS[expenseQuarter].months.reduce((sum, mIdx) => {
+                                const m = mIdx + 1;
                                 return sum + expectedExpenses.reduce((mSum, exp) => {
-                                  if (exp.monthlyOccurrences?.includes(mIdx + 1)) return mSum + exp.amount;
+                                  if (exp.monthlyOccurrences?.includes(m)) {
+                                    const ov = (exp as ExpectedExpense & { monthlyOverrides?: Record<number, number> }).monthlyOverrides?.[m];
+                                    return mSum + (ov ?? exp.amount);
+                                  }
                                   return mSum;
                                 }, 0);
                               }, 0)
@@ -519,11 +572,19 @@ export default function SettingsPage() {
                             <div className="text-xs font-medium truncate max-w-[100px]">{expense.name}</div>
                           </TableCell>
                           {MONTHS.map((_, monthIdx) => {
-                            const hasExpense = expense.monthlyOccurrences?.includes(monthIdx + 1);
+                            const month = monthIdx + 1;
+                            const hasExpense = expense.monthlyOccurrences?.includes(month);
+                            const ov = (expense as ExpectedExpense & { monthlyOverrides?: Record<number, number> }).monthlyOverrides?.[month];
+                            const cellValue = ov ?? expense.amount;
                             return (
                               <TableCell key={monthIdx} className="text-center text-xs p-1">
                                 {hasExpense ? (
-                                  <span className="font-mono text-red-600">{formatCurrency(expense.amount)}</span>
+                                  <EditableCell
+                                    value={cellValue}
+                                    defaultValue={expense.amount}
+                                    colorClass="text-red-600"
+                                    onSave={(cents) => handleSaveExpenseOverride(expense.id, month, cents)}
+                                  />
                                 ) : "-"}
                               </TableCell>
                             );
@@ -536,8 +597,12 @@ export default function SettingsPage() {
                       <TableRow className="bg-muted font-bold">
                         <TableCell className="sticky left-0 bg-muted z-10 text-xs">TOTALE</TableCell>
                         {MONTHS.map((_, monthIdx) => {
+                          const m = monthIdx + 1;
                           const monthTotal = expectedExpenses.reduce((sum, exp) => {
-                            if (exp.monthlyOccurrences?.includes(monthIdx + 1)) return sum + exp.amount;
+                            if (exp.monthlyOccurrences?.includes(m)) {
+                              const ov = (exp as ExpectedExpense & { monthlyOverrides?: Record<number, number> }).monthlyOverrides?.[m];
+                              return sum + (ov ?? exp.amount);
+                            }
                             return sum;
                           }, 0);
                           return (
@@ -547,7 +612,7 @@ export default function SettingsPage() {
                           );
                         })}
                         <TableCell className="text-right font-mono text-red-600 text-xs">
-                          {formatCurrency(totalExpectedExpenses)}
+                          {formatCurrency(expensesWithAnnual.reduce((s, e) => s + e.annualAmount, 0))}
                         </TableCell>
                       </TableRow>
                     </TableBody>
@@ -647,7 +712,11 @@ export default function SettingsPage() {
                         {incomesWithAnnual.map((income) => {
                           const quarterMonths = QUARTERS[incomeQuarter].months;
                           const quarterTotal = quarterMonths.reduce((sum, mIdx) => {
-                            if (income.monthlyOccurrences?.includes(mIdx + 1)) return sum + income.amount;
+                            const m = mIdx + 1;
+                            if (income.monthlyOccurrences?.includes(m)) {
+                              const ov = (income as ExpectedIncome & { monthlyOverrides?: Record<number, number> }).monthlyOverrides?.[m];
+                              return sum + (ov ?? income.amount);
+                            }
                             return sum;
                           }, 0);
                           return (
@@ -656,11 +725,20 @@ export default function SettingsPage() {
                                 <div className="font-medium truncate max-w-[90px]">{income.clientName}</div>
                               </TableCell>
                               {quarterMonths.map((mIdx) => {
-                                const hasIncome = income.monthlyOccurrences?.includes(mIdx + 1);
+                                const month = mIdx + 1;
+                                const hasIncome = income.monthlyOccurrences?.includes(month);
+                                const ov = (income as ExpectedIncome & { monthlyOverrides?: Record<number, number> }).monthlyOverrides?.[month];
+                                const cellValue = ov ?? income.amount;
                                 return (
                                   <TableCell key={mIdx} className="text-center text-xs p-1">
                                     {hasIncome ? (
-                                      <span className="font-mono text-green-600 dark:text-green-400">{formatCurrency(income.amount)}</span>
+                                      <EditableCell
+                                        value={cellValue}
+                                        defaultValue={income.amount}
+                                        colorClass="text-green-600 dark:text-green-400"
+                                        onSave={(cents) => handleSaveIncomeOverride(income.id, month, cents)}
+                                        align="left"
+                                      />
                                     ) : "-"}
                                   </TableCell>
                                 );
@@ -674,8 +752,12 @@ export default function SettingsPage() {
                         <TableRow className="bg-muted font-bold">
                           <TableCell className="text-xs p-2">TOTALE</TableCell>
                           {QUARTERS[incomeQuarter].months.map((mIdx) => {
+                            const m = mIdx + 1;
                             const monthTotal = expectedIncomes.reduce((sum, inc) => {
-                              if (inc.monthlyOccurrences?.includes(mIdx + 1)) return sum + inc.amount;
+                              if (inc.monthlyOccurrences?.includes(m)) {
+                                const ov = (inc as ExpectedIncome & { monthlyOverrides?: Record<number, number> }).monthlyOverrides?.[m];
+                                return sum + (ov ?? inc.amount);
+                              }
                               return sum;
                             }, 0);
                             return (
@@ -687,8 +769,12 @@ export default function SettingsPage() {
                           <TableCell className="text-right font-mono text-green-600 dark:text-green-400 text-xs p-1">
                             {formatCurrency(
                               QUARTERS[incomeQuarter].months.reduce((sum, mIdx) => {
+                                const m = mIdx + 1;
                                 return sum + expectedIncomes.reduce((mSum, inc) => {
-                                  if (inc.monthlyOccurrences?.includes(mIdx + 1)) return mSum + inc.amount;
+                                  if (inc.monthlyOccurrences?.includes(m)) {
+                                    const ov = (inc as ExpectedIncome & { monthlyOverrides?: Record<number, number> }).monthlyOverrides?.[m];
+                                    return mSum + (ov ?? inc.amount);
+                                  }
                                   return mSum;
                                 }, 0);
                               }, 0)
@@ -721,11 +807,19 @@ export default function SettingsPage() {
                             <div className="text-xs font-medium truncate max-w-[100px]">{income.clientName}</div>
                           </TableCell>
                           {MONTHS.map((_, monthIdx) => {
-                            const hasIncome = income.monthlyOccurrences?.includes(monthIdx + 1);
+                            const month = monthIdx + 1;
+                            const hasIncome = income.monthlyOccurrences?.includes(month);
+                            const ov = (income as ExpectedIncome & { monthlyOverrides?: Record<number, number> }).monthlyOverrides?.[month];
+                            const cellValue = ov ?? income.amount;
                             return (
                               <TableCell key={monthIdx} className="text-center text-xs p-1">
                                 {hasIncome ? (
-                                  <span className="font-mono text-green-600">{formatCurrency(income.amount)}</span>
+                                  <EditableCell
+                                    value={cellValue}
+                                    defaultValue={income.amount}
+                                    colorClass="text-green-600"
+                                    onSave={(cents) => handleSaveIncomeOverride(income.id, month, cents)}
+                                  />
                                 ) : "-"}
                               </TableCell>
                             );
@@ -738,8 +832,12 @@ export default function SettingsPage() {
                       <TableRow className="bg-muted font-bold">
                         <TableCell className="sticky left-0 bg-muted z-10 text-xs">TOTALE</TableCell>
                         {MONTHS.map((_, monthIdx) => {
+                          const m = monthIdx + 1;
                           const monthTotal = expectedIncomes.reduce((sum, inc) => {
-                            if (inc.monthlyOccurrences?.includes(monthIdx + 1)) return sum + inc.amount;
+                            if (inc.monthlyOccurrences?.includes(m)) {
+                              const ov = (inc as ExpectedIncome & { monthlyOverrides?: Record<number, number> }).monthlyOverrides?.[m];
+                              return sum + (ov ?? inc.amount);
+                            }
                             return sum;
                           }, 0);
                           return (
@@ -749,7 +847,7 @@ export default function SettingsPage() {
                           );
                         })}
                         <TableCell className="text-right font-mono text-green-600 text-xs">
-                          {formatCurrency(totalExpectedIncomes)}
+                          {formatCurrency(incomesWithAnnual.reduce((s, i) => s + i.annualAmount, 0))}
                         </TableCell>
                       </TableRow>
                     </TableBody>

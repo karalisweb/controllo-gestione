@@ -1,6 +1,35 @@
 import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
+// Override mensili per spese previste.
+// Permette di sovrascrivere l'importo della singola occorrenza in un mese specifico
+// senza alterare il template (es. "Server Plan -50% per gennaio per pagamento anticipato").
+// Se non esiste un override per (expectedExpenseId, year, month), si usa il default
+// dell'expected_expense.
+export const expectedExpenseOverrides = sqliteTable("expected_expense_overrides", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  expectedExpenseId: integer("expected_expense_id").notNull().references(() => expectedExpenses.id),
+  year: integer("year").notNull(),
+  month: integer("month").notNull(), // 1-12
+  amount: integer("amount").notNull(), // centesimi, valore effettivo per quel (year, month)
+  notes: text("notes"),
+  createdAt: integer("created_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
+});
+
+// Override mensili per incassi previsti (simmetrico a expense overrides).
+// Esempio: "Orizzonte normalmente paga 366, ma a giugno 866 (366 base + 500 servizio extra)".
+export const expectedIncomeOverrides = sqliteTable("expected_income_overrides", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  expectedIncomeId: integer("expected_income_id").notNull().references(() => expectedIncomes.id),
+  year: integer("year").notNull(),
+  month: integer("month").notNull(),
+  amount: integer("amount").notNull(),
+  notes: text("notes"),
+  createdAt: integer("created_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
+});
+
 // Sottoscrizioni: cliente x servizio del catalogo.
 // Ogni riga rappresenta un contratto: "Cliente X compra Servizio Y da data inizio
 // a data fine, con eventuali override su importo/intervallo/percentuali rispetto
@@ -395,6 +424,12 @@ export type NewService = typeof services.$inferInsert;
 
 export type Subscription = typeof subscriptions.$inferSelect;
 export type NewSubscription = typeof subscriptions.$inferInsert;
+
+export type ExpectedExpenseOverride = typeof expectedExpenseOverrides.$inferSelect;
+export type NewExpectedExpenseOverride = typeof expectedExpenseOverrides.$inferInsert;
+
+export type ExpectedIncomeOverride = typeof expectedIncomeOverrides.$inferSelect;
+export type NewExpectedIncomeOverride = typeof expectedIncomeOverrides.$inferInsert;
 
 export type Contact = typeof contacts.$inferSelect;
 export type NewContact = typeof contacts.$inferInsert;

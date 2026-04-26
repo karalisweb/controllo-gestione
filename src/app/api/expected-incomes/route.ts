@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { expectedIncomes, revenueCenters } from "@/lib/db/schema";
-import { eq, isNull, and, sql, or, lte, gte } from "drizzle-orm";
+import { expectedIncomes, expectedIncomeOverrides, revenueCenters } from "@/lib/db/schema";
+import { eq, isNull, and, sql, or, lte, gte, inArray } from "drizzle-orm";
 import { syncForecastFromIncome } from "@/lib/forecast-sync";
 
 export async function GET(request: NextRequest) {
@@ -40,6 +40,25 @@ export async function GET(request: NextRequest) {
     .where(whereClause)
     .orderBy(expectedIncomes.clientName);
 
+  // Carica override mensili per (anno, lista expected_income_ids)
+  const incomeIds = incomes.map((i) => i.id);
+  const overridesByIncome: Record<number, Record<number, number>> = {};
+  if (incomeIds.length > 0) {
+    const overrides = await db
+      .select()
+      .from(expectedIncomeOverrides)
+      .where(
+        and(
+          inArray(expectedIncomeOverrides.expectedIncomeId, incomeIds),
+          eq(expectedIncomeOverrides.year, year),
+        ),
+      );
+    for (const o of overrides) {
+      if (!overridesByIncome[o.expectedIncomeId]) overridesByIncome[o.expectedIncomeId] = {};
+      overridesByIncome[o.expectedIncomeId][o.month] = o.amount;
+    }
+  }
+
   // Aggiungi il nome del centro di ricavo
   const incomesWithCenter = await Promise.all(
     incomes.map(async (income) => {
@@ -64,6 +83,9 @@ export async function GET(request: NextRequest) {
         ...income,
         revenueCenter,
         monthlyOccurrences,
+        // Map { month: amountOverride } per l'anno richiesto. Se manca un mese,
+        // usare income.amount come default.
+        monthlyOverrides: overridesByIncome[income.id] || {},
       };
     })
   );

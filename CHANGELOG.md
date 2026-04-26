@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.17] - 2026-04-26
+
+### Modificato
+- passo 2: celle Excel-style editabili nelle viste mensili (override per mese, schema + API + UI)
+
+---
+
 ## [2.3.16] - 2026-04-26
 
 ### Modificato

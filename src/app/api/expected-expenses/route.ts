@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { expectedExpenses, costCenters } from "@/lib/db/schema";
-import { eq, isNull, and, sql, or, lte, gte } from "drizzle-orm";
+import { expectedExpenses, expectedExpenseOverrides, costCenters } from "@/lib/db/schema";
+import { eq, isNull, and, sql, or, lte, gte, inArray } from "drizzle-orm";
 import { syncForecastFromExpense } from "@/lib/forecast-sync";
 
 export async function GET(request: NextRequest) {
@@ -40,6 +40,25 @@ export async function GET(request: NextRequest) {
     .where(whereClause)
     .orderBy(expectedExpenses.name);
 
+  // Carica override mensili per (anno, lista expected_expense_ids)
+  const expenseIds = expenses.map((e) => e.id);
+  const overridesByExpense: Record<number, Record<number, number>> = {};
+  if (expenseIds.length > 0) {
+    const overrides = await db
+      .select()
+      .from(expectedExpenseOverrides)
+      .where(
+        and(
+          inArray(expectedExpenseOverrides.expectedExpenseId, expenseIds),
+          eq(expectedExpenseOverrides.year, year),
+        ),
+      );
+    for (const o of overrides) {
+      if (!overridesByExpense[o.expectedExpenseId]) overridesByExpense[o.expectedExpenseId] = {};
+      overridesByExpense[o.expectedExpenseId][o.month] = o.amount;
+    }
+  }
+
   // Aggiungi il nome del centro di costo
   const expensesWithCenter = await Promise.all(
     expenses.map(async (expense) => {
@@ -64,6 +83,9 @@ export async function GET(request: NextRequest) {
         ...expense,
         costCenter,
         monthlyOccurrences,
+        // Map { month: amountOverride } per l'anno richiesto. Se manca un mese,
+        // usare expense.amount come default.
+        monthlyOverrides: overridesByExpense[expense.id] || {},
       };
     })
   );
