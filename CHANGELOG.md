@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.23] - 2026-04-27
+
+### Modificato
+- feat(movimenti): riga inserimento inline Excel-style con quick-add anagrafica/centri
+
+---
+
 ## [2.3.22] - 2026-04-27
 
 ### Modificato

@@ -13,6 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { MobileHeader } from "@/components/MobileHeader";
+import { NewMovementForm } from "@/components/movimenti/NewMovementForm";
 import { ChevronLeft, ChevronRight, CalendarRange, CheckCircle2, Clock, CreditCard, ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
 import { formatDate } from "@/lib/utils/dates";
@@ -178,19 +179,21 @@ export default function MovimentiPage() {
           </Card>
         )}
 
-        {/* Tabella movimenti */}
-        {!loading && data && data.rows.length === 0 && (
+        {/* Tabella movimenti + form inserimento in cima */}
+        {!loading && data && (
           <Card>
-            <CardContent className="p-8 text-center text-muted-foreground">
-              <p>Nessun movimento per {monthLabel}.</p>
-            </CardContent>
-          </Card>
-        )}
+            <NewMovementForm onSaved={() => fetchMovements(year, month)} />
 
-        {!loading && data && data.rows.length > 0 && (
-          <Card>
-            {/* Mobile: cards compatte */}
-            <div className="sm:hidden divide-y">
+            {data.rows.length === 0 && (
+              <CardContent className="p-8 text-center text-muted-foreground">
+                <p>Nessun movimento per {monthLabel}.</p>
+              </CardContent>
+            )}
+
+            {data.rows.length > 0 && (
+              <>
+                {/* Mobile: cards compatte */}
+                <div className="sm:hidden divide-y">
               {data.rows.map((row) => {
                 const Icon = TYPE_ICONS[row.type];
                 const isToday = row.date === todayStr;
@@ -308,10 +311,12 @@ export default function MovimentiPage() {
               </Table>
             </div>
 
-            {/* Counter footer */}
-            <div className="border-t p-3 text-xs text-muted-foreground">
-              {data.rowsCount} movimenti nel mese
-            </div>
+                {/* Counter footer */}
+                <div className="border-t p-3 text-xs text-muted-foreground">
+                  {data.rowsCount} movimenti nel mese
+                </div>
+              </>
+            )}
           </Card>
         )}
       </div>
