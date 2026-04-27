@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.22] - 2026-04-27
+
+### Modificato
+- feat(transactions): aggiungo contactId (FK contacts) per anagrafica nei movimenti
+
+---
+
 ## [2.3.21] - 2026-04-27
 
 ### Modificato

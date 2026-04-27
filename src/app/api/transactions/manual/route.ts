@@ -10,6 +10,7 @@ export async function POST(request: NextRequest) {
       date,
       description,
       amount,
+      contactId,
       costCenterId,
       revenueCenterId,
       notes,
@@ -59,6 +60,7 @@ export async function POST(request: NextRequest) {
         date,
         description,
         amount, // già in centesimi, già con segno corretto
+        contactId: contactId || null,
         costCenterId: costCenterId || null,
         revenueCenterId: revenueCenterId || null,
         notes: fullNotes || null,

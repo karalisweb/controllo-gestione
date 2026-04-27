@@ -1,6 +1,6 @@
 {
   "name": "kw-cashflow",
-  "version": "2.3.21",
+  "version": "2.3.22",
   "private": true,
   "scripts": {
     "dev": "next dev -p 3002",

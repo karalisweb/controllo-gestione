@@ -213,6 +213,7 @@ export const transactions = sqliteTable("transactions", {
   description: text("description"),
   amount: integer("amount").notNull(), // centesimi, positivo = entrata, negativo = uscita
   categoryId: integer("category_id").references(() => categories.id),
+  contactId: integer("contact_id").references(() => contacts.id), // contatto da anagrafica (cliente o fornitore)
   costCenterId: integer("cost_center_id").references(() => costCenters.id), // centro di costo
   revenueCenterId: integer("revenue_center_id").references(() => revenueCenters.id), // centro di ricavo
   isSplit: integer("is_split", { mode: "boolean" }).default(false),

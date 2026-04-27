@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { transactions, categories, costCenters, revenueCenters } from "@/lib/db/schema";
+import { transactions, categories, costCenters, revenueCenters, contacts } from "@/lib/db/schema";
 import { eq, and, isNull, gte, lte, desc } from "drizzle-orm";
 
 export async function GET(request: NextRequest) {
@@ -30,6 +30,7 @@ export async function GET(request: NextRequest) {
       description: transactions.description,
       amount: transactions.amount,
       categoryId: transactions.categoryId,
+      contactId: transactions.contactId,
       costCenterId: transactions.costCenterId,
       revenueCenterId: transactions.revenueCenterId,
       isSplit: transactions.isSplit,
@@ -42,6 +43,11 @@ export async function GET(request: NextRequest) {
         name: categories.name,
         type: categories.type,
         color: categories.color,
+      },
+      contact: {
+        id: contacts.id,
+        name: contacts.name,
+        type: contacts.type,
       },
       costCenter: {
         id: costCenters.id,
@@ -56,6 +62,7 @@ export async function GET(request: NextRequest) {
     })
     .from(transactions)
     .leftJoin(categories, eq(transactions.categoryId, categories.id))
+    .leftJoin(contacts, eq(transactions.contactId, contacts.id))
     .leftJoin(costCenters, eq(transactions.costCenterId, costCenters.id))
     .leftJoin(revenueCenters, eq(transactions.revenueCenterId, revenueCenters.id))
     .where(and(...conditions))
@@ -75,7 +82,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const body = await request.json();
 
-  const { externalId, date, description, amount, categoryId, notes } = body;
+  const { externalId, date, description, amount, categoryId, contactId, costCenterId, revenueCenterId, notes } = body;
 
   if (!date || amount === undefined) {
     return NextResponse.json(
@@ -107,6 +114,9 @@ export async function POST(request: NextRequest) {
       description: description || null,
       amount, // centesimi
       categoryId: categoryId || null,
+      contactId: contactId || null,
+      costCenterId: costCenterId || null,
+      revenueCenterId: revenueCenterId || null,
       notes: notes || null,
       isSplit: false,
     })

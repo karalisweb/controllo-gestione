@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { transactions, categories } from "@/lib/db/schema";
+import { transactions, categories, contacts } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 
 export async function GET(
@@ -18,6 +18,9 @@ export async function GET(
       description: transactions.description,
       amount: transactions.amount,
       categoryId: transactions.categoryId,
+      contactId: transactions.contactId,
+      costCenterId: transactions.costCenterId,
+      revenueCenterId: transactions.revenueCenterId,
       isSplit: transactions.isSplit,
       notes: transactions.notes,
       createdAt: transactions.createdAt,
@@ -27,9 +30,15 @@ export async function GET(
         type: categories.type,
         color: categories.color,
       },
+      contact: {
+        id: contacts.id,
+        name: contacts.name,
+        type: contacts.type,
+      },
     })
     .from(transactions)
     .leftJoin(categories, eq(transactions.categoryId, categories.id))
+    .leftJoin(contacts, eq(transactions.contactId, contacts.id))
     .where(eq(transactions.id, transactionId));
 
   const result = resultArr[0];
@@ -52,7 +61,7 @@ export async function PUT(
   const transactionId = parseInt(id);
   const body = await request.json();
 
-  const { date, description, amount, categoryId, costCenterId, revenueCenterId, notes } = body;
+  const { date, description, amount, categoryId, contactId, costCenterId, revenueCenterId, notes } = body;
 
   const existingArr = await db
     .select()
@@ -75,6 +84,7 @@ export async function PUT(
       description: description !== undefined ? description : existing.description,
       amount: amount ?? existing.amount,
       categoryId: categoryId !== undefined ? categoryId : existing.categoryId,
+      contactId: contactId !== undefined ? contactId : existing.contactId,
       costCenterId: costCenterId !== undefined ? costCenterId : existing.costCenterId,
       revenueCenterId: revenueCenterId !== undefined ? revenueCenterId : existing.revenueCenterId,
       notes: notes !== undefined ? notes : existing.notes,
