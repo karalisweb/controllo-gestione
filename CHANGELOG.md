@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.21] - 2026-04-27
+
+### Modificato
+- fix(movimenti): escludi rate dei piani sospesi dal ledger
+
+---
+
 ## [2.3.20] - 2026-04-26
 
 ### Modificato

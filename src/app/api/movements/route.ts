@@ -264,6 +264,7 @@ export async function GET(request: NextRequest) {
           gte(paymentPlanInstallments.dueDate, firstOfMonth),
           lte(paymentPlanInstallments.dueDate, lastOfMonth),
           isNull(paymentPlans.deletedAt),
+          eq(paymentPlans.isActive, true),
         ),
       );
 
