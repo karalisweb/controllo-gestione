@@ -19,6 +19,7 @@ import {
   Link as LinkIcon,
   TrendingDown,
   TrendingUp,
+  Wand2,
 } from "lucide-react";
 import { APP_VERSION } from "@/lib/version";
 
@@ -33,6 +34,7 @@ const navSections = [
     items: [
       { href: "/", label: "Dashboard", icon: LayoutDashboard },
       { href: "/movimenti", label: "Movimenti", icon: CalendarRange },
+      { href: "/riconcilia", label: "Riconcilia", icon: Wand2 },
       { href: "/forecast", label: "Previsionale", icon: CalendarRange },
       { href: "/transactions", label: "Consuntivo", icon: Receipt },
     ],

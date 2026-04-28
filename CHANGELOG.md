@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.24] - 2026-04-28
+
+### Modificato
+- feat(riconcilia): pagina auto-match per associare contatto/centro a transazioni storiche
+
+---
+
 ## [2.3.23] - 2026-04-27
 
 ### Modificato
