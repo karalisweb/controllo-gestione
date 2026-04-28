@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.25] - 2026-04-28
+
+### Modificato
+- feat(riconcilia): contatto autocomplete + quick-add + Ignora persistente (isIgnored)
+
+---
+
 ## [2.3.24] - 2026-04-28
 
 ### Modificato

@@ -17,6 +17,7 @@ interface UpdateItem {
   contactId?: number | null;
   costCenterId?: number | null;
   revenueCenterId?: number | null;
+  isIgnored?: boolean;
 }
 
 export async function POST(request: NextRequest) {
@@ -40,6 +41,7 @@ export async function POST(request: NextRequest) {
       if (u.contactId !== undefined) setData.contactId = u.contactId;
       if (u.costCenterId !== undefined) setData.costCenterId = u.costCenterId;
       if (u.revenueCenterId !== undefined) setData.revenueCenterId = u.revenueCenterId;
+      if (u.isIgnored !== undefined) setData.isIgnored = u.isIgnored;
 
       if (Object.keys(setData).length === 0) {
         errors.push({ transactionId: u.transactionId, error: "nessun campo da aggiornare" });

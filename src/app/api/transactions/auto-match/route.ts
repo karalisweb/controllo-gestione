@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { transactions, contacts, costCenters, revenueCenters } from "@/lib/db/schema";
-import { isNull, and } from "drizzle-orm";
+import { isNull, and, eq, or } from "drizzle-orm";
 
 /**
  * GET /api/transactions/auto-match
@@ -59,6 +59,8 @@ export async function GET() {
         and(
           isNull(transactions.deletedAt),
           isNull(transactions.contactId),
+          // is_ignored può essere null (righe pre-migration) o false: in entrambi i casi va mostrato
+          or(isNull(transactions.isIgnored), eq(transactions.isIgnored, false)),
         ),
       );
 

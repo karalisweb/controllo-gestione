@@ -218,6 +218,7 @@ export const transactions = sqliteTable("transactions", {
   revenueCenterId: integer("revenue_center_id").references(() => revenueCenters.id), // centro di ricavo
   isSplit: integer("is_split", { mode: "boolean" }).default(false),
   isTransfer: integer("is_transfer", { mode: "boolean" }).default(false), // true = giroconto/ripartizione, non è una spesa operativa
+  isIgnored: integer("is_ignored", { mode: "boolean" }).default(false), // true = utente ha scelto di non tracciare contatto/centro per questa transazione (esclusa da /riconcilia)
   isVerified: integer("is_verified", { mode: "boolean" }).default(false), // verificato con previsionale
   matchedBudgetItemId: integer("matched_budget_item_id").references(() => budgetItems.id), // voce previsionale corrispondente
   linkedTransactionId: integer("linked_transaction_id"), // collegamento a transazione originale (es. incasso per cui questo è il bonifico soci)
