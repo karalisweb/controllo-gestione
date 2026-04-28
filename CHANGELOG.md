@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.38] - 2026-04-28
+
+### Modificato
+- fix(movimenti): saldo iniziale coerente fra mesi (previsti residui) + sticky header + scroll a oggi + box disavanzo
+
+---
+
 ## [2.3.37] - 2026-04-28
 
 ### Modificato

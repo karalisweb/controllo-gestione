@@ -101,6 +101,7 @@ export default function MovimentiPage() {
   const [data, setData] = useState<MovementsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [shouldScrollToToday, setShouldScrollToToday] = useState(false);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [costCenters, setCostCenters] = useState<Center[]>([]);
   const [revenueCenters, setRevenueCenters] = useState<Center[]>([]);
@@ -279,7 +280,20 @@ export default function MovimentiPage() {
   const goToday = () => {
     setYear(today.getFullYear());
     setMonth(today.getMonth() + 1);
+    setShouldScrollToToday(true);
   };
+
+  useEffect(() => {
+    if (shouldScrollToToday && data) {
+      // microtask per aspettare il DOM dopo render
+      const t = setTimeout(() => {
+        const el = document.querySelector('[data-today="true"]');
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+        setShouldScrollToToday(false);
+      }, 50);
+      return () => clearTimeout(t);
+    }
+  }, [shouldScrollToToday, data]);
 
   const isCurrentMonth = year === today.getFullYear() && month === today.getMonth() + 1;
   const monthLabel = `${MONTH_LABELS[month - 1]} ${year}`;
@@ -290,6 +304,8 @@ export default function MovimentiPage() {
       <MobileHeader title="Movimenti" />
 
       <div className="p-3 sm:p-4 lg:p-6 space-y-4">
+        {/* Wrapper sticky: navigazione + saldi + 3 box restano in cima allo scroll */}
+        <div className="sticky top-0 z-20 bg-background pb-4 -mx-3 sm:-mx-4 lg:-mx-6 px-3 sm:px-4 lg:px-6 space-y-4 pt-2 border-b border-border">
         {/* Header navigazione */}
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
           <div>
@@ -316,9 +332,9 @@ export default function MovimentiPage() {
           </div>
         </div>
 
-        {/* Saldi iniziale e finale */}
+        {/* Saldi iniziale, finale, disavanzo */}
         {data && (
-          <div className="grid grid-cols-2 gap-2 sm:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
             <Card className="p-3 sm:p-4">
               <p className="text-xs text-muted-foreground mb-1">Saldo a inizio mese</p>
               <p className={`text-base sm:text-xl font-bold font-mono ${data.initialBalance >= 0 ? "text-foreground" : "text-red-500"}`}>
@@ -330,10 +346,13 @@ export default function MovimentiPage() {
               <p className={`text-base sm:text-xl font-bold font-mono ${data.finalBalance >= 0 ? "text-green-500" : "text-red-500"}`}>
                 {formatCurrency(data.finalBalance)}
               </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Variazione: <span className={data.finalBalance - data.initialBalance >= 0 ? "text-green-500" : "text-red-500"}>
-                  {data.finalBalance - data.initialBalance >= 0 ? "+" : ""}{formatCurrency(data.finalBalance - data.initialBalance)}
-                </span>
+            </Card>
+            <Card className={`p-3 sm:p-4 ${data.finalBalance - data.initialBalance >= 0 ? "border-green-500/40" : "border-red-500/40"}`}>
+              <p className="text-xs text-muted-foreground mb-1">
+                {data.finalBalance - data.initialBalance >= 0 ? "Surplus del mese" : "Disavanzo del mese"}
+              </p>
+              <p className={`text-base sm:text-xl font-bold font-mono ${data.finalBalance - data.initialBalance >= 0 ? "text-green-500" : "text-red-500"}`}>
+                {data.finalBalance - data.initialBalance >= 0 ? "+" : ""}{formatCurrency(data.finalBalance - data.initialBalance)}
               </p>
             </Card>
           </div>
@@ -422,6 +441,7 @@ export default function MovimentiPage() {
             </Card>
           </div>
         )}
+        </div>{/* fine wrapper sticky */}
 
         {/* Stato */}
         {loading && (

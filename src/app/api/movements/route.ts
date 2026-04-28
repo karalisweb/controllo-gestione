@@ -146,7 +146,123 @@ export async function GET(request: NextRequest) {
         ),
       );
     const pastTxSum = pastTxs.reduce((s, t) => (t.isTransfer ? s : s + t.amount), 0);
-    const initialBalance = initialBalanceBase + pastTxSum;
+    let initialBalance = initialBalanceBase + pastTxSum;
+
+    // ───── 1b. Aggiusta saldo iniziale per previsti residui (today ≤ data < firstOfMonth) ─────
+    // Caso: aprile aveva previsti per 28-30 che incidevano sul saldo finale aprile.
+    // Il saldo iniziale di maggio (oggi calcolato come base + transactions reali) NON li include
+    // → discrepanza. Rimedio: somma anche i previsti residui per coerenza fra mesi.
+    if (today < firstOfMonth) {
+      const [todayY, todayM] = today.split("-").map(Number);
+      const startYm = todayY * 12 + (todayM - 1);
+      const targetYm = year * 12 + (month - 1);
+
+      // Range esteso: previsti attivi tra today e firstOfMonth-1
+      // Per ridurre il dataset, usiamo un'unica query con filtro startDate<=lastDayBeforeMonth
+      // e endDate>=today (o nullo).
+      const lastDayBeforeFirst = new Date(Date.UTC(year, month - 1, 0));
+      const lastDateBeforeFirstStr = `${lastDayBeforeFirst.getUTCFullYear()}-${pad2(lastDayBeforeFirst.getUTCMonth() + 1)}-${pad2(lastDayBeforeFirst.getUTCDate())}`;
+
+      const residualExpenses = await db
+        .select()
+        .from(expectedExpenses)
+        .where(
+          and(
+            isNull(expectedExpenses.deletedAt),
+            eq(expectedExpenses.isActive, true),
+            lte(expectedExpenses.startDate, lastDateBeforeFirstStr),
+            or(isNull(expectedExpenses.endDate), gte(expectedExpenses.endDate, today)),
+          ),
+        );
+      const residualIncomes = await db
+        .select()
+        .from(expectedIncomes)
+        .where(
+          and(
+            isNull(expectedIncomes.deletedAt),
+            eq(expectedIncomes.isActive, true),
+            lte(expectedIncomes.startDate, lastDateBeforeFirstStr),
+            or(isNull(expectedIncomes.endDate), gte(expectedIncomes.endDate, today)),
+          ),
+        );
+
+      // Carica overrides per gli expectedIds nel range mensile [startYm, targetYm)
+      const expIds = residualExpenses.map((e) => e.id);
+      const incIds = residualIncomes.map((i) => i.id);
+      const expOverridesRange = expIds.length > 0
+        ? await db.select().from(expectedExpenseOverrides).where(
+            inArray(expectedExpenseOverrides.expectedExpenseId, expIds),
+          )
+        : [];
+      const incOverridesRange = incIds.length > 0
+        ? await db.select().from(expectedIncomeOverrides).where(
+            inArray(expectedIncomeOverrides.expectedIncomeId, incIds),
+          )
+        : [];
+      const expOvMap = new Map<string, number>();
+      for (const o of expOverridesRange) {
+        const ym = o.year * 12 + (o.month - 1);
+        if (ym >= startYm && ym < targetYm) {
+          expOvMap.set(`${o.expectedExpenseId}-${o.year}-${o.month}`, o.amount);
+        }
+      }
+      const incOvMap = new Map<string, number>();
+      for (const o of incOverridesRange) {
+        const ym = o.year * 12 + (o.month - 1);
+        if (ym >= startYm && ym < targetYm) {
+          incOvMap.set(`${o.expectedIncomeId}-${o.year}-${o.month}`, o.amount);
+        }
+      }
+
+      // Itera sui mesi tra today e firstOfMonth (esclusivo)
+      let curY = todayY, curM = todayM;
+      while (curY * 12 + (curM - 1) < targetYm) {
+        const lastDayOfCur = new Date(Date.UTC(curY, curM, 0)).getUTCDate();
+        for (const e of residualExpenses) {
+          if (!monthMatches(e.startDate, e.endDate, e.frequency, curY, curM)) continue;
+          const day = Math.min(Math.max(e.expectedDay || 1, 1), lastDayOfCur);
+          const date = `${curY}-${pad2(curM)}-${pad2(day)}`;
+          if (date < today || date >= firstOfMonth) continue;
+          const ovAmount = expOvMap.get(`${e.id}-${curY}-${curM}`);
+          const amount = ovAmount !== undefined ? ovAmount : e.amount;
+          if (amount === 0) continue;
+          initialBalance -= amount;
+        }
+        for (const i of residualIncomes) {
+          if (!monthMatches(i.startDate, i.endDate, i.frequency, curY, curM)) continue;
+          const day = Math.min(Math.max(i.expectedDay || 1, 1), lastDayOfCur);
+          const date = `${curY}-${pad2(curM)}-${pad2(day)}`;
+          if (date < today || date >= firstOfMonth) continue;
+          const ovAmount = incOvMap.get(`${i.id}-${curY}-${curM}`);
+          const amount = ovAmount !== undefined ? ovAmount : i.amount;
+          if (amount === 0) continue;
+          initialBalance += amount;
+        }
+        curM++;
+        if (curM > 12) { curM = 1; curY++; }
+      }
+
+      // Rate PDR non pagate nel range [today, firstOfMonth)
+      const residualInstallments = await db
+        .select({
+          amount: paymentPlanInstallments.amount,
+          isPaid: paymentPlanInstallments.isPaid,
+        })
+        .from(paymentPlanInstallments)
+        .leftJoin(paymentPlans, eq(paymentPlanInstallments.paymentPlanId, paymentPlans.id))
+        .where(
+          and(
+            gte(paymentPlanInstallments.dueDate, today),
+            lt(paymentPlanInstallments.dueDate, firstOfMonth),
+            isNull(paymentPlans.deletedAt),
+            eq(paymentPlans.isActive, true),
+          ),
+        );
+      for (const r of residualInstallments) {
+        if (r.isPaid) continue; // se pagata c'è già la transaction in pastTxSum
+        initialBalance -= r.amount;
+      }
+    }
 
     // ───── 2. Programmati: expected_expenses attivi nel mese ─────
     const allExpenses = await db

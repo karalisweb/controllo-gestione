@@ -326,7 +326,7 @@ export function TransactionEditableRow({
 
   return (
     <>
-    <TableRow className={rowClass}>
+    <TableRow className={rowClass} data-today={isToday ? "true" : undefined}>
       <TableCell className={isChild ? "pl-6" : ""}>
         <div className="flex items-center gap-1">
           {isChild && <CornerDownRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
