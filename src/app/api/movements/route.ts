@@ -31,6 +31,10 @@ import { and, eq, isNull, lte, gte, or, lt, sql, inArray } from "drizzle-orm";
  * + saldo finale previsto a fine mese.
  */
 
+interface SplitDetail {
+  iva: number; alessio: number; daniela: number; agency: number;
+}
+
 interface MovementRow {
   id: string;
   date: string; // YYYY-MM-DD
@@ -48,8 +52,11 @@ interface MovementRow {
   costCenterId?: number | null;
   revenueCenterId?: number | null;
   isSplit?: boolean; // true se la transaction è già stata splittata
-  isTransfer?: boolean; // true se è una riga figlia di split (IVA/Alessio/Daniela)
+  isTransfer?: boolean; // true = vecchia riga figlia di split (modello v2.3.28-32, 3 righe)
   linkedTransactionId?: number | null; // FK alla transaction "padre" se è una riga split
+  notes?: string | null;
+  // Spaccato espandibile per la riga "[SPLIT-TOTAL]" (modello attuale, 1 sola riga)
+  splitDetail?: SplitDetail | null;
   // Per rate PDR: id del piano (per "Segna pagata")
   paymentPlanId?: number | null;
 }
@@ -309,6 +316,7 @@ export async function GET(request: NextRequest) {
         isSplit: transactions.isSplit,
         isTransfer: transactions.isTransfer,
         linkedTransactionId: transactions.linkedTransactionId,
+        notes: transactions.notes,
         contactName: contacts.name,
       })
       .from(transactions)
@@ -321,10 +329,45 @@ export async function GET(request: NextRequest) {
         ),
       );
 
+    // Carica incomeSplits del mese mappati per transactionId padre (per popolare splitDetail
+    // sulle righe "[SPLIT-TOTAL]" e per il box Valori).
+    const monthSplitsRaw = await db
+      .select({
+        transactionId: incomeSplits.transactionId,
+        vatAmount: incomeSplits.vatAmount,
+        alessioAmount: incomeSplits.alessioAmount,
+        danielaAmount: incomeSplits.danielaAmount,
+        agencyAmount: incomeSplits.agencyAmount,
+      })
+      .from(incomeSplits)
+      .innerJoin(transactions, eq(incomeSplits.transactionId, transactions.id))
+      .where(
+        and(
+          gte(transactions.date, firstOfMonth),
+          lte(transactions.date, lastOfMonth),
+          isNull(transactions.deletedAt),
+        ),
+      );
+    const splitByParentId = new Map<number, SplitDetail>();
+    for (const s of monthSplitsRaw) {
+      if (s.transactionId == null) continue;
+      splitByParentId.set(s.transactionId, {
+        iva: s.vatAmount,
+        alessio: s.alessioAmount,
+        daniela: s.danielaAmount,
+        agency: s.agencyAmount,
+      });
+    }
+
     const txRows: MovementRow[] = monthTxs.map((t) => {
       const center = t.amount >= 0
         ? (t.revenueCenterId ? revCenterById.get(t.revenueCenterId) : null)
         : (t.costCenterId ? costCenterById.get(t.costCenterId) : null);
+      // splitDetail popolato solo per la riga "[SPLIT-TOTAL]" (modello attuale, 1 riga)
+      const isSplitTotal = !!(t.linkedTransactionId && t.notes?.startsWith("[SPLIT-TOTAL]"));
+      const splitDetail = isSplitTotal && t.linkedTransactionId
+        ? splitByParentId.get(t.linkedTransactionId) ?? null
+        : null;
       return {
         id: `tx-${t.id}`,
         date: t.date,
@@ -342,6 +385,8 @@ export async function GET(request: NextRequest) {
         isSplit: t.isSplit ?? false,
         isTransfer: t.isTransfer ?? false,
         linkedTransactionId: t.linkedTransactionId ?? null,
+        notes: t.notes ?? null,
+        splitDetail,
       };
     });
 
@@ -371,11 +416,15 @@ export async function GET(request: NextRequest) {
     const finalBalance = running;
 
     // ───── 8. Aggregati del mese (per i 3 box header) ─────
-    // Esclusi isTransfer=true (sono split, non valori operativi).
+    // Esclusi:
+    //   - isTransfer=true (vecchie 3 righe split modello v2.3.28-32)
+    //   - linkedTransactionId NOT NULL (riga "[SPLIT-TOTAL]" nuova: è giroconto soci+IVA,
+    //     non spesa operativa; lo spaccato vive nel box "Valori da split")
     const incomeByCenterMap = new Map<string, number>();
     const expenseByCenterMap = new Map<string, number>();
     for (const t of monthTxs) {
       if (t.isTransfer) continue;
+      if (t.linkedTransactionId) continue;
       if (t.amount > 0) {
         const name = t.revenueCenterId ? (revCenterById.get(t.revenueCenterId) || "Senza centro") : "Senza centro";
         incomeByCenterMap.set(name, (incomeByCenterMap.get(name) || 0) + t.amount);
@@ -392,23 +441,7 @@ export async function GET(request: NextRequest) {
       .sort((a, b) => b.amount - a.amount);
 
     // Valori dagli incomeSplits del mese (Guadagno = agency, IVA, Alessio, Daniela)
-    const monthSplitsRaw = await db
-      .select({
-        vatAmount: incomeSplits.vatAmount,
-        alessioAmount: incomeSplits.alessioAmount,
-        danielaAmount: incomeSplits.danielaAmount,
-        agencyAmount: incomeSplits.agencyAmount,
-        txDate: transactions.date,
-      })
-      .from(incomeSplits)
-      .innerJoin(transactions, eq(incomeSplits.transactionId, transactions.id))
-      .where(
-        and(
-          gte(transactions.date, firstOfMonth),
-          lte(transactions.date, lastOfMonth),
-          isNull(transactions.deletedAt),
-        ),
-      );
+    // Riusa monthSplitsRaw già caricato sopra per popolare splitDetail.
     const values = monthSplitsRaw.reduce(
       (acc, s) => {
         acc.iva += s.vatAmount;

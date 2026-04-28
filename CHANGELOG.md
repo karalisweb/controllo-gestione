@@ -7,6 +7,20 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.37] - 2026-04-28
+
+### Modificato
+- feat(split): 1 riga totale 'Bonifico soci+IVA' + spaccato espandibile
+
+---
+
+## [2.3.36] - 2026-04-28
+
+### Modificato
+- feat(split): 1 riga totale 'Bonifico soci+IVA' che incide sul saldo + spaccato espandibile
+
+---
+
 ## [2.3.35] - 2026-04-28
 
 ### Modificato

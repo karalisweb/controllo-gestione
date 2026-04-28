@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { incomeSplits, transactions, contacts, costCenters } from "@/lib/db/schema";
+import { incomeSplits, transactions, costCenters } from "@/lib/db/schema";
 import { and, eq, isNull } from "drizzle-orm";
 import { calculateSplit } from "@/lib/utils/splits";
 import { getSplitConfig } from "@/lib/utils/settings-server";
@@ -23,34 +23,6 @@ async function ensureCostCenterByName(name: string): Promise<number> {
   return Array.isArray(created) ? created[0].id : 0;
 }
 
-/**
- * Trova o crea un contatto fornitore per nome. Se esiste già senza costCenterId
- * lo lascia com'è (rispetto della scelta utente).
- */
-async function ensureSupplierByName(name: string, defaultCostCenterId: number): Promise<number> {
-  const existing = await db
-    .select({ id: contacts.id })
-    .from(contacts)
-    .where(
-      and(
-        eq(contacts.name, name),
-        eq(contacts.type, "supplier"),
-        isNull(contacts.deletedAt),
-      ),
-    )
-    .limit(1);
-  if (existing.length > 0) return existing[0].id;
-  const created = await db
-    .insert(contacts)
-    .values({
-      name,
-      type: "supplier",
-      costCenterId: defaultCostCenterId,
-      isActive: true,
-    })
-    .returning();
-  return Array.isArray(created) ? created[0].id : 0;
-}
 
 // GET - Recupera tutte le ripartizioni o filtra per transazione
 export async function GET(request: NextRequest) {
@@ -129,67 +101,36 @@ export async function POST(request: NextRequest) {
     vatAmount: customAmounts.vatAmount,
   } : baseSplit;
 
-  // Pre-crea (o recupera) centri di costo IVA/Soci e i 3 contatti supplier.
-  // Filosofia: ogni riga split deve nascere già "tracciata" con contatto + centro,
-  // così non serve passare da /riconcilia per categorizzarle.
-  const ivaCenterId = await ensureCostCenterByName("IVA");
+  // Pre-crea (o recupera) il centro di costo "Soci" per categorizzare la riga totale
+  // (cosmetico: il box "Uscite per centro" esclude comunque le righe con linkedTransactionId).
   const sociCenterId = await ensureCostCenterByName("Soci");
-  const ivaContactId = await ensureSupplierByName("IVA", ivaCenterId);
-  const alessioContactId = await ensureSupplierByName("Alessio", sociCenterId);
-  const danielaContactId = await ensureSupplierByName("Daniela", sociCenterId);
 
-  // Crea 3 transazioni separate (IVA, Alessio, Daniela) collegate all'incasso originale.
-  // Descrizione: "{prefisso} {descrizione incasso}" (es. "IVA Cambarau marzo")
+  // Modello: 1 SOLA riga totale "Bonifico soci+IVA <incasso>" che corrisponde al
+  // bonifico bancario reale. Lo spaccato (IVA/Alessio/Daniela) vive in `incomeSplits`
+  // ed è esposto come dettaglio espandibile nella UI di /movimenti.
   const incassoDesc = (transaction.description || "").trim();
-  const splitItems = [
-    {
-      descPrefix: "IVA",
-      amount: split.vatAmount,
-      marker: "VAT",
-      contactId: ivaContactId,
-      costCenterId: ivaCenterId,
-    },
-    {
-      descPrefix: "Quota Alessio",
-      amount: split.alessioAmount,
-      marker: "ALESSIO",
-      contactId: alessioContactId,
-      costCenterId: sociCenterId,
-    },
-    {
-      descPrefix: "Quota Daniela",
-      amount: split.danielaAmount,
-      marker: "DANIELA",
-      contactId: danielaContactId,
-      costCenterId: sociCenterId,
-    },
-  ];
+  const transferAmount = split.vatAmount + split.alessioAmount + split.danielaAmount;
+  const totalDescription = incassoDesc
+    ? `Bonifico soci+IVA ${incassoDesc}`
+    : "Bonifico soci+IVA";
 
-  const createdTransfers: unknown[] = [];
   const ts = Date.now();
-  for (const item of splitItems) {
-    if (item.amount <= 0) continue; // niente riga zero
-    const description = incassoDesc
-      ? `${item.descPrefix} ${incassoDesc}`
-      : item.descPrefix;
-    const r = await db
-      .insert(transactions)
-      .values({
-        externalId: `SPLIT-${item.marker}-${transactionId}-${ts}`,
-        date: transaction.date,
-        description,
-        amount: -item.amount, // uscita
-        contactId: item.contactId,
-        costCenterId: item.costCenterId,
-        isTransfer: true, // giroconto, non spesa operativa
-        linkedTransactionId: transactionId,
-        notes: `[SPLIT-${item.marker}] da incasso #${transactionId}`,
-        isSplit: false,
-        isVerified: true,
-      })
-      .returning();
-    if (Array.isArray(r) && r[0]) createdTransfers.push(r[0]);
-  }
+  const transferResult = await db
+    .insert(transactions)
+    .values({
+      externalId: `SPLIT-TOTAL-${transactionId}-${ts}`,
+      date: transaction.date,
+      description: totalDescription,
+      amount: -transferAmount,
+      costCenterId: sociCenterId,
+      isTransfer: false, // INCIDE sul saldo (corrisponde al bonifico bancario reale)
+      linkedTransactionId: transactionId,
+      notes: `[SPLIT-TOTAL] da incasso #${transactionId}`,
+      isSplit: false,
+      isVerified: true,
+    })
+    .returning();
+  const createdTransfers = Array.isArray(transferResult) ? [transferResult[0]] : [];
 
   // Salva la ripartizione
   const insertResult = await db

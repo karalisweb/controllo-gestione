@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { TableCell, TableRow } from "@/components/ui/table";
-import { CheckCircle2, CornerDownRight, Loader2, Split as SplitIcon, Trash2 } from "lucide-react";
+import { CheckCircle2, ChevronDown, ChevronRight, CornerDownRight, Loader2, Split as SplitIcon, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { centsToEuros, eurosToCents, formatCurrency } from "@/lib/utils/currency";
 import { formatDate } from "@/lib/utils/dates";
@@ -18,6 +18,10 @@ interface Contact {
 interface Center {
   id: number;
   name: string;
+}
+
+export interface SplitDetailData {
+  iva: number; alessio: number; daniela: number; agency: number;
 }
 
 export interface MovementRowData {
@@ -36,6 +40,7 @@ export interface MovementRowData {
   isSplit?: boolean;
   isTransfer?: boolean;
   linkedTransactionId?: number | null;
+  splitDetail?: SplitDetailData | null;
 }
 
 type EditField = "date" | "description" | "contact" | "center" | "amount" | null;
@@ -64,6 +69,7 @@ export function TransactionEditableRow({
   const [editingField, setEditingField] = useState<EditField>(null);
   const [localValue, setLocalValue] = useState("");
   const [saving, setSaving] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const isExpense = row.amount < 0;
@@ -311,17 +317,29 @@ export function TransactionEditableRow({
     }
   };
 
-  const isChild = !!row.isTransfer;
+  const isChild = !!row.isTransfer; // vecchio modello (3 righe). Manteniamo retro-compat.
+  const hasSplitDetail = !!row.splitDetail; // nuovo modello (1 riga + spaccato)
   const rowClass = [
     isToday ? "bg-primary/5" : "",
     isChild ? "bg-muted/20" : "",
   ].filter(Boolean).join(" ");
 
   return (
+    <>
     <TableRow className={rowClass}>
       <TableCell className={isChild ? "pl-6" : ""}>
         <div className="flex items-center gap-1">
           {isChild && <CornerDownRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
+          {hasSplitDetail && (
+            <button
+              type="button"
+              onClick={() => setExpanded((v) => !v)}
+              title="Espandi spaccato (IVA/Alessio/Daniela)"
+              className="p-0.5 rounded hover:bg-muted text-muted-foreground transition-colors"
+            >
+              {expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+            </button>
+          )}
           <CheckCircle2
             className={`h-4 w-4 shrink-0 ${isExpense ? "text-red-500" : "text-green-500"} ${isChild ? "opacity-60" : ""}`}
           />
@@ -515,5 +533,35 @@ export function TransactionEditableRow({
         {isChild ? <span className="text-muted-foreground/60">—</span> : formatCurrency(row.runningBalance)}
       </TableCell>
     </TableRow>
+
+    {/* Riga espansa: spaccato split (IVA/Alessio/Daniela) — solo info, non incide su saldo */}
+    {hasSplitDetail && expanded && row.splitDetail && (
+      <TableRow className="bg-muted/30">
+        <TableCell colSpan={8} className="py-2 px-4">
+          <div className="flex flex-wrap items-center gap-4 text-xs">
+            <span className="text-muted-foreground italic">Spaccato:</span>
+            <span className="flex items-center gap-1">
+              <CornerDownRight className="h-3 w-3 text-muted-foreground" />
+              <span className="text-muted-foreground">IVA</span>
+              <span className="font-mono text-red-500">-{formatCurrency(row.splitDetail.iva)}</span>
+            </span>
+            <span className="flex items-center gap-1">
+              <CornerDownRight className="h-3 w-3 text-muted-foreground" />
+              <span className="text-muted-foreground">Alessio</span>
+              <span className="font-mono text-red-500">-{formatCurrency(row.splitDetail.alessio)}</span>
+            </span>
+            <span className="flex items-center gap-1">
+              <CornerDownRight className="h-3 w-3 text-muted-foreground" />
+              <span className="text-muted-foreground">Daniela</span>
+              <span className="font-mono text-red-500">-{formatCurrency(row.splitDetail.daniela)}</span>
+            </span>
+            <span className="ml-auto text-muted-foreground italic">
+              Guadagno agenzia residuo: <span className="font-mono not-italic text-green-500">{formatCurrency(row.splitDetail.agency)}</span>
+            </span>
+          </div>
+        </TableCell>
+      </TableRow>
+    )}
+    </>
   );
 }
