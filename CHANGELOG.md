@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.31] - 2026-04-28
+
+### Modificato
+- feat(movimenti): elimina riga transaction + annulla split + salta previsto per mese
+
+---
+
 ## [2.3.30] - 2026-04-28
 
 ### Modificato

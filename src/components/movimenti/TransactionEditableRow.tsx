@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { TableCell, TableRow } from "@/components/ui/table";
-import { CheckCircle2, Loader2, Split as SplitIcon } from "lucide-react";
+import { CheckCircle2, Loader2, Split as SplitIcon, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { centsToEuros, eurosToCents, formatCurrency } from "@/lib/utils/currency";
 import { formatDate } from "@/lib/utils/dates";
@@ -241,6 +241,32 @@ export function TransactionEditableRow({
   const datalistCentersId = `centers-edit-${isExpense ? "exp" : "inc"}`;
 
   const canSplit = !isExpense && !row.isSplit && !row.isTransfer;
+
+  const handleDelete = async () => {
+    if (saving) return;
+    let msg = `Eliminare la riga "${row.description}"?`;
+    if (row.isSplit) {
+      msg += "\n\n⚠️ Questa è splittata: le 3 righe IVA/Alessio/Daniela resteranno (eliminale singolarmente se vuoi rimuoverle).";
+    } else if (row.isTransfer) {
+      msg += "\n\n(È una riga generata da split di un incasso. L'incasso padre resta.)";
+    }
+    if (!confirm(msg)) return;
+    setSaving(true);
+    try {
+      const r = await fetch(`/api/transactions/${row.sourceId}`, { method: "DELETE" });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${r.status}`);
+      }
+      toast.success("Riga eliminata");
+      onSaved();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Errore eliminazione");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSplit = async () => {
     if (saving) return;
     if (!confirm("Generare 3 righe (IVA, Quota Alessio, Quota Daniela) dall'incasso?")) return;
@@ -259,6 +285,27 @@ export function TransactionEditableRow({
       onSaved();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Errore split");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleUnsplit = async () => {
+    if (saving) return;
+    if (!confirm("Annullare lo split? Le 3 righe IVA/Alessio/Daniela verranno rimosse e l'incasso tornerà non splittato.")) return;
+    setSaving(true);
+    try {
+      const r = await fetch(`/api/splits?transactionId=${row.sourceId}`, {
+        method: "DELETE",
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${r.status}`);
+      }
+      toast.success("Split annullato");
+      onSaved();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Errore annullamento split");
     } finally {
       setSaving(false);
     }
@@ -284,15 +331,31 @@ export function TransactionEditableRow({
             </button>
           )}
           {row.isSplit && (
-            <Badge variant="outline" className="text-[10px] px-1 py-0 text-muted-foreground border-border" title="Già splittato in IVA/Alessio/Daniela">
-              splittato
-            </Badge>
+            <button
+              type="button"
+              onClick={handleUnsplit}
+              disabled={saving}
+              title="Annulla split (rimuove le 3 righe figlie)"
+              className="px-1.5 py-0.5 text-[10px] rounded bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 transition-colors disabled:opacity-50 flex items-center gap-0.5"
+            >
+              <SplitIcon className="h-2.5 w-2.5" />
+              Annulla split
+            </button>
           )}
           {row.isTransfer && (
             <Badge variant="outline" className="text-[10px] px-1 py-0 bg-muted text-muted-foreground border-border" title="Riga generata da split di un incasso">
               da split
             </Badge>
           )}
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={saving}
+            title="Elimina riga"
+            className="ml-auto p-1 rounded hover:bg-red-500/10 text-red-500/70 hover:text-red-500 transition-colors disabled:opacity-50"
+          >
+            <Trash2 className="h-3 w-3" />
+          </button>
         </div>
       </TableCell>
 

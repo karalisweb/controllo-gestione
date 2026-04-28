@@ -16,7 +16,7 @@ import { MobileHeader } from "@/components/MobileHeader";
 import { NewMovementForm } from "@/components/movimenti/NewMovementForm";
 import { TransactionEditableRow } from "@/components/movimenti/TransactionEditableRow";
 import { ConfirmExpectedDialog, type PreviewRow } from "@/components/movimenti/ConfirmExpectedDialog";
-import { ChevronLeft, ChevronRight, CalendarRange, CheckCircle2, Clock, CreditCard, ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarRange, CheckCircle2, Clock, CreditCard, ArrowDownToLine, ArrowUpFromLine, X } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils/currency";
 import { formatDate } from "@/lib/utils/dates";
@@ -127,6 +127,35 @@ export default function MovimentiPage() {
       categoryName: row.categoryName,
     });
     setConfirmDialogOpen(true);
+  };
+
+  const handleSkipExpected = async (row: MovementRow) => {
+    if (row.type !== "expected_expense" && row.type !== "expected_income") return;
+    if (!confirm(`Saltare "${row.description}" per questo mese? La riga sparirà dal ledger di ${row.date.slice(0, 7)}.`)) return;
+    try {
+      const [y, m] = row.date.split("-").map(Number);
+      const url = row.type === "expected_expense"
+        ? `/api/expected-expenses/${row.sourceId}/override`
+        : `/api/expected-incomes/${row.sourceId}/override`;
+      const r = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          year: y,
+          month: m,
+          amount: 0,
+          notes: "Saltato dall'utente in /movimenti",
+        }),
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${r.status}`);
+      }
+      toast.success("Saltato per questo mese");
+      fetchMovements(year, month);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Errore");
+    }
   };
 
   const handleMarkPaid = async (row: MovementRow) => {
@@ -399,15 +428,26 @@ export default function MovimentiPage() {
                           <div className="flex items-center gap-1">
                             <Icon className={`h-4 w-4 shrink-0 ${row.amount >= 0 ? "text-green-500" : "text-red-500"} ${row.status === "planned" ? "opacity-60" : ""}`} />
                             {isExpectedRow && (
-                              <button
-                                type="button"
-                                onClick={() => openConfirmDialog(row)}
-                                title="Conferma come movimento reale"
-                                className="px-1.5 py-0.5 text-[10px] rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors flex items-center gap-0.5"
-                              >
-                                <CheckCircle2 className="h-2.5 w-2.5" />
-                                Conferma
-                              </button>
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => openConfirmDialog(row)}
+                                  title="Conferma come movimento reale"
+                                  className="px-1.5 py-0.5 text-[10px] rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors flex items-center gap-0.5"
+                                >
+                                  <CheckCircle2 className="h-2.5 w-2.5" />
+                                  Conferma
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleSkipExpected(row)}
+                                  title="Salta per questo mese (la riga sparisce dal ledger)"
+                                  className="px-1.5 py-0.5 text-[10px] rounded bg-muted text-muted-foreground hover:bg-muted/70 transition-colors flex items-center gap-0.5"
+                                >
+                                  <X className="h-2.5 w-2.5" />
+                                  Salta
+                                </button>
+                              </>
                             )}
                             {isPdrPlanned && (
                               <button
