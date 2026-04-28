@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.30] - 2026-04-28
+
+### Modificato
+- feat(split): righe split IVA/Alessio/Daniela ora con descrizione contestuale + contatto + centro auto
+
+---
+
 ## [2.3.29] - 2026-04-28
 
 ### Modificato
