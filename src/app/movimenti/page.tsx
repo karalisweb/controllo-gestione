@@ -92,6 +92,8 @@ export default function MovimentiPage() {
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [confirmRow, setConfirmRow] = useState<PreviewRow | null>(null);
   const [markingPaid, setMarkingPaid] = useState<number | null>(null);
+  const [editingPdrDateId, setEditingPdrDateId] = useState<number | null>(null);
+  const [editingPdrDateValue, setEditingPdrDateValue] = useState("");
 
   // Carica liste anagrafica/centri una volta sola (per l'editing inline delle transactions)
   useEffect(() => {
@@ -152,6 +154,28 @@ export default function MovimentiPage() {
         throw new Error(err.error || `HTTP ${r.status}`);
       }
       toast.success("Saltato per questo mese");
+      fetchMovements(year, month);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Errore");
+    }
+  };
+
+  const commitPdrDate = async (row: MovementRow) => {
+    const newDate = editingPdrDateValue;
+    setEditingPdrDateId(null);
+    if (!row.paymentPlanId) return;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(newDate) || newDate === row.date) return;
+    try {
+      const r = await fetch(`/api/payment-plans/${row.paymentPlanId}/installments`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ installmentId: row.sourceId, dueDate: newDate }),
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${r.status}`);
+      }
+      toast.success("Data rata aggiornata");
       fetchMovements(year, month);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Errore");
@@ -467,7 +491,35 @@ export default function MovimentiPage() {
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="text-sm">{formatDate(row.date)}</TableCell>
+                        <TableCell className="text-sm">
+                          {isPdrPlanned ? (
+                            editingPdrDateId === row.sourceId ? (
+                              <input
+                                type="date"
+                                value={editingPdrDateValue}
+                                onChange={(e) => setEditingPdrDateValue(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") { e.preventDefault(); commitPdrDate(row); }
+                                  else if (e.key === "Escape") { e.preventDefault(); setEditingPdrDateId(null); }
+                                }}
+                                onBlur={() => commitPdrDate(row)}
+                                autoFocus
+                                className="h-7 px-1 text-xs rounded border border-primary/60 bg-background outline-none w-full"
+                              />
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => { setEditingPdrDateId(row.sourceId); setEditingPdrDateValue(row.date); }}
+                                title="Clicca per modificare la data scadenza (es. anticipo pagamento)"
+                                className="px-1 py-0.5 rounded hover:bg-muted/50 transition-colors text-left"
+                              >
+                                {formatDate(row.date)}
+                              </button>
+                            )
+                          ) : (
+                            formatDate(row.date)
+                          )}
+                        </TableCell>
                         <TableCell className="font-medium text-sm">{row.description}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">{row.contactName || "—"}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">{row.categoryName || "—"}</TableCell>

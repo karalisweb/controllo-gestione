@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.33] - 2026-04-28
+
+### Modificato
+- feat(movimenti): data rate PDR cliccabile per modifica scadenza (anticipi)
+
+---
+
 ## [2.3.32] - 2026-04-28
 
 ### Modificato
