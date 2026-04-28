@@ -28,6 +28,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { QuickEntry } from "@/components/dashboard/QuickEntry";
+import { SalesForecastTable } from "@/components/dashboard/SalesForecastTable";
 import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
 import { AnimatedNumber } from "@/components/ui/animated-number";
 
@@ -201,46 +202,119 @@ export default function Home() {
         initial="hidden"
         animate="visible"
       >
-        {/* ============ 1. HERO: VENDI ANCORA ============ */}
+        {/* ============ 1. PREVISIONALE 4 MESI ============ */}
         <motion.div variants={fadeInUp} transition={{ duration: 0.4 }}>
-        <Card className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border-amber-200 dark:border-amber-800">
-          <CardContent className="p-4 sm:p-6">
-            <div className="flex items-center gap-2 mb-2">
-              <Target className="h-5 w-5 text-amber-600" />
-              <span className="text-sm font-medium text-amber-700 dark:text-amber-400">
-                OBIETTIVO Q{data.quarterSales.quarter} {data.quarterSales.year}
-              </span>
-              <Badge variant="outline" className="ml-auto text-xs">
-                {data.quarterSales.daysRemaining} giorni rimasti
-              </Badge>
-            </div>
+          <SalesForecastTable />
+        </motion.div>
 
-            <div className="text-center py-4">
-              <div className="text-xs text-muted-foreground mb-1">Vendi ancora</div>
-              <div className="text-3xl sm:text-4xl font-bold font-mono text-amber-600 dark:text-amber-400">
-                <AnimatedNumber
-                  value={data.quarterSales.remainingToSell}
-                  duration={1000}
-                  formatter={formatCurrency}
-                />
+        {/* ============ 2. TREND 3 MESI ============ */}
+        <motion.div variants={fadeInUp} transition={{ duration: 0.4 }}>
+        <Card>
+          <CardHeader className="pb-2 px-4">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" />
+              Trend ultimi 3 mesi
+              {data.trend.length >= 2 && (
+                <span className="ml-auto">
+                  {data.trend[data.trend.length - 1].margin > data.trend[data.trend.length - 2].margin ? (
+                    <Badge variant="outline" className="text-green-600 border-green-600/30 text-xs">
+                      <TrendingUp className="h-3 w-3 mr-1" /> In miglioramento
+                    </Badge>
+                  ) : data.trend[data.trend.length - 1].margin < data.trend[data.trend.length - 2].margin ? (
+                    <Badge variant="outline" className="text-red-600 border-red-600/30 text-xs">
+                      <TrendingDown className="h-3 w-3 mr-1" /> In peggioramento
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-muted-foreground text-xs">Stabile</Badge>
+                  )}
+                </span>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            {data.trend.length > 0 && (
+              <div className="h-40">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart
+                    data={data.trend.map(m => ({
+                      name: formatMonth(m.month),
+                      entrate: m.income / 100,
+                      uscite: m.expenses / 100,
+                      margine: m.margin / 100,
+                    }))}
+                    margin={{ top: 5, right: 5, left: -20, bottom: 0 }}
+                  >
+                    <defs>
+                      <linearGradient id="colorEntrate" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id="colorUscite" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <XAxis
+                      dataKey="name"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: "#71717a", fontSize: 12 }}
+                    />
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: "#71717a", fontSize: 10 }}
+                      tickFormatter={(v: number) => `${(v / 1000).toFixed(0)}k`}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "#132032",
+                        border: "1px solid #2a2a35",
+                        borderRadius: "8px",
+                        fontSize: "12px",
+                        color: "#f5f5f7",
+                      }}
+                      formatter={(value: number | undefined) => [value != null ? `${value.toLocaleString("it-IT", { minimumFractionDigits: 2 })} €` : ""]}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="entrate"
+                      stroke="#22c55e"
+                      fillOpacity={1}
+                      fill="url(#colorEntrate)"
+                      strokeWidth={2}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="uscite"
+                      stroke="#ef4444"
+                      fillOpacity={1}
+                      fill="url(#colorUscite)"
+                      strokeWidth={2}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
               </div>
-            </div>
-
-            {/* Progress bar */}
-            <div className="mt-4">
-              <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                <span>Venduto {formatCurrency(data.quarterSales.salesAvailable)}</span>
-                <span>Target {formatCurrency(data.quarterSales.gap)}</span>
-              </div>
-              <div className="h-3 bg-amber-200 dark:bg-amber-900 rounded-full overflow-hidden">
+            )}
+            {/* Margine per mese sotto il chart */}
+            <div className="grid grid-cols-3 gap-2 mt-3">
+              {data.trend.map((month, idx) => (
                 <div
-                  className="h-full bg-amber-500 transition-all rounded-full"
-                  style={{ width: `${data.quarterSales.progress}%` }}
-                />
-              </div>
-              <div className="text-center text-sm font-medium text-amber-600 mt-2">
-                {data.quarterSales.progress}% raggiunto
-              </div>
+                  key={`${month.month}-${month.year}`}
+                  className={`p-2 rounded-lg text-center ${
+                    idx === data.trend.length - 1 ? "bg-muted" : "bg-muted/50"
+                  }`}
+                >
+                  <div className="text-xs text-muted-foreground">
+                    {formatMonth(month.month)} {idx === data.trend.length - 1 && "(prev)"}
+                  </div>
+                  <div className={`font-mono text-sm font-bold ${
+                    month.margin >= 0 ? "text-green-600" : "text-red-600"
+                  }`}>
+                    {month.margin >= 0 ? "+" : ""}{formatCurrency(month.margin)}
+                  </div>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
@@ -297,54 +371,7 @@ export default function Home() {
           </Card>
         </motion.div>
 
-        {/* ============ 3. SOSTENIBILITÀ MESE ============ */}
-        <motion.div variants={fadeInUp} transition={{ duration: 0.4 }}>
-        <Card>
-          <CardHeader className="pb-2 px-4">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              {formatMonth(data.currentMonthSustainability.month)} {data.currentMonthSustainability.year} - Sostenibilità
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-4 pb-4">
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-sm">Entrate previste</span>
-                <span className="font-mono text-green-600">+{formatCurrency(data.currentMonthSustainability.income)}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm">Uscite operative</span>
-                <span className="font-mono text-red-600">-{formatCurrency(data.currentMonthSustainability.expenses)}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm">Rate PDR</span>
-                <span className="font-mono text-amber-600">-{formatCurrency(data.currentMonthSustainability.pdr)}</span>
-              </div>
-              <div className="border-t pt-2 mt-2">
-                <div className="flex justify-between items-center">
-                  <span className="font-medium">MARGINE PREVISTO</span>
-                  <span className={`font-mono font-bold text-lg ${
-                    data.currentMonthSustainability.margin >= 0 ? "text-green-600" : "text-red-600"
-                  }`}>
-                    {data.currentMonthSustainability.margin >= 0 ? "+" : ""}{formatCurrency(data.currentMonthSustainability.margin)}
-                    {data.currentMonthSustainability.margin < 0 && (
-                      <AlertTriangle className="inline h-4 w-4 ml-1" />
-                    )}
-                  </span>
-                </div>
-              </div>
-              <div className="text-xs text-muted-foreground flex items-center gap-1">
-                vs {formatMonth(data.currentMonthSustainability.prevMonth.month)}:
-                <span className={data.currentMonthSustainability.marginChange >= 0 ? "text-green-600" : "text-red-600"}>
-                  {data.currentMonthSustainability.marginChange >= 0 ? "+" : ""}{formatCurrency(data.currentMonthSustainability.marginChange)}
-                </span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        </motion.div>
-
-        {/* ============ 4. PROSSIMI 7GG + ULTIMI 7GG ============ */}
+        {/* ============ 3. PROSSIMI 7GG + ULTIMI 7GG ============ */}
         <motion.div variants={fadeInUp} transition={{ duration: 0.4 }} className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {/* Prossimi 7 giorni */}
           <Card>
@@ -476,87 +503,7 @@ export default function Home() {
           </Card>
         </motion.div>
 
-        {/* ============ 5. AZIONI RICHIESTE ============ */}
-        {hasActions && (
-          <motion.div variants={fadeInUp} transition={{ duration: 0.4 }}>
-          <Card className="border-amber-200 dark:border-amber-800">
-            <CardHeader className="pb-2 px-4">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-amber-500" />
-                Azioni Richieste
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="px-4 pb-4 space-y-3">
-              {/* Rate scadute */}
-              {data.actions.overdueInstallments.length > 0 && (
-                <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-red-500" />
-                      <span className="font-medium text-red-700 dark:text-red-400">
-                        {data.actions.overdueInstallments.length} rate PDR scadute
-                      </span>
-                    </div>
-                    <span className="font-mono font-bold text-red-600">
-                      {formatCurrency(data.actions.overdueTotal)}
-                    </span>
-                  </div>
-                  <div className="text-xs text-red-600 dark:text-red-400">
-                    {data.actions.overdueInstallments.slice(0, 3).map(i => i.creditorName).join(" • ")}
-                  </div>
-                  <Link href="/payment-plans">
-                    <Button size="sm" variant="outline" className="mt-2 h-9 text-xs border-red-300 text-red-600 hover:bg-red-100">
-                      Gestisci <ArrowRight className="h-3 w-3 ml-1" />
-                    </Button>
-                  </Link>
-                </div>
-              )}
-
-              {/* Fatture da emettere */}
-              {data.actions.invoicesToIssue.length > 0 && (
-                <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-amber-500" />
-                      <span className="font-medium text-amber-700 dark:text-amber-400">
-                        {data.actions.invoicesToIssue.length} fatture da emettere
-                      </span>
-                    </div>
-                    <span className="font-mono font-bold text-amber-600">
-                      {formatCurrency(data.actions.invoicesTotal)}
-                    </span>
-                  </div>
-                  <div className="text-xs text-amber-600 dark:text-amber-400">
-                    {data.actions.invoicesToIssue.slice(0, 3).map(i => i.clientName).join(" • ")}
-                  </div>
-                </div>
-              )}
-
-              {/* Incassi in ritardo */}
-              {data.actions.latePayments.length > 0 && (
-                <div className="p-3 rounded-lg bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <Receipt className="h-4 w-4 text-orange-500" />
-                      <span className="font-medium text-orange-700 dark:text-orange-400">
-                        {data.actions.latePayments.length} incassi in ritardo
-                      </span>
-                    </div>
-                    <span className="font-mono font-bold text-orange-600">
-                      {formatCurrency(data.actions.lateTotal)}
-                    </span>
-                  </div>
-                  <div className="text-xs text-orange-600 dark:text-orange-400">
-                    {data.actions.latePayments.slice(0, 3).map(i => i.clientName).join(" • ")}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-          </motion.div>
-        )}
-
-        {/* ============ 6. PIANI DI RIENTRO ============ */}
+        {/* ============ 4. PIANI DI RIENTRO ============ */}
         {data.pdr.plans.length > 0 && (
           <motion.div variants={fadeInUp} transition={{ duration: 0.4 }}>
           <Card>
@@ -621,119 +568,6 @@ export default function Home() {
           </Card>
           </motion.div>
         )}
-
-        {/* ============ 7. TREND ============ */}
-        <motion.div variants={fadeInUp} transition={{ duration: 0.4 }}>
-        <Card>
-          <CardHeader className="pb-2 px-4">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
-              Trend ultimi 3 mesi
-              {data.trend.length >= 2 && (
-                <span className="ml-auto">
-                  {data.trend[data.trend.length - 1].margin > data.trend[data.trend.length - 2].margin ? (
-                    <Badge variant="outline" className="text-green-600 border-green-600/30 text-xs">
-                      <TrendingUp className="h-3 w-3 mr-1" /> In miglioramento
-                    </Badge>
-                  ) : data.trend[data.trend.length - 1].margin < data.trend[data.trend.length - 2].margin ? (
-                    <Badge variant="outline" className="text-red-600 border-red-600/30 text-xs">
-                      <TrendingDown className="h-3 w-3 mr-1" /> In peggioramento
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="text-muted-foreground text-xs">Stabile</Badge>
-                  )}
-                </span>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-4 pb-4">
-            {data.trend.length > 0 && (
-              <div className="h-40">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart
-                    data={data.trend.map(m => ({
-                      name: formatMonth(m.month),
-                      entrate: m.income / 100,
-                      uscite: m.expenses / 100,
-                      margine: m.margin / 100,
-                    }))}
-                    margin={{ top: 5, right: 5, left: -20, bottom: 0 }}
-                  >
-                    <defs>
-                      <linearGradient id="colorEntrate" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
-                      </linearGradient>
-                      <linearGradient id="colorUscite" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <XAxis
-                      dataKey="name"
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: "#71717a", fontSize: 12 }}
-                    />
-                    <YAxis
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: "#71717a", fontSize: 10 }}
-                      tickFormatter={(v: number) => `${(v / 1000).toFixed(0)}k`}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "#132032",
-                        border: "1px solid #2a2a35",
-                        borderRadius: "8px",
-                        fontSize: "12px",
-                        color: "#f5f5f7",
-                      }}
-                      formatter={(value: number | undefined) => [value != null ? `${value.toLocaleString("it-IT", { minimumFractionDigits: 2 })} €` : ""]}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="entrate"
-                      stroke="#22c55e"
-                      fillOpacity={1}
-                      fill="url(#colorEntrate)"
-                      strokeWidth={2}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="uscite"
-                      stroke="#ef4444"
-                      fillOpacity={1}
-                      fill="url(#colorUscite)"
-                      strokeWidth={2}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-            {/* Margine per mese sotto il chart */}
-            <div className="grid grid-cols-3 gap-2 mt-3">
-              {data.trend.map((month, idx) => (
-                <div
-                  key={`${month.month}-${month.year}`}
-                  className={`p-2 rounded-lg text-center ${
-                    idx === data.trend.length - 1 ? "bg-muted" : "bg-muted/50"
-                  }`}
-                >
-                  <div className="text-xs text-muted-foreground">
-                    {formatMonth(month.month)} {idx === data.trend.length - 1 && "(prev)"}
-                  </div>
-                  <div className={`font-mono text-sm font-bold ${
-                    month.margin >= 0 ? "text-green-600" : "text-red-600"
-                  }`}>
-                    {month.margin >= 0 ? "+" : ""}{formatCurrency(month.margin)}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-        </motion.div>
 
         {/* Quick Links */}
         <motion.div variants={fadeInUp} transition={{ duration: 0.4 }} className="grid grid-cols-4 gap-2">

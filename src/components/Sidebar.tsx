@@ -54,12 +54,6 @@ const navSections = [
       { href: "/centri-ricavo", label: "Centri di Ricavo", icon: TrendingUp },
     ],
   },
-  {
-    title: "AZIONI",
-    items: [
-      { href: "/transactions?new=1", label: "Nuovo Movimento", icon: PlusCircle },
-    ],
-  },
 ];
 
 /* ═══════════════════════════════════════════

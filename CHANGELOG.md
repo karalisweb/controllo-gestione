@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.46] - 2026-04-28
+
+### Modificato
+- feat(dashboard): tabella previsionale 4 mesi con obiettivo modificabile + Trend 2a card + rimosse Sostenibilità/Azioni richieste/Nuovo Movimento
+
+---
+
 ## [2.3.45] - 2026-04-28
 
 ### Modificato
