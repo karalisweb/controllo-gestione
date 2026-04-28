@@ -13,7 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { MobileHeader } from "@/components/MobileHeader";
-import { Wand2, CheckCircle2, Loader2, Eye, EyeOff } from "lucide-react";
+import { Wand2, CheckCircle2, Loader2, Eye, EyeOff, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils/currency";
 import { formatDate } from "@/lib/utils/dates";
@@ -372,6 +372,26 @@ export default function RiconciliaPage() {
                   {filterButton("with_match", "Con match", data.withMatch)}
                   {filterButton("without_match", "Senza match", data.withoutMatch)}
                   <div className="flex-1" />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const hasPending = Object.values(choices).some((c) => c.selected);
+                      if (hasPending) {
+                        const ok = confirm(
+                          "Hai delle righe selezionate non ancora applicate. Aggiornare i suggerimenti perderà le scelte non salvate. Procedere?",
+                        );
+                        if (!ok) return;
+                      }
+                      fetchData();
+                    }}
+                    disabled={loading}
+                    className="h-8 text-xs"
+                    title="Ricalcola i suggerimenti dal server (utile dopo aver creato nuovi contatti in anagrafica)"
+                  >
+                    <RefreshCw className={`h-3 w-3 mr-1 ${loading ? "animate-spin" : ""}`} />
+                    Aggiorna match
+                  </Button>
                   <Button
                     variant="outline"
                     size="sm"

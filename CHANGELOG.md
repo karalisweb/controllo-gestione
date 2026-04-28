@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.26] - 2026-04-28
+
+### Modificato
+- feat(riconcilia): bottone 'Aggiorna match' per ricalcolare suggerimenti senza ricaricare la pagina
+
+---
+
 ## [2.3.25] - 2026-04-28
 
 ### Modificato
