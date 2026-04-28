@@ -46,6 +46,9 @@ interface MovementRow {
   contactName?: string | null;
   costCenterId?: number | null;
   revenueCenterId?: number | null;
+  isSplit?: boolean; // true se la transaction è già stata splittata
+  isTransfer?: boolean; // true se è una riga figlia di split (IVA/Alessio/Daniela)
+  linkedTransactionId?: number | null; // FK alla transaction "padre" se è una riga split
 }
 
 // Calcola se il mese (1-12) di un dato anno è "coperto" da una expected_expense/income
@@ -296,6 +299,9 @@ export async function GET(request: NextRequest) {
         contactId: transactions.contactId,
         costCenterId: transactions.costCenterId,
         revenueCenterId: transactions.revenueCenterId,
+        isSplit: transactions.isSplit,
+        isTransfer: transactions.isTransfer,
+        linkedTransactionId: transactions.linkedTransactionId,
         contactName: contacts.name,
       })
       .from(transactions)
@@ -326,6 +332,9 @@ export async function GET(request: NextRequest) {
         contactName: t.contactName || null,
         costCenterId: t.costCenterId,
         revenueCenterId: t.revenueCenterId,
+        isSplit: t.isSplit ?? false,
+        isTransfer: t.isTransfer ?? false,
+        linkedTransactionId: t.linkedTransactionId ?? null,
       };
     });
 

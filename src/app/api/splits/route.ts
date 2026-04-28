@@ -82,27 +82,35 @@ export async function POST(request: NextRequest) {
     vatAmount: customAmounts.vatAmount,
   } : baseSplit;
 
-  // Calcola importo totale bonifico: Alessio + Daniela + IVA
-  const transferAmount = split.alessioAmount + split.danielaAmount + split.vatAmount;
+  // Crea 3 transazioni separate (IVA, Alessio, Daniela) collegate all'incasso originale.
+  // Filosofia: lo split nel ledger Movimenti deve apparire come 3 righe distinte sotto l'incasso,
+  // come nel foglio Excel storico.
+  const splitItems = [
+    { name: "IVA", amount: split.vatAmount, marker: "VAT" },
+    { name: "Quota Alessio", amount: split.alessioAmount, marker: "ALESSIO" },
+    { name: "Quota Daniela", amount: split.danielaAmount, marker: "DANIELA" },
+  ];
 
-  // Crea la transazione di uscita per il bonifico soci + IVA
-  // Usa solo la descrizione dell'incasso originale
-  const transferResult = await db
-    .insert(transactions)
-    .values({
-      externalId: `SPLIT-${transactionId}-${Date.now()}`,
-      date: transaction.date, // Stessa data dell'incasso
-      description: transaction.description || 'Bonifico soci + IVA',
-      amount: -transferAmount, // Negativo perché è un'uscita
-      isTransfer: true, // Marca come giroconto, non spesa operativa
-      linkedTransactionId: transactionId, // Collega all'incasso originale
-      notes: `[RIPARTIZIONE] Alessio: ${split.alessioAmount}, Daniela: ${split.danielaAmount}, IVA: ${split.vatAmount}`,
-      isSplit: false,
-      isVerified: true,
-    })
-    .returning();
-
-  const transferTx = Array.isArray(transferResult) ? transferResult[0] : null;
+  const createdTransfers: unknown[] = [];
+  const ts = Date.now();
+  for (const item of splitItems) {
+    if (item.amount <= 0) continue; // niente riga zero
+    const r = await db
+      .insert(transactions)
+      .values({
+        externalId: `SPLIT-${item.marker}-${transactionId}-${ts}`,
+        date: transaction.date,
+        description: item.name,
+        amount: -item.amount, // uscita
+        isTransfer: true, // giroconto, non spesa operativa
+        linkedTransactionId: transactionId,
+        notes: `[SPLIT-${item.marker}] da incasso #${transactionId}`,
+        isSplit: false,
+        isVerified: true,
+      })
+      .returning();
+    if (Array.isArray(r) && r[0]) createdTransfers.push(r[0]);
+  }
 
   // Salva la ripartizione
   const insertResult = await db
@@ -128,10 +136,12 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({
     split: newSplit,
-    transfer: transferTx,
+    transfers: createdTransfers,
     summary: {
       incasso: split.grossAmount,
-      bonificoSoci: transferAmount,
+      iva: split.vatAmount,
+      alessio: split.alessioAmount,
+      daniela: split.danielaAmount,
       disponibileAgenzia: split.agencyAmount,
     }
   }, { status: 201 });
@@ -150,6 +160,12 @@ export async function DELETE(request: NextRequest) {
   }
 
   const txId = parseInt(transactionId);
+
+  // Soft-delete delle 3 transazioni figlie (linkedTransactionId = txId, isTransfer=true)
+  await db
+    .update(transactions)
+    .set({ deletedAt: new Date() })
+    .where(eq(transactions.linkedTransactionId, txId));
 
   // Elimina la ripartizione
   await db

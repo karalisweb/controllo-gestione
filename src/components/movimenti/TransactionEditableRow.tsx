@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { TableCell, TableRow } from "@/components/ui/table";
-import { CheckCircle2, Loader2 } from "lucide-react";
+import { CheckCircle2, Loader2, Split as SplitIcon } from "lucide-react";
 import { toast } from "sonner";
 import { centsToEuros, eurosToCents, formatCurrency } from "@/lib/utils/currency";
 import { formatDate } from "@/lib/utils/dates";
@@ -33,6 +33,9 @@ export interface MovementRowData {
   contactName?: string | null;
   costCenterId?: number | null;
   revenueCenterId?: number | null;
+  isSplit?: boolean;
+  isTransfer?: boolean;
+  linkedTransactionId?: number | null;
 }
 
 type EditField = "date" | "description" | "contact" | "center" | "amount" | null;
@@ -237,12 +240,60 @@ export function TransactionEditableRow({
   const datalistContactsId = `contacts-edit-${isExpense ? "exp" : "inc"}`;
   const datalistCentersId = `centers-edit-${isExpense ? "exp" : "inc"}`;
 
+  const canSplit = !isExpense && !row.isSplit && !row.isTransfer;
+  const handleSplit = async () => {
+    if (saving) return;
+    if (!confirm("Generare 3 righe (IVA, Quota Alessio, Quota Daniela) dall'incasso?")) return;
+    setSaving(true);
+    try {
+      const r = await fetch("/api/splits", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transactionId: row.sourceId }),
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${r.status}`);
+      }
+      toast.success("Split generato — 3 righe create");
+      onSaved();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Errore split");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <TableRow className={isToday ? "bg-primary/5" : ""}>
       <TableCell>
-        <CheckCircle2
-          className={`h-4 w-4 ${isExpense ? "text-red-500" : "text-green-500"}`}
-        />
+        <div className="flex items-center gap-1">
+          <CheckCircle2
+            className={`h-4 w-4 shrink-0 ${isExpense ? "text-red-500" : "text-green-500"}`}
+          />
+          {canSplit && (
+            <button
+              type="button"
+              onClick={handleSplit}
+              disabled={saving}
+              title="Split: genera 3 righe (IVA, Quota Alessio, Quota Daniela)"
+              className="px-1.5 py-0.5 text-[10px] rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors disabled:opacity-50 flex items-center gap-0.5"
+            >
+              <SplitIcon className="h-2.5 w-2.5" />
+              Split
+            </button>
+          )}
+          {row.isSplit && (
+            <Badge variant="outline" className="text-[10px] px-1 py-0 text-muted-foreground border-border" title="Già splittato in IVA/Alessio/Daniela">
+              splittato
+            </Badge>
+          )}
+          {row.isTransfer && (
+            <Badge variant="outline" className="text-[10px] px-1 py-0 bg-muted text-muted-foreground border-border" title="Riga generata da split di un incasso">
+              da split
+            </Badge>
+          )}
+        </div>
       </TableCell>
 
       {/* Data */}

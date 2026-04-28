@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.28] - 2026-04-28
+
+### Modificato
+- feat(movimenti): bottone Split su incasso genera 3 righe (IVA/Alessio/Daniela)
+
+---
+
 ## [2.3.27] - 2026-04-28
 
 ### Modificato
