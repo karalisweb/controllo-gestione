@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.29] - 2026-04-28
+
+### Modificato
+- feat(movimenti): passo 4b - Conferma previsto (dialog) + Segna pagata rate PDR
+
+---
+
 ## [2.3.28] - 2026-04-28
 
 ### Modificato

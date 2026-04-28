@@ -15,7 +15,9 @@ import {
 import { MobileHeader } from "@/components/MobileHeader";
 import { NewMovementForm } from "@/components/movimenti/NewMovementForm";
 import { TransactionEditableRow } from "@/components/movimenti/TransactionEditableRow";
+import { ConfirmExpectedDialog, type PreviewRow } from "@/components/movimenti/ConfirmExpectedDialog";
 import { ChevronLeft, ChevronRight, CalendarRange, CheckCircle2, Clock, CreditCard, ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
+import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils/currency";
 import { formatDate } from "@/lib/utils/dates";
 
@@ -34,6 +36,10 @@ interface MovementRow {
   contactName?: string | null;
   costCenterId?: number | null;
   revenueCenterId?: number | null;
+  isSplit?: boolean;
+  isTransfer?: boolean;
+  linkedTransactionId?: number | null;
+  paymentPlanId?: number | null;
 }
 
 interface Contact {
@@ -83,6 +89,9 @@ export default function MovimentiPage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [costCenters, setCostCenters] = useState<Center[]>([]);
   const [revenueCenters, setRevenueCenters] = useState<Center[]>([]);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [confirmRow, setConfirmRow] = useState<PreviewRow | null>(null);
+  const [markingPaid, setMarkingPaid] = useState<number | null>(null);
 
   // Carica liste anagrafica/centri una volta sola (per l'editing inline delle transactions)
   useEffect(() => {
@@ -106,6 +115,67 @@ export default function MovimentiPage() {
     if (type === "expense") setCostCenters((prev) => [...prev, c]);
     else setRevenueCenters((prev) => [...prev, c]);
   }, []);
+
+  const openConfirmDialog = (row: MovementRow) => {
+    if (row.type !== "expected_expense" && row.type !== "expected_income") return;
+    setConfirmRow({
+      type: row.type,
+      sourceId: row.sourceId,
+      date: row.date,
+      description: row.description,
+      amount: row.amount,
+      categoryName: row.categoryName,
+    });
+    setConfirmDialogOpen(true);
+  };
+
+  const handleMarkPaid = async (row: MovementRow) => {
+    if (row.type !== "pdr_installment" || !row.paymentPlanId || markingPaid === row.sourceId) return;
+    if (!confirm(`Segnare la rata "${row.description}" come pagata oggi?`)) return;
+    setMarkingPaid(row.sourceId);
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      // 1. Crea transaction reale
+      const txRes = await fetch("/api/transactions/manual", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          date: today,
+          description: row.description,
+          amount: row.amount, // già negativo
+          notes: `[PDR-installment-${row.sourceId}]`,
+        }),
+      });
+      if (!txRes.ok) {
+        const err = await txRes.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${txRes.status}`);
+      }
+      const txJson = await txRes.json();
+      const txId = txJson?.transaction?.id ?? null;
+
+      // 2. Segna rata pagata + linka transaction
+      const ipRes = await fetch(`/api/payment-plans/${row.paymentPlanId}/installments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          installmentId: row.sourceId,
+          paidDate: today,
+          transactionId: txId,
+        }),
+      });
+      if (!ipRes.ok) {
+        const err = await ipRes.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${ipRes.status}`);
+      }
+
+      toast.success("Rata segnata come pagata");
+      fetchMovements(year, month);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Errore");
+    } finally {
+      setMarkingPaid(null);
+    }
+  };
 
   const fetchMovements = useCallback(async (y: number, m: number) => {
     try {
@@ -321,10 +391,37 @@ export default function MovimentiPage() {
                       );
                     }
                     const Icon = TYPE_ICONS[row.type];
+                    const isExpectedRow = row.type === "expected_expense" || row.type === "expected_income";
+                    const isPdrPlanned = row.type === "pdr_installment" && row.status === "planned";
                     return (
                       <TableRow key={row.id} className={isToday ? "bg-primary/5" : ""}>
                         <TableCell>
-                          <Icon className={`h-4 w-4 ${row.amount >= 0 ? "text-green-500" : "text-red-500"} ${row.status === "planned" ? "opacity-60" : ""}`} />
+                          <div className="flex items-center gap-1">
+                            <Icon className={`h-4 w-4 shrink-0 ${row.amount >= 0 ? "text-green-500" : "text-red-500"} ${row.status === "planned" ? "opacity-60" : ""}`} />
+                            {isExpectedRow && (
+                              <button
+                                type="button"
+                                onClick={() => openConfirmDialog(row)}
+                                title="Conferma come movimento reale"
+                                className="px-1.5 py-0.5 text-[10px] rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors flex items-center gap-0.5"
+                              >
+                                <CheckCircle2 className="h-2.5 w-2.5" />
+                                Conferma
+                              </button>
+                            )}
+                            {isPdrPlanned && (
+                              <button
+                                type="button"
+                                onClick={() => handleMarkPaid(row)}
+                                disabled={markingPaid === row.sourceId}
+                                title="Segna questa rata come pagata oggi"
+                                className="px-1.5 py-0.5 text-[10px] rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors flex items-center gap-0.5 disabled:opacity-50"
+                              >
+                                <CheckCircle2 className="h-2.5 w-2.5" />
+                                {markingPaid === row.sourceId ? "..." : "Segna pagata"}
+                              </button>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className="text-sm">{formatDate(row.date)}</TableCell>
                         <TableCell className="font-medium text-sm">{row.description}</TableCell>
@@ -380,6 +477,18 @@ export default function MovimentiPage() {
           </Card>
         )}
       </div>
+
+      <ConfirmExpectedDialog
+        open={confirmDialogOpen}
+        onOpenChange={setConfirmDialogOpen}
+        row={confirmRow}
+        contacts={contacts}
+        costCenters={costCenters}
+        revenueCenters={revenueCenters}
+        onConfirmed={() => fetchMovements(year, month)}
+        onContactCreated={handleContactCreated}
+        onCenterCreated={handleCenterCreated}
+      />
     </div>
   );
 }
