@@ -1,0 +1,397 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { TableCell, TableRow } from "@/components/ui/table";
+import { CheckCircle2, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { centsToEuros, eurosToCents, formatCurrency } from "@/lib/utils/currency";
+import { formatDate } from "@/lib/utils/dates";
+
+interface Contact {
+  id: number;
+  name: string;
+  type: "client" | "supplier" | "ex_supplier" | "other";
+  costCenterId?: number | null;
+  revenueCenterId?: number | null;
+}
+interface Center {
+  id: number;
+  name: string;
+}
+
+export interface MovementRowData {
+  id: string;
+  sourceId: number;
+  date: string;
+  description: string;
+  amount: number;
+  runningBalance: number;
+  status: "planned" | "realized";
+  categoryName?: string | null;
+  contactId?: number | null;
+  contactName?: string | null;
+  costCenterId?: number | null;
+  revenueCenterId?: number | null;
+}
+
+type EditField = "date" | "description" | "contact" | "center" | "amount" | null;
+
+interface Props {
+  row: MovementRowData;
+  isToday: boolean;
+  contacts: Contact[];
+  costCenters: Center[];
+  revenueCenters: Center[];
+  onSaved: () => void;
+  onContactCreated: (contact: Contact) => void;
+  onCenterCreated: (center: Center, type: "expense" | "income") => void;
+}
+
+export function TransactionEditableRow({
+  row,
+  isToday,
+  contacts,
+  costCenters,
+  revenueCenters,
+  onSaved,
+  onContactCreated,
+  onCenterCreated,
+}: Props) {
+  const [editingField, setEditingField] = useState<EditField>(null);
+  const [localValue, setLocalValue] = useState("");
+  const [saving, setSaving] = useState(false);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  const isExpense = row.amount < 0;
+  const contactCandidates = isExpense
+    ? contacts.filter((c) => c.type === "supplier" || c.type === "ex_supplier")
+    : contacts.filter((c) => c.type === "client");
+  const centerCandidates = isExpense ? costCenters : revenueCenters;
+  const currentCenterName = row.categoryName || "";
+
+  useEffect(() => {
+    if (editingField && inputRef.current) {
+      inputRef.current.focus();
+      if (inputRef.current.type !== "date") {
+        inputRef.current.select();
+      }
+    }
+  }, [editingField]);
+
+  const startEdit = (field: NonNullable<EditField>, initial: string) => {
+    if (saving) return;
+    setLocalValue(initial);
+    setEditingField(field);
+  };
+
+  const cancel = () => {
+    setEditingField(null);
+    setLocalValue("");
+  };
+
+  const handleKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      commit();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      cancel();
+    }
+  };
+
+  const ensureContactId = async (name: string): Promise<number | null> => {
+    const trimmed = name.trim();
+    if (!trimmed) return null;
+    const existing = contactCandidates.find(
+      (c) => c.name.toLowerCase() === trimmed.toLowerCase(),
+    );
+    if (existing) return existing.id;
+    const expectedType = isExpense ? "supplier" : "client";
+    const r = await fetch("/api/contacts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: trimmed, type: expectedType }),
+    });
+    if (r.ok) {
+      const created = await r.json();
+      onContactCreated({ ...created, type: expectedType });
+      return created.id;
+    } else if (r.status === 409) {
+      const data = await r.json().catch(() => ({}));
+      return data?.existingId ?? null;
+    }
+    throw new Error(`Errore creazione contatto: HTTP ${r.status}`);
+  };
+
+  const ensureCenterId = async (name: string): Promise<number | null> => {
+    const trimmed = name.trim();
+    if (!trimmed) return null;
+    const existing = centerCandidates.find(
+      (c) => c.name.toLowerCase() === trimmed.toLowerCase(),
+    );
+    if (existing) return existing.id;
+    const url = isExpense ? "/api/cost-centers" : "/api/revenue-centers";
+    const r = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: trimmed }),
+    });
+    if (!r.ok) throw new Error(`Errore creazione centro: HTTP ${r.status}`);
+    const created = await r.json();
+    onCenterCreated({ id: created.id, name: trimmed }, isExpense ? "expense" : "income");
+    return created.id;
+  };
+
+  const commit = async () => {
+    if (saving) return;
+    const field = editingField;
+    if (!field) return;
+    setSaving(true);
+    try {
+      const payload: Record<string, unknown> = {};
+      if (field === "date") {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(localValue) || localValue === row.date) {
+          cancel();
+          setSaving(false);
+          return;
+        }
+        payload.date = localValue;
+      } else if (field === "description") {
+        if (localValue === row.description) {
+          cancel();
+          setSaving(false);
+          return;
+        }
+        payload.description = localValue;
+      } else if (field === "contact") {
+        const id = await ensureContactId(localValue);
+        if (id === row.contactId) {
+          cancel();
+          setSaving(false);
+          return;
+        }
+        payload.contactId = id;
+      } else if (field === "center") {
+        const id = await ensureCenterId(localValue);
+        const currentId = isExpense ? row.costCenterId : row.revenueCenterId;
+        if (id === currentId) {
+          cancel();
+          setSaving(false);
+          return;
+        }
+        if (isExpense) payload.costCenterId = id;
+        else payload.revenueCenterId = id;
+      } else if (field === "amount") {
+        const parsed = parseFloat(localValue.replace(",", "."));
+        if (!Number.isFinite(parsed) || parsed <= 0) {
+          cancel();
+          setSaving(false);
+          return;
+        }
+        const newCents = eurosToCents(parsed) * (isExpense ? -1 : 1);
+        if (newCents === row.amount) {
+          cancel();
+          setSaving(false);
+          return;
+        }
+        payload.amount = newCents;
+      }
+
+      if (Object.keys(payload).length === 0) {
+        cancel();
+        setSaving(false);
+        return;
+      }
+
+      const res = await fetch(`/api/transactions/${row.sourceId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${res.status}`);
+      }
+      toast.success("Salvato");
+      onSaved();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Errore salvataggio");
+    } finally {
+      setSaving(false);
+      setEditingField(null);
+    }
+  };
+
+  const cellButton = (label: string, onClick: () => void, extraClass = "") => (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={saving}
+      className={`px-1 py-0.5 rounded hover:bg-muted/50 transition-colors disabled:opacity-50 ${extraClass}`}
+    >
+      {label}
+    </button>
+  );
+
+  const datalistContactsId = `contacts-edit-${isExpense ? "exp" : "inc"}`;
+  const datalistCentersId = `centers-edit-${isExpense ? "exp" : "inc"}`;
+
+  return (
+    <TableRow className={isToday ? "bg-primary/5" : ""}>
+      <TableCell>
+        <CheckCircle2
+          className={`h-4 w-4 ${isExpense ? "text-red-500" : "text-green-500"}`}
+        />
+      </TableCell>
+
+      {/* Data */}
+      <TableCell className="text-sm">
+        {editingField === "date" ? (
+          <input
+            ref={inputRef}
+            type="date"
+            value={localValue}
+            onChange={(e) => setLocalValue(e.target.value)}
+            onKeyDown={handleKey}
+            onBlur={commit}
+            disabled={saving}
+            className="h-7 px-1 text-xs rounded border border-primary/60 bg-background outline-none w-full"
+          />
+        ) : (
+          cellButton(formatDate(row.date), () => startEdit("date", row.date), "text-left")
+        )}
+      </TableCell>
+
+      {/* Descrizione */}
+      <TableCell className="font-medium text-sm">
+        {editingField === "description" ? (
+          <input
+            ref={inputRef}
+            type="text"
+            value={localValue}
+            onChange={(e) => setLocalValue(e.target.value)}
+            onKeyDown={handleKey}
+            onBlur={commit}
+            disabled={saving}
+            className="h-7 px-1 text-xs rounded border border-primary/60 bg-background outline-none w-full"
+          />
+        ) : (
+          cellButton(
+            row.description,
+            () => startEdit("description", row.description),
+            "text-left w-full block truncate",
+          )
+        )}
+      </TableCell>
+
+      {/* Contatto */}
+      <TableCell className="text-sm text-muted-foreground">
+        {editingField === "contact" ? (
+          <>
+            <input
+              ref={inputRef}
+              type="text"
+              list={datalistContactsId}
+              value={localValue}
+              onChange={(e) => setLocalValue(e.target.value)}
+              onKeyDown={handleKey}
+              onBlur={commit}
+              disabled={saving}
+              placeholder={isExpense ? "Fornitore" : "Cliente"}
+              className="h-7 px-1 text-xs rounded border border-primary/60 bg-background outline-none w-full"
+            />
+            <datalist id={datalistContactsId}>
+              {contactCandidates.map((c) => (
+                <option key={c.id} value={c.name} />
+              ))}
+            </datalist>
+          </>
+        ) : (
+          cellButton(
+            row.contactName || "—",
+            () => startEdit("contact", row.contactName || ""),
+            "text-left w-full block truncate",
+          )
+        )}
+      </TableCell>
+
+      {/* Centro (Categoria) */}
+      <TableCell className="text-sm text-muted-foreground">
+        {editingField === "center" ? (
+          <>
+            <input
+              ref={inputRef}
+              type="text"
+              list={datalistCentersId}
+              value={localValue}
+              onChange={(e) => setLocalValue(e.target.value)}
+              onKeyDown={handleKey}
+              onBlur={commit}
+              disabled={saving}
+              placeholder={isExpense ? "Centro costo" : "Centro ricavo"}
+              className="h-7 px-1 text-xs rounded border border-primary/60 bg-background outline-none w-full"
+            />
+            <datalist id={datalistCentersId}>
+              {centerCandidates.map((c) => (
+                <option key={c.id} value={c.name} />
+              ))}
+            </datalist>
+          </>
+        ) : (
+          cellButton(
+            currentCenterName || "—",
+            () => startEdit("center", currentCenterName),
+            "text-left w-full block truncate",
+          )
+        )}
+      </TableCell>
+
+      {/* Stato (read-only) */}
+      <TableCell className="text-center">
+        <Badge
+          variant="outline"
+          className="text-xs px-1.5 py-0 bg-green-500/10 text-green-500 border-green-500/40"
+        >
+          <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" />
+          pagato
+        </Badge>
+      </TableCell>
+
+      {/* Importo */}
+      <TableCell
+        className={`text-right font-mono ${isExpense ? "text-red-500" : "text-green-500"}`}
+      >
+        {editingField === "amount" ? (
+          <input
+            ref={inputRef}
+            type="number"
+            step="0.01"
+            min="0"
+            value={localValue}
+            onChange={(e) => setLocalValue(e.target.value)}
+            onKeyDown={handleKey}
+            onBlur={commit}
+            disabled={saving}
+            className="h-7 px-1 text-xs rounded border border-primary/60 bg-background outline-none w-24 text-right font-mono"
+          />
+        ) : (
+          cellButton(
+            `${row.amount >= 0 ? "+" : ""}${formatCurrency(row.amount)}`,
+            () =>
+              startEdit("amount", centsToEuros(Math.abs(row.amount)).toFixed(2)),
+            "text-right font-mono w-full",
+          )
+        )}
+        {saving && <Loader2 className="inline h-3 w-3 animate-spin ml-1" />}
+      </TableCell>
+
+      {/* Saldo (read-only) */}
+      <TableCell
+        className={`text-right font-mono font-medium ${row.runningBalance >= 0 ? "text-foreground" : "text-red-500"}`}
+      >
+        {formatCurrency(row.runningBalance)}
+      </TableCell>
+    </TableRow>
+  );
+}

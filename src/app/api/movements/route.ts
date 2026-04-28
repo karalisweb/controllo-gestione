@@ -10,6 +10,7 @@ import {
   transactions,
   costCenters,
   revenueCenters,
+  contacts,
   settings,
 } from "@/lib/db/schema";
 import { and, eq, isNull, lte, gte, or, lt, sql, inArray } from "drizzle-orm";
@@ -38,8 +39,13 @@ interface MovementRow {
   type: "expected_expense" | "expected_income" | "pdr_installment" | "transaction";
   status: "planned" | "realized";
   sourceId: number;
-  categoryName?: string | null; // centro di costo o ricavo
+  categoryName?: string | null; // centro di costo o ricavo (display)
   isOverride?: boolean; // true se importo è override (per spese/incassi)
+  // Campi extra per editing inline (popolati solo per transactions)
+  contactId?: number | null;
+  contactName?: string | null;
+  costCenterId?: number | null;
+  revenueCenterId?: number | null;
 }
 
 // Calcola se il mese (1-12) di un dato anno è "coperto" da una expected_expense/income
@@ -282,8 +288,18 @@ export async function GET(request: NextRequest) {
 
     // ───── 5. Transactions reali del mese ─────
     const monthTxs = await db
-      .select()
+      .select({
+        id: transactions.id,
+        date: transactions.date,
+        description: transactions.description,
+        amount: transactions.amount,
+        contactId: transactions.contactId,
+        costCenterId: transactions.costCenterId,
+        revenueCenterId: transactions.revenueCenterId,
+        contactName: contacts.name,
+      })
       .from(transactions)
+      .leftJoin(contacts, eq(transactions.contactId, contacts.id))
       .where(
         and(
           isNull(transactions.deletedAt),
@@ -306,6 +322,10 @@ export async function GET(request: NextRequest) {
         status: "realized",
         sourceId: t.id,
         categoryName: center || null,
+        contactId: t.contactId,
+        contactName: t.contactName || null,
+        costCenterId: t.costCenterId,
+        revenueCenterId: t.revenueCenterId,
       };
     });
 

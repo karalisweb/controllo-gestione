@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.27] - 2026-04-28
+
+### Modificato
+- feat(movimenti): editing inline celle delle transactions + colonna Contatto in tabella
+
+---
+
 ## [2.3.26] - 2026-04-28
 
 ### Modificato

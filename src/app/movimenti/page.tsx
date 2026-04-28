@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/table";
 import { MobileHeader } from "@/components/MobileHeader";
 import { NewMovementForm } from "@/components/movimenti/NewMovementForm";
+import { TransactionEditableRow } from "@/components/movimenti/TransactionEditableRow";
 import { ChevronLeft, ChevronRight, CalendarRange, CheckCircle2, Clock, CreditCard, ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
 import { formatDate } from "@/lib/utils/dates";
@@ -29,7 +30,20 @@ interface MovementRow {
   sourceId: number;
   categoryName?: string | null;
   isOverride?: boolean;
+  contactId?: number | null;
+  contactName?: string | null;
+  costCenterId?: number | null;
+  revenueCenterId?: number | null;
 }
+
+interface Contact {
+  id: number;
+  name: string;
+  type: "client" | "supplier" | "ex_supplier" | "other";
+  costCenterId?: number | null;
+  revenueCenterId?: number | null;
+}
+interface Center { id: number; name: string }
 
 interface MovementsResponse {
   year: number;
@@ -66,6 +80,32 @@ export default function MovimentiPage() {
   const [data, setData] = useState<MovementsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [costCenters, setCostCenters] = useState<Center[]>([]);
+  const [revenueCenters, setRevenueCenters] = useState<Center[]>([]);
+
+  // Carica liste anagrafica/centri una volta sola (per l'editing inline delle transactions)
+  useEffect(() => {
+    Promise.all([
+      fetch("/api/contacts").then((r) => r.json()),
+      fetch("/api/cost-centers").then((r) => r.json()),
+      fetch("/api/revenue-centers").then((r) => r.json()),
+    ])
+      .then(([c, cc, rc]) => {
+        setContacts(Array.isArray(c) ? c : []);
+        setCostCenters(Array.isArray(cc) ? cc : []);
+        setRevenueCenters(Array.isArray(rc) ? rc : []);
+      })
+      .catch(() => {/* silently */});
+  }, []);
+
+  const handleContactCreated = useCallback((c: Contact) => {
+    setContacts((prev) => [...prev, c]);
+  }, []);
+  const handleCenterCreated = useCallback((c: Center, type: "expense" | "income") => {
+    if (type === "expense") setCostCenters((prev) => [...prev, c]);
+    else setRevenueCenters((prev) => [...prev, c]);
+  }, []);
 
   const fetchMovements = useCallback(async (y: number, m: number) => {
     try {
@@ -206,6 +246,9 @@ export default function MovimentiPage() {
                           <p className="font-medium text-sm truncate">{row.description}</p>
                           <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                             <span className="text-xs text-muted-foreground">{formatDate(row.date)}</span>
+                            {row.contactName && (
+                              <Badge variant="outline" className="text-xs px-1.5 py-0">{row.contactName}</Badge>
+                            )}
                             {row.categoryName && (
                               <Badge variant="outline" className="text-xs px-1.5 py-0">{row.categoryName}</Badge>
                             )}
@@ -242,7 +285,8 @@ export default function MovimentiPage() {
                     <TableHead className="w-[40px]"></TableHead>
                     <TableHead className="w-[110px]">Data</TableHead>
                     <TableHead>Descrizione</TableHead>
-                    <TableHead>Categoria</TableHead>
+                    <TableHead className="w-[160px]">Contatto</TableHead>
+                    <TableHead className="w-[160px]">Categoria</TableHead>
                     <TableHead className="text-center w-[110px]">Stato</TableHead>
                     <TableHead className="text-right w-[120px]">Importo</TableHead>
                     <TableHead className="text-right w-[140px]">Saldo</TableHead>
@@ -253,15 +297,30 @@ export default function MovimentiPage() {
                   <TableRow className="bg-muted/30">
                     <TableCell></TableCell>
                     <TableCell className="text-xs text-muted-foreground italic">{`${year}-${String(month).padStart(2, "0")}-01`}</TableCell>
-                    <TableCell colSpan={3} className="text-sm italic text-muted-foreground">Saldo a inizio mese</TableCell>
+                    <TableCell colSpan={4} className="text-sm italic text-muted-foreground">Saldo a inizio mese</TableCell>
                     <TableCell></TableCell>
                     <TableCell className={`text-right font-mono font-bold ${data.initialBalance >= 0 ? "text-foreground" : "text-red-500"}`}>
                       {formatCurrency(data.initialBalance)}
                     </TableCell>
                   </TableRow>
                   {data.rows.map((row) => {
-                    const Icon = TYPE_ICONS[row.type];
                     const isToday = row.date === todayStr;
+                    if (row.type === "transaction") {
+                      return (
+                        <TransactionEditableRow
+                          key={row.id}
+                          row={row}
+                          isToday={isToday}
+                          contacts={contacts}
+                          costCenters={costCenters}
+                          revenueCenters={revenueCenters}
+                          onSaved={() => fetchMovements(year, month)}
+                          onContactCreated={handleContactCreated}
+                          onCenterCreated={handleCenterCreated}
+                        />
+                      );
+                    }
+                    const Icon = TYPE_ICONS[row.type];
                     return (
                       <TableRow key={row.id} className={isToday ? "bg-primary/5" : ""}>
                         <TableCell>
@@ -269,6 +328,7 @@ export default function MovimentiPage() {
                         </TableCell>
                         <TableCell className="text-sm">{formatDate(row.date)}</TableCell>
                         <TableCell className="font-medium text-sm">{row.description}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{row.contactName || "—"}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">{row.categoryName || "—"}</TableCell>
                         <TableCell className="text-center">
                           {row.status === "planned" ? (
@@ -299,7 +359,7 @@ export default function MovimentiPage() {
                   <TableRow className="bg-muted/30 font-bold">
                     <TableCell></TableCell>
                     <TableCell className="text-xs text-muted-foreground italic">fine mese</TableCell>
-                    <TableCell colSpan={3} className="text-sm italic text-muted-foreground">Saldo finale previsto</TableCell>
+                    <TableCell colSpan={4} className="text-sm italic text-muted-foreground">Saldo finale previsto</TableCell>
                     <TableCell className={`text-right font-mono ${data.finalBalance - data.initialBalance >= 0 ? "text-green-500" : "text-red-500"}`}>
                       {data.finalBalance - data.initialBalance >= 0 ? "+" : ""}{formatCurrency(data.finalBalance - data.initialBalance)}
                     </TableCell>
