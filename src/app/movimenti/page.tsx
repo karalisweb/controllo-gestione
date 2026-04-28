@@ -16,7 +16,7 @@ import { MobileHeader } from "@/components/MobileHeader";
 import { NewMovementForm } from "@/components/movimenti/NewMovementForm";
 import { TransactionEditableRow } from "@/components/movimenti/TransactionEditableRow";
 import { ConfirmExpectedDialog, type PreviewRow } from "@/components/movimenti/ConfirmExpectedDialog";
-import { ChevronLeft, ChevronRight, CalendarRange, CheckCircle2, Clock, CreditCard, ArrowDownToLine, ArrowUpFromLine, X, CornerDownRight, Pencil } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, CalendarRange, CheckCircle2, Clock, CreditCard, ArrowDownToLine, ArrowUpFromLine, X, CornerDownRight, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils/currency";
 import { formatDate } from "@/lib/utils/dates";
@@ -110,6 +110,17 @@ export default function MovimentiPage() {
   const [markingPaid, setMarkingPaid] = useState<number | null>(null);
   const [editingPdrDateId, setEditingPdrDateId] = useState<number | null>(null);
   const [editingPdrDateValue, setEditingPdrDateValue] = useState("");
+  const [expandedBoxes, setExpandedBoxes] = useState<Set<string>>(new Set());
+
+  const toggleBox = (key: string) => {
+    setExpandedBoxes((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+  const isBoxExpanded = (key: string) => expandedBoxes.has(key);
 
   // Carica liste anagrafica/centri una volta sola (per l'editing inline delle transactions)
   useEffect(() => {
@@ -359,89 +370,122 @@ export default function MovimentiPage() {
           </div>
         )}
 
-        {/* 3 box aggregati (Excel-style header) */}
-        {data?.totals && (
+        {/* 3 box aggregati (Excel-style header) — collassati di default, click per espandere */}
+        {data?.totals && (() => {
+          const totalIncome = data.totals.incomeByCenter.reduce((s, i) => s + i.amount, 0);
+          const totalExpense = data.totals.expenseByCenter.reduce((s, i) => s + i.amount, 0);
+          const valuesEmpty = data.totals.values.iva === 0 && data.totals.values.alessio === 0 && data.totals.values.daniela === 0 && data.totals.values.guadagno === 0;
+          return (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 sm:gap-4">
             {/* INGRESSI per centro di ricavo */}
             <Card className="p-3 sm:p-4">
-              <p className="text-xs font-semibold text-green-500 mb-2 uppercase tracking-wide">
-                Ingressi per centro
-              </p>
-              {data.totals.incomeByCenter.length === 0 ? (
-                <p className="text-sm text-muted-foreground italic">Nessun incasso</p>
-              ) : (
-                <div className="space-y-1">
-                  {data.totals.incomeByCenter.map((it) => (
-                    <div key={it.name} className="flex justify-between text-sm">
-                      <span className="text-muted-foreground truncate mr-2">{it.name}</span>
-                      <span className="font-mono text-green-500">{formatCurrency(it.amount)}</span>
-                    </div>
-                  ))}
-                  <div className="flex justify-between text-sm font-semibold pt-1 border-t border-border">
-                    <span>Totale</span>
-                    <span className="font-mono text-green-500">
-                      {formatCurrency(data.totals.incomeByCenter.reduce((s, i) => s + i.amount, 0))}
-                    </span>
-                  </div>
+              <button
+                type="button"
+                onClick={() => toggleBox("income")}
+                className="w-full flex items-start justify-between gap-2 text-left"
+              >
+                <div className="flex-1">
+                  <p className="text-xs font-semibold text-green-500 mb-1 uppercase tracking-wide">
+                    Ingressi per centro
+                  </p>
+                  <p className="text-base sm:text-xl font-bold font-mono text-green-500">
+                    {formatCurrency(totalIncome)}
+                  </p>
+                </div>
+                {isBoxExpanded("income") ? <ChevronDown className="h-4 w-4 text-muted-foreground mt-1" /> : <ChevronRight className="h-4 w-4 text-muted-foreground mt-1" />}
+              </button>
+              {isBoxExpanded("income") && (
+                <div className="mt-2 pt-2 border-t border-border space-y-1">
+                  {data.totals.incomeByCenter.length === 0 ? (
+                    <p className="text-sm text-muted-foreground italic">Nessun incasso</p>
+                  ) : (
+                    data.totals.incomeByCenter.map((it) => (
+                      <div key={it.name} className="flex justify-between text-sm">
+                        <span className="text-muted-foreground truncate mr-2">{it.name}</span>
+                        <span className="font-mono text-green-500">{formatCurrency(it.amount)}</span>
+                      </div>
+                    ))
+                  )}
                 </div>
               )}
             </Card>
 
             {/* USCITE per centro di costo */}
             <Card className="p-3 sm:p-4">
-              <p className="text-xs font-semibold text-red-500 mb-2 uppercase tracking-wide">
-                Uscite per centro
-              </p>
-              {data.totals.expenseByCenter.length === 0 ? (
-                <p className="text-sm text-muted-foreground italic">Nessuna spesa</p>
-              ) : (
-                <div className="space-y-1">
-                  {data.totals.expenseByCenter.map((it) => (
-                    <div key={it.name} className="flex justify-between text-sm">
-                      <span className="text-muted-foreground truncate mr-2">{it.name}</span>
-                      <span className="font-mono text-red-500">-{formatCurrency(it.amount)}</span>
-                    </div>
-                  ))}
-                  <div className="flex justify-between text-sm font-semibold pt-1 border-t border-border">
-                    <span>Totale</span>
-                    <span className="font-mono text-red-500">
-                      -{formatCurrency(data.totals.expenseByCenter.reduce((s, i) => s + i.amount, 0))}
-                    </span>
-                  </div>
+              <button
+                type="button"
+                onClick={() => toggleBox("expense")}
+                className="w-full flex items-start justify-between gap-2 text-left"
+              >
+                <div className="flex-1">
+                  <p className="text-xs font-semibold text-red-500 mb-1 uppercase tracking-wide">
+                    Uscite per centro
+                  </p>
+                  <p className="text-base sm:text-xl font-bold font-mono text-red-500">
+                    -{formatCurrency(totalExpense)}
+                  </p>
+                </div>
+                {isBoxExpanded("expense") ? <ChevronDown className="h-4 w-4 text-muted-foreground mt-1" /> : <ChevronRight className="h-4 w-4 text-muted-foreground mt-1" />}
+              </button>
+              {isBoxExpanded("expense") && (
+                <div className="mt-2 pt-2 border-t border-border space-y-1">
+                  {data.totals.expenseByCenter.length === 0 ? (
+                    <p className="text-sm text-muted-foreground italic">Nessuna spesa</p>
+                  ) : (
+                    data.totals.expenseByCenter.map((it) => (
+                      <div key={it.name} className="flex justify-between text-sm">
+                        <span className="text-muted-foreground truncate mr-2">{it.name}</span>
+                        <span className="font-mono text-red-500">-{formatCurrency(it.amount)}</span>
+                      </div>
+                    ))
+                  )}
                 </div>
               )}
             </Card>
 
             {/* VALORI da split */}
             <Card className="p-3 sm:p-4">
-              <p className="text-xs font-semibold text-primary mb-2 uppercase tracking-wide">
-                Valori (da split)
-              </p>
-              {data.totals.values.iva === 0 && data.totals.values.alessio === 0 && data.totals.values.daniela === 0 && data.totals.values.guadagno === 0 ? (
-                <p className="text-sm text-muted-foreground italic">Nessuno split nel mese</p>
-              ) : (
-                <div className="space-y-1">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Guadagno agenzia</span>
-                    <span className="font-mono">{formatCurrency(data.totals.values.guadagno)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">IVA</span>
-                    <span className="font-mono">{formatCurrency(data.totals.values.iva)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Alessio</span>
-                    <span className="font-mono">{formatCurrency(data.totals.values.alessio)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Daniela</span>
-                    <span className="font-mono">{formatCurrency(data.totals.values.daniela)}</span>
-                  </div>
+              <button
+                type="button"
+                onClick={() => toggleBox("values")}
+                className="w-full flex items-start justify-between gap-2 text-left"
+              >
+                <div className="flex-1">
+                  <p className="text-xs font-semibold text-primary mb-1 uppercase tracking-wide">
+                    Guadagno agenzia (da split)
+                  </p>
+                  <p className="text-base sm:text-xl font-bold font-mono text-primary">
+                    {formatCurrency(data.totals.values.guadagno)}
+                  </p>
+                </div>
+                {isBoxExpanded("values") ? <ChevronDown className="h-4 w-4 text-muted-foreground mt-1" /> : <ChevronRight className="h-4 w-4 text-muted-foreground mt-1" />}
+              </button>
+              {isBoxExpanded("values") && (
+                <div className="mt-2 pt-2 border-t border-border space-y-1">
+                  {valuesEmpty ? (
+                    <p className="text-sm text-muted-foreground italic">Nessuno split nel mese</p>
+                  ) : (
+                    <>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">IVA</span>
+                        <span className="font-mono">{formatCurrency(data.totals.values.iva)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Alessio</span>
+                        <span className="font-mono">{formatCurrency(data.totals.values.alessio)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Daniela</span>
+                        <span className="font-mono">{formatCurrency(data.totals.values.daniela)}</span>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </Card>
           </div>
-        )}
+          );
+        })()}
         </div>{/* fine wrapper sticky */}
 
         {/* Stato */}

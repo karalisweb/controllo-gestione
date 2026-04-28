@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.41] - 2026-04-28
+
+### Modificato
+- feat(movimenti): 3 box aggregati collassati di default (totale visibile, click per espandere)
+
+---
+
 ## [2.3.40] - 2026-04-28
 
 ### Modificato
