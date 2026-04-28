@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.39] - 2026-04-28
+
+### Modificato
+- fix(movimenti): evita doppio conteggio rate PDR pagate e scadute nel saldo running
+
+---
+
 ## [2.3.38] - 2026-04-28
 
 ### Modificato

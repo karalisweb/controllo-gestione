@@ -519,12 +519,17 @@ export async function GET(request: NextRequest) {
     });
 
     // ───── 7. Calcola saldo running ─────
-    // Le righe split (isTransfer=true) NON incidono sul saldo: sono breakdown informativo
-    // dell'incasso padre (IVA/Alessio/Daniela), il vero impatto in cassa lo darà il
-    // bonifico bancario reale quando arriverà.
+    // Le righe ESCLUSE dal saldo:
+    //   - isTransfer=true (vecchie figlie split, breakdown informativo)
+    //   - rate PDR pagate (la realtà è già nelle transactions linkate, evita doppio conteggio)
+    //   - rate PDR scadute non pagate (date < today: coerenza con la regola "passato=solo realtà"
+    //     applicata ai previsti expected_*; il saldo iniziale del mese successivo non le include)
     let running = initialBalance;
     for (const row of all) {
-      if (!row.isTransfer) {
+      const isPdrPaid = row.type === "pdr_installment" && row.status === "realized";
+      const isPdrPastUnpaid = row.type === "pdr_installment" && row.status === "planned" && row.date < today;
+      const skipFromBalance = row.isTransfer || isPdrPaid || isPdrPastUnpaid;
+      if (!skipFromBalance) {
         running += row.amount;
       }
       row.runningBalance = running;
