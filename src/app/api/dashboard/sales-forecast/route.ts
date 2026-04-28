@@ -63,9 +63,11 @@ const MONTH_LABELS = [
 export async function GET(request: NextRequest) {
   try {
     const months = Math.max(1, Math.min(12, parseInt(request.nextUrl.searchParams.get("months") || "4", 10)));
+    const yearParam = request.nextUrl.searchParams.get("year");
+    const monthParam = request.nextUrl.searchParams.get("month");
     const today = new Date();
-    const startY = today.getFullYear();
-    const startM = today.getMonth() + 1;
+    const startY = yearParam ? parseInt(yearParam, 10) : today.getFullYear();
+    const startM = monthParam ? parseInt(monthParam, 10) : today.getMonth() + 1;
 
     // Calcola lista (year, month) per i prossimi N mesi
     const list: { year: number; month: number }[] = [];

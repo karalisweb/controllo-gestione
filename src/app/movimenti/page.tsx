@@ -115,6 +115,7 @@ export default function MovimentiPage() {
   const [markingPaid, setMarkingPaid] = useState<number | null>(null);
   const [editingPdrDateId, setEditingPdrDateId] = useState<number | null>(null);
   const [editingPdrDateValue, setEditingPdrDateValue] = useState("");
+  const [monthTarget, setMonthTarget] = useState<{ target: number; revenuePrev: number; gap: number } | null>(null);
   const [expandedBoxes, setExpandedBoxes] = useState<Set<string>>(new Set());
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
@@ -329,6 +330,18 @@ export default function MovimentiPage() {
     fetchMovements(year, month);
   }, [fetchMovements, year, month]);
 
+  // Fetch obiettivo + previsto + gap del mese visualizzato
+  useEffect(() => {
+    fetch(`/api/dashboard/sales-forecast?year=${year}&month=${month}&months=1`)
+      .then((r) => r.json())
+      .then((j) => {
+        const m = j?.months?.[0];
+        if (m) setMonthTarget({ target: m.target, revenuePrev: m.revenuePrev, gap: m.gap });
+        else setMonthTarget(null);
+      })
+      .catch(() => setMonthTarget(null));
+  }, [year, month]);
+
   const goPrev = () => {
     if (month === 1) { setYear(year - 1); setMonth(12); }
     else setMonth(month - 1);
@@ -392,9 +405,9 @@ export default function MovimentiPage() {
           </div>
         </div>
 
-        {/* Saldi iniziale, finale, disavanzo */}
+        {/* Saldi iniziale, finale, disavanzo, obiettivo */}
         {data && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
             <Card className="p-3 sm:p-4">
               <p className="text-xs text-muted-foreground mb-1">Saldo a inizio mese</p>
               <p className={`text-base sm:text-xl font-bold font-mono ${data.initialBalance >= 0 ? "text-foreground" : "text-red-500"}`}>
@@ -414,6 +427,21 @@ export default function MovimentiPage() {
               <p className={`text-base sm:text-xl font-bold font-mono ${data.finalBalance - data.initialBalance >= 0 ? "text-green-500" : "text-red-500"}`}>
                 {data.finalBalance - data.initialBalance >= 0 ? "+" : ""}{formatCurrency(data.finalBalance - data.initialBalance)}
               </p>
+            </Card>
+            <Card className={`p-3 sm:p-4 ${monthTarget && monthTarget.gap === 0 ? "border-green-500/40" : "border-amber-500/40"}`}>
+              <p className="text-xs text-muted-foreground mb-1">Obiettivo vendite</p>
+              {monthTarget ? (
+                <>
+                  <p className={`text-base sm:text-xl font-bold font-mono ${monthTarget.gap === 0 ? "text-green-500" : "text-amber-500"}`}>
+                    {monthTarget.gap === 0 ? "✓ Raggiunto" : `Gap ${formatCurrency(monthTarget.gap)}`}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5 font-mono">
+                    {formatCurrency(monthTarget.revenuePrev)} / {formatCurrency(monthTarget.target)}
+                  </p>
+                </>
+              ) : (
+                <p className="text-xs text-muted-foreground italic">Caricamento...</p>
+              )}
             </Card>
           </div>
         )}

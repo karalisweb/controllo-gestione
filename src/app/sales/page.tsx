@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SalesForm } from "@/components/sales/SalesForm";
+import { SalesForecastTable } from "@/components/dashboard/SalesForecastTable";
 import { formatCurrency } from "@/lib/utils/currency";
 import type { SalesOpportunity, MonthlyGap, YearGapSummary } from "@/types";
 
@@ -245,6 +246,9 @@ export default function SalesPage() {
         </div>
         <Button onClick={handleAddSale} className="w-full sm:w-auto">+ Nuovo</Button>
       </div>
+
+      {/* Previsionale 4 mesi (obiettivo modificabile + gap) */}
+      <SalesForecastTable />
 
       {/* Riepilogo Anno */}
       {yearSummary && (

@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.47] - 2026-04-29
+
+### Modificato
+- feat(sales+movimenti): box Obiettivo mese in /movimenti header + tabella previsionale in /sales
+
+---
+
 ## [2.3.46] - 2026-04-28
 
 ### Modificato
