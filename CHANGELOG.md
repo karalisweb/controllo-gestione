@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.40] - 2026-04-28
+
+### Modificato
+- feat(movimenti): icona matita su data PDR + 'Segna pagata' usa data rata (anticipi)
+
+---
+
 ## [2.3.39] - 2026-04-28
 
 ### Modificato

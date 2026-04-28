@@ -16,7 +16,7 @@ import { MobileHeader } from "@/components/MobileHeader";
 import { NewMovementForm } from "@/components/movimenti/NewMovementForm";
 import { TransactionEditableRow } from "@/components/movimenti/TransactionEditableRow";
 import { ConfirmExpectedDialog, type PreviewRow } from "@/components/movimenti/ConfirmExpectedDialog";
-import { ChevronLeft, ChevronRight, CalendarRange, CheckCircle2, Clock, CreditCard, ArrowDownToLine, ArrowUpFromLine, X, CornerDownRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarRange, CheckCircle2, Clock, CreditCard, ArrowDownToLine, ArrowUpFromLine, X, CornerDownRight, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils/currency";
 import { formatDate } from "@/lib/utils/dates";
@@ -200,16 +200,17 @@ export default function MovimentiPage() {
 
   const handleMarkPaid = async (row: MovementRow) => {
     if (row.type !== "pdr_installment" || !row.paymentPlanId || markingPaid === row.sourceId) return;
-    if (!confirm(`Segnare la rata "${row.description}" come pagata oggi?`)) return;
+    // Usa la data della rata (già modificata se l'utente l'ha anticipata via cella data inline).
+    const paidOn = row.date;
+    if (!confirm(`Segnare la rata "${row.description}" come pagata il ${formatDate(paidOn)}?`)) return;
     setMarkingPaid(row.sourceId);
     try {
-      const today = new Date().toISOString().slice(0, 10);
       // 1. Crea transaction reale
       const txRes = await fetch("/api/transactions/manual", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          date: today,
+          date: paidOn,
           description: row.description,
           amount: row.amount, // già negativo
           notes: `[PDR-installment-${row.sourceId}]`,
@@ -228,7 +229,7 @@ export default function MovimentiPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           installmentId: row.sourceId,
-          paidDate: today,
+          paidDate: paidOn,
           transactionId: txId,
         }),
       });
@@ -653,9 +654,10 @@ export default function MovimentiPage() {
                                 type="button"
                                 onClick={() => { setEditingPdrDateId(row.sourceId); setEditingPdrDateValue(row.date); }}
                                 title="Clicca per modificare la data scadenza (es. anticipo pagamento)"
-                                className="px-1 py-0.5 rounded hover:bg-muted/50 transition-colors text-left"
+                                className="px-1 py-0.5 rounded hover:bg-amber-500/10 transition-colors text-left flex items-center gap-1 text-amber-600 dark:text-amber-500"
                               >
                                 {formatDate(row.date)}
+                                <Pencil className="h-3 w-3 opacity-70" />
                               </button>
                             )
                           ) : (
