@@ -11,6 +11,7 @@ import {
   costCenters,
   revenueCenters,
   contacts,
+  incomeSplits,
   settings,
 } from "@/lib/db/schema";
 import { and, eq, isNull, lte, gte, or, lt, sql, inArray } from "drizzle-orm";
@@ -369,6 +370,56 @@ export async function GET(request: NextRequest) {
     }
     const finalBalance = running;
 
+    // ───── 8. Aggregati del mese (per i 3 box header) ─────
+    // Esclusi isTransfer=true (sono split, non valori operativi).
+    const incomeByCenterMap = new Map<string, number>();
+    const expenseByCenterMap = new Map<string, number>();
+    for (const t of monthTxs) {
+      if (t.isTransfer) continue;
+      if (t.amount > 0) {
+        const name = t.revenueCenterId ? (revCenterById.get(t.revenueCenterId) || "Senza centro") : "Senza centro";
+        incomeByCenterMap.set(name, (incomeByCenterMap.get(name) || 0) + t.amount);
+      } else if (t.amount < 0) {
+        const name = t.costCenterId ? (costCenterById.get(t.costCenterId) || "Senza centro") : "Senza centro";
+        expenseByCenterMap.set(name, (expenseByCenterMap.get(name) || 0) + Math.abs(t.amount));
+      }
+    }
+    const incomeByCenter = Array.from(incomeByCenterMap.entries())
+      .map(([name, amount]) => ({ name, amount }))
+      .sort((a, b) => b.amount - a.amount);
+    const expenseByCenter = Array.from(expenseByCenterMap.entries())
+      .map(([name, amount]) => ({ name, amount }))
+      .sort((a, b) => b.amount - a.amount);
+
+    // Valori dagli incomeSplits del mese (Guadagno = agency, IVA, Alessio, Daniela)
+    const monthSplitsRaw = await db
+      .select({
+        vatAmount: incomeSplits.vatAmount,
+        alessioAmount: incomeSplits.alessioAmount,
+        danielaAmount: incomeSplits.danielaAmount,
+        agencyAmount: incomeSplits.agencyAmount,
+        txDate: transactions.date,
+      })
+      .from(incomeSplits)
+      .innerJoin(transactions, eq(incomeSplits.transactionId, transactions.id))
+      .where(
+        and(
+          gte(transactions.date, firstOfMonth),
+          lte(transactions.date, lastOfMonth),
+          isNull(transactions.deletedAt),
+        ),
+      );
+    const values = monthSplitsRaw.reduce(
+      (acc, s) => {
+        acc.iva += s.vatAmount;
+        acc.alessio += s.alessioAmount;
+        acc.daniela += s.danielaAmount;
+        acc.guadagno += s.agencyAmount;
+        return acc;
+      },
+      { iva: 0, alessio: 0, daniela: 0, guadagno: 0 },
+    );
+
     return NextResponse.json({
       year,
       month,
@@ -376,6 +427,11 @@ export async function GET(request: NextRequest) {
       finalBalance,
       rowsCount: all.length,
       rows: all,
+      totals: {
+        incomeByCenter,
+        expenseByCenter,
+        values,
+      },
     });
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 });

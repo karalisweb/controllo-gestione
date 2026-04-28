@@ -51,6 +51,16 @@ interface Contact {
 }
 interface Center { id: number; name: string }
 
+interface AggregatedItem {
+  name: string;
+  amount: number;
+}
+interface AggregatedValues {
+  iva: number;
+  alessio: number;
+  daniela: number;
+  guadagno: number;
+}
 interface MovementsResponse {
   year: number;
   month: number;
@@ -58,6 +68,11 @@ interface MovementsResponse {
   finalBalance: number;
   rowsCount: number;
   rows: MovementRow[];
+  totals?: {
+    incomeByCenter: AggregatedItem[];
+    expenseByCenter: AggregatedItem[];
+    values: AggregatedValues;
+  };
 }
 
 const MONTH_LABELS = [
@@ -320,6 +335,90 @@ export default function MovimentiPage() {
                   {data.finalBalance - data.initialBalance >= 0 ? "+" : ""}{formatCurrency(data.finalBalance - data.initialBalance)}
                 </span>
               </p>
+            </Card>
+          </div>
+        )}
+
+        {/* 3 box aggregati (Excel-style header) */}
+        {data?.totals && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 sm:gap-4">
+            {/* INGRESSI per centro di ricavo */}
+            <Card className="p-3 sm:p-4">
+              <p className="text-xs font-semibold text-green-500 mb-2 uppercase tracking-wide">
+                Ingressi per centro
+              </p>
+              {data.totals.incomeByCenter.length === 0 ? (
+                <p className="text-sm text-muted-foreground italic">Nessun incasso</p>
+              ) : (
+                <div className="space-y-1">
+                  {data.totals.incomeByCenter.map((it) => (
+                    <div key={it.name} className="flex justify-between text-sm">
+                      <span className="text-muted-foreground truncate mr-2">{it.name}</span>
+                      <span className="font-mono text-green-500">{formatCurrency(it.amount)}</span>
+                    </div>
+                  ))}
+                  <div className="flex justify-between text-sm font-semibold pt-1 border-t border-border">
+                    <span>Totale</span>
+                    <span className="font-mono text-green-500">
+                      {formatCurrency(data.totals.incomeByCenter.reduce((s, i) => s + i.amount, 0))}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </Card>
+
+            {/* USCITE per centro di costo */}
+            <Card className="p-3 sm:p-4">
+              <p className="text-xs font-semibold text-red-500 mb-2 uppercase tracking-wide">
+                Uscite per centro
+              </p>
+              {data.totals.expenseByCenter.length === 0 ? (
+                <p className="text-sm text-muted-foreground italic">Nessuna spesa</p>
+              ) : (
+                <div className="space-y-1">
+                  {data.totals.expenseByCenter.map((it) => (
+                    <div key={it.name} className="flex justify-between text-sm">
+                      <span className="text-muted-foreground truncate mr-2">{it.name}</span>
+                      <span className="font-mono text-red-500">-{formatCurrency(it.amount)}</span>
+                    </div>
+                  ))}
+                  <div className="flex justify-between text-sm font-semibold pt-1 border-t border-border">
+                    <span>Totale</span>
+                    <span className="font-mono text-red-500">
+                      -{formatCurrency(data.totals.expenseByCenter.reduce((s, i) => s + i.amount, 0))}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </Card>
+
+            {/* VALORI da split */}
+            <Card className="p-3 sm:p-4">
+              <p className="text-xs font-semibold text-primary mb-2 uppercase tracking-wide">
+                Valori (da split)
+              </p>
+              {data.totals.values.iva === 0 && data.totals.values.alessio === 0 && data.totals.values.daniela === 0 && data.totals.values.guadagno === 0 ? (
+                <p className="text-sm text-muted-foreground italic">Nessuno split nel mese</p>
+              ) : (
+                <div className="space-y-1">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Guadagno agenzia</span>
+                    <span className="font-mono">{formatCurrency(data.totals.values.guadagno)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">IVA</span>
+                    <span className="font-mono">{formatCurrency(data.totals.values.iva)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Alessio</span>
+                    <span className="font-mono">{formatCurrency(data.totals.values.alessio)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Daniela</span>
+                    <span className="font-mono">{formatCurrency(data.totals.values.daniela)}</span>
+                  </div>
+                </div>
+              )}
             </Card>
           </div>
         )}

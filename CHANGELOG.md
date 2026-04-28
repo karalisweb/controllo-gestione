@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.34] - 2026-04-28
+
+### Modificato
+- feat(movimenti): 3 box aggregati Excel-style nell'header (Ingressi/Uscite per centro + Valori split)
+
+---
+
 ## [2.3.33] - 2026-04-28
 
 ### Modificato
