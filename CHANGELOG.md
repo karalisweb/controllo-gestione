@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.42] - 2026-04-28
+
+### Modificato
+- feat(movimenti): barra inserimento sticky insieme a header
+
+---
+
 ## [2.3.41] - 2026-04-28
 
 ### Modificato

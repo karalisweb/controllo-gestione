@@ -486,29 +486,10 @@ export default function MovimentiPage() {
           </div>
           );
         })()}
-        </div>{/* fine wrapper sticky */}
 
-        {/* Stato */}
-        {loading && (
-          <Card>
-            <CardContent className="p-8 text-center text-muted-foreground">
-              Caricamento movimenti...
-            </CardContent>
-          </Card>
-        )}
-
-        {error && (
-          <Card className="border-red-500/40">
-            <CardContent className="p-6 text-red-600">
-              <p className="font-medium mb-1">Errore</p>
-              <p className="text-sm">{error}</p>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Tabella movimenti + form inserimento in cima */}
+        {/* Barra di inserimento sticky (parte del wrapper header sticky) */}
         {!loading && data && (
-          <Card>
+          <Card className="overflow-hidden">
             <NewMovementForm
               onSaved={() => fetchMovements(year, month)}
               expectedRows={data.rows
@@ -533,7 +514,31 @@ export default function MovimentiPage() {
                 setConfirmDialogOpen(true);
               }}
             />
+          </Card>
+        )}
+        </div>{/* fine wrapper sticky */}
 
+        {/* Stato */}
+        {loading && (
+          <Card>
+            <CardContent className="p-8 text-center text-muted-foreground">
+              Caricamento movimenti...
+            </CardContent>
+          </Card>
+        )}
+
+        {error && (
+          <Card className="border-red-500/40">
+            <CardContent className="p-6 text-red-600">
+              <p className="font-medium mb-1">Errore</p>
+              <p className="text-sm">{error}</p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Tabella movimenti (form inserimento è sopra, sticky con l'header) */}
+        {!loading && data && (
+          <Card>
             {data.rows.length === 0 && (
               <CardContent className="p-8 text-center text-muted-foreground">
                 <p>Nessun movimento per {monthLabel}.</p>
