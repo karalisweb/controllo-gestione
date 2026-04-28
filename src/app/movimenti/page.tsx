@@ -193,6 +193,7 @@ export default function MovimentiPage() {
     if (!row.paymentPlanId) return;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(newDate) || newDate === row.date) return;
     try {
+      // 1. Aggiorna dueDate della rata
       const r = await fetch(`/api/payment-plans/${row.paymentPlanId}/installments`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -201,6 +202,18 @@ export default function MovimentiPage() {
       if (!r.ok) {
         const err = await r.json().catch(() => ({}));
         throw new Error(err.error || `HTTP ${r.status}`);
+      }
+      // 2. Se la rata è già pagata e c'è una transaction linkata, aggiorna anche la sua data
+      if (row.status === "realized" && row.linkedTransactionId) {
+        const txRes = await fetch(`/api/transactions/${row.linkedTransactionId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ date: newDate }),
+        });
+        if (!txRes.ok) {
+          // Non fatale: la rata è aggiornata, logghiamo
+          console.warn("Aggiornamento data transaction associata fallito");
+        }
       }
       toast.success("Data rata aggiornata");
       fetchMovements(year, month);
@@ -641,7 +654,8 @@ export default function MovimentiPage() {
                     }
                     const Icon = TYPE_ICONS[row.type];
                     const isExpectedRow = row.type === "expected_expense" || row.type === "expected_income";
-                    const isPdrPlanned = row.type === "pdr_installment" && row.status === "planned";
+                    const isPdr = row.type === "pdr_installment";
+                    const isPdrPlanned = isPdr && row.status === "planned";
                     return (
                       <TableRow key={row.id} className={isToday ? "bg-primary/5" : ""}>
                         <TableCell>
@@ -684,7 +698,7 @@ export default function MovimentiPage() {
                           </div>
                         </TableCell>
                         <TableCell className="text-sm">
-                          {isPdrPlanned ? (
+                          {isPdr ? (
                             editingPdrDateId === row.sourceId ? (
                               <input
                                 type="date"

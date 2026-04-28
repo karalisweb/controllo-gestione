@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.43] - 2026-04-28
+
+### Modificato
+- feat(movimenti): data rate PDR sempre cliccabile (anche pagate); aggiorna anche tx associata
+
+---
+
 ## [2.3.42] - 2026-04-28
 
 ### Modificato

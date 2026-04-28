@@ -392,6 +392,7 @@ export async function GET(request: NextRequest) {
         dueDate: paymentPlanInstallments.dueDate,
         amount: paymentPlanInstallments.amount,
         isPaid: paymentPlanInstallments.isPaid,
+        transactionId: paymentPlanInstallments.transactionId,
         creditorName: paymentPlans.creditorName,
         planId: paymentPlans.id,
       })
@@ -417,6 +418,7 @@ export async function GET(request: NextRequest) {
       sourceId: inst.id,
       categoryName: "Debiti",
       paymentPlanId: inst.planId ?? null,
+      linkedTransactionId: inst.transactionId ?? null,
     }));
 
     // ───── 5. Transactions reali del mese ─────
