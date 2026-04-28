@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowDownToLine, ArrowUpFromLine, Loader2, Plus } from "lucide-react";
+import { ArrowDownToLine, ArrowUpFromLine, Lightbulb, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
+import { formatCurrency } from "@/lib/utils/currency";
 
 interface Contact {
   id: number;
@@ -18,11 +19,22 @@ interface Center {
   name: string;
 }
 
-interface NewMovementFormProps {
-  onSaved: () => void;
+export interface ExpectedRowLite {
+  type: "expected_expense" | "expected_income";
+  sourceId: number;
+  date: string; // YYYY-MM-DD
+  description: string;
+  amount: number; // centesimi (negativo per uscita, positivo per entrata)
+  categoryName?: string | null;
 }
 
-export function NewMovementForm({ onSaved }: NewMovementFormProps) {
+interface NewMovementFormProps {
+  onSaved: () => void;
+  expectedRows?: ExpectedRowLite[];
+  onMatchSuggested?: (row: ExpectedRowLite) => void;
+}
+
+export function NewMovementForm({ onSaved, expectedRows, onMatchSuggested }: NewMovementFormProps) {
   const todayStr = new Date().toISOString().slice(0, 10);
 
   const [type, setType] = useState<"expense" | "income">("expense");
@@ -137,6 +149,38 @@ export function NewMovementForm({ onSaved }: NewMovementFormProps) {
 
   const todayStrNow = new Date().toISOString().slice(0, 10);
   const isFuture = date > todayStrNow;
+
+  // Match suggerito (modalità B): cerca tra i previsti del mese un candidato compatibile
+  // per type + importo (±5%) + (opzionale) nome contatto contenuto nella descrizione del previsto.
+  const suggestedMatch = useMemo<ExpectedRowLite | null>(() => {
+    if (!expectedRows || expectedRows.length === 0) return null;
+    if (isFuture) return null; // se è scadenza non ha senso suggerire
+    const amountNum = parseFloat(amount.replace(",", "."));
+    if (!Number.isFinite(amountNum) || amountNum <= 0) return null;
+    const expectedTypeKey = type === "expense" ? "expected_expense" : "expected_income";
+    const candidates = expectedRows.filter((r) => {
+      if (r.type !== expectedTypeKey) return false;
+      const rAmt = Math.abs(r.amount) / 100;
+      if (rAmt === 0) return false;
+      const ratio = Math.abs(rAmt - amountNum) / Math.max(rAmt, amountNum);
+      if (ratio > 0.05) return false;
+      return true;
+    });
+    if (candidates.length === 0) return null;
+    // Bonus se descrizione/contatto del form combacia con quella del previsto
+    const desc = description.trim().toLowerCase();
+    const contact = contactName.trim().toLowerCase();
+    candidates.sort((a, b) => {
+      const aDelta = Math.abs(Math.abs(a.amount) / 100 - amountNum);
+      const bDelta = Math.abs(Math.abs(b.amount) / 100 - amountNum);
+      const aMatch = (desc && a.description.toLowerCase().includes(desc)) || (contact && a.description.toLowerCase().includes(contact));
+      const bMatch = (desc && b.description.toLowerCase().includes(desc)) || (contact && b.description.toLowerCase().includes(contact));
+      if (aMatch && !bMatch) return -1;
+      if (!aMatch && bMatch) return 1;
+      return aDelta - bDelta;
+    });
+    return candidates[0];
+  }, [expectedRows, amount, type, description, contactName, isFuture]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -324,6 +368,24 @@ export function NewMovementForm({ onSaved }: NewMovementFormProps) {
           </>
         )}
       </Button>
+
+      {suggestedMatch && onMatchSuggested && (
+        <div className="basis-full mt-1 flex items-center gap-2 px-2 py-1.5 rounded-md border border-amber-500/40 bg-amber-500/10 text-xs">
+          <Lightbulb className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+          <span className="text-muted-foreground">
+            Forse stai confermando il previsto:{" "}
+            <span className="font-medium text-foreground">{suggestedMatch.description}</span>{" "}
+            del {suggestedMatch.date.slice(8, 10)}/{suggestedMatch.date.slice(5, 7)} ({formatCurrency(Math.abs(suggestedMatch.amount))})
+          </span>
+          <button
+            type="button"
+            onClick={() => onMatchSuggested(suggestedMatch)}
+            className="ml-auto px-2 py-0.5 rounded bg-amber-500 text-white hover:bg-amber-600 transition-colors"
+          >
+            Conferma questo
+          </button>
+        </div>
+      )}
     </form>
   );
 }

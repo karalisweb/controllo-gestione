@@ -444,7 +444,30 @@ export default function MovimentiPage() {
         {/* Tabella movimenti + form inserimento in cima */}
         {!loading && data && (
           <Card>
-            <NewMovementForm onSaved={() => fetchMovements(year, month)} />
+            <NewMovementForm
+              onSaved={() => fetchMovements(year, month)}
+              expectedRows={data.rows
+                .filter((r) => (r.type === "expected_expense" || r.type === "expected_income") && r.status === "planned")
+                .map((r) => ({
+                  type: r.type as "expected_expense" | "expected_income",
+                  sourceId: r.sourceId,
+                  date: r.date,
+                  description: r.description,
+                  amount: r.amount,
+                  categoryName: r.categoryName,
+                }))}
+              onMatchSuggested={(row) => {
+                setConfirmRow({
+                  type: row.type,
+                  sourceId: row.sourceId,
+                  date: row.date,
+                  description: row.description,
+                  amount: row.amount,
+                  categoryName: row.categoryName,
+                });
+                setConfirmDialogOpen(true);
+              }}
+            />
 
             {data.rows.length === 0 && (
               <CardContent className="p-8 text-center text-muted-foreground">

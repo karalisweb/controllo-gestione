@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.35] - 2026-04-28
+
+### Modificato
+- feat(movimenti): match suggerito previsto durante inserimento (modalità B)
+
+---
+
 ## [2.3.34] - 2026-04-28
 
 ### Modificato
