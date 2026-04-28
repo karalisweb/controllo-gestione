@@ -98,6 +98,7 @@ export async function POST(request: NextRequest) {
 
   const {
     name,
+    contactId,
     costCenterId,
     amount,
     frequency = "monthly",
@@ -119,6 +120,7 @@ export async function POST(request: NextRequest) {
     .insert(expectedExpenses)
     .values({
       name,
+      contactId: contactId || null,
       costCenterId: costCenterId || null,
       amount,
       frequency,

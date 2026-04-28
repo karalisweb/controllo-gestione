@@ -135,6 +135,9 @@ export function NewMovementForm({ onSaved }: NewMovementFormProps) {
     return id;
   };
 
+  const todayStrNow = new Date().toISOString().slice(0, 10);
+  const isFuture = date > todayStrNow;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (submitting) return;
@@ -154,26 +157,64 @@ export function NewMovementForm({ onSaved }: NewMovementFormProps) {
       const centerId = await ensureCenter();
       const contactId = await ensureContact(centerId);
 
-      const amountCents = Math.round(amountNum * 100) * (type === "expense" ? -1 : 1);
-      const payload: Record<string, unknown> = {
-        date,
-        description: description.trim(),
-        amount: amountCents,
-        contactId,
-      };
-      if (type === "expense") payload.costCenterId = centerId;
-      else payload.revenueCenterId = centerId;
+      if (isFuture) {
+        // ───── Data futura → crea SCADENZA (expected_expense / expected_income one_time) ─────
+        const amountAbs = Math.round(amountNum * 100);
+        const day = parseInt(date.slice(8, 10), 10);
+        const url =
+          type === "expense" ? "/api/expected-expenses" : "/api/expected-incomes";
+        const payload: Record<string, unknown> =
+          type === "expense"
+            ? {
+                name: description.trim(),
+                contactId,
+                costCenterId: centerId,
+                amount: amountAbs,
+                frequency: "one_time",
+                expectedDay: day,
+                startDate: date,
+              }
+            : {
+                clientName: contactName.trim() || description.trim(),
+                revenueCenterId: centerId,
+                amount: amountAbs,
+                frequency: "one_time",
+                expectedDay: day,
+                startDate: date,
+              };
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || `HTTP ${res.status}`);
+        }
+        toast.success("Scadenza salvata");
+      } else {
+        // ───── Data passata o oggi → crea TRANSACTION reale ─────
+        const amountCents = Math.round(amountNum * 100) * (type === "expense" ? -1 : 1);
+        const payload: Record<string, unknown> = {
+          date,
+          description: description.trim(),
+          amount: amountCents,
+          contactId,
+        };
+        if (type === "expense") payload.costCenterId = centerId;
+        else payload.revenueCenterId = centerId;
 
-      const res = await fetch("/api/transactions/manual", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || `HTTP ${res.status}`);
+        const res = await fetch("/api/transactions/manual", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || `HTTP ${res.status}`);
+        }
+        toast.success("Movimento salvato");
       }
-      toast.success("Movimento salvato");
       reset();
       onSaved();
     } catch (e) {
@@ -273,13 +314,13 @@ export function NewMovementForm({ onSaved }: NewMovementFormProps) {
         required
       />
 
-      <Button type="submit" size="sm" disabled={submitting} className="h-8">
+      <Button type="submit" size="sm" disabled={submitting} className="h-8" title={isFuture ? "Data futura → verrà salvata come scadenza prevista" : "Crea movimento reale"}>
         {submitting ? (
           <Loader2 className="h-4 w-4 animate-spin" />
         ) : (
           <>
             <Plus className="h-4 w-4 mr-1" />
-            Salva
+            {isFuture ? "Salva come scadenza" : "Salva"}
           </>
         )}
       </Button>

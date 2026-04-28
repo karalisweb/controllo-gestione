@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.32] - 2026-04-28
+
+### Modificato
+- feat(movimenti): split escluso dal saldo + indentato come breakdown + auto-scadenza per data futura
+
+---
+
 ## [2.3.31] - 2026-04-28
 
 ### Modificato

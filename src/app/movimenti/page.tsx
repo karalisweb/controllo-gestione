@@ -16,7 +16,7 @@ import { MobileHeader } from "@/components/MobileHeader";
 import { NewMovementForm } from "@/components/movimenti/NewMovementForm";
 import { TransactionEditableRow } from "@/components/movimenti/TransactionEditableRow";
 import { ConfirmExpectedDialog, type PreviewRow } from "@/components/movimenti/ConfirmExpectedDialog";
-import { ChevronLeft, ChevronRight, CalendarRange, CheckCircle2, Clock, CreditCard, ArrowDownToLine, ArrowUpFromLine, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarRange, CheckCircle2, Clock, CreditCard, ArrowDownToLine, ArrowUpFromLine, X, CornerDownRight } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils/currency";
 import { formatDate } from "@/lib/utils/dates";
@@ -336,11 +336,13 @@ export default function MovimentiPage() {
               {data.rows.map((row) => {
                 const Icon = TYPE_ICONS[row.type];
                 const isToday = row.date === todayStr;
+                const isChild = !!row.isTransfer;
                 return (
-                  <div key={row.id} className={`p-3 ${isToday ? "bg-primary/5" : ""}`}>
+                  <div key={row.id} className={`p-3 ${isToday ? "bg-primary/5" : ""} ${isChild ? "bg-muted/20 pl-8" : ""}`}>
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-start gap-2 min-w-0 flex-1">
-                        <Icon className={`h-4 w-4 mt-1 shrink-0 ${row.amount >= 0 ? "text-green-500" : "text-red-500"} ${row.status === "planned" ? "opacity-60" : ""}`} />
+                        {isChild && <CornerDownRight className="h-3.5 w-3.5 mt-1 text-muted-foreground shrink-0" />}
+                        <Icon className={`h-4 w-4 mt-1 shrink-0 ${row.amount >= 0 ? "text-green-500" : "text-red-500"} ${row.status === "planned" || isChild ? "opacity-60" : ""}`} />
                         <div className="min-w-0">
                           <p className="font-medium text-sm truncate">{row.description}</p>
                           <div className="flex items-center gap-2 mt-0.5 flex-wrap">
@@ -366,9 +368,11 @@ export default function MovimentiPage() {
                         <div className={`font-mono font-bold text-sm ${row.amount >= 0 ? "text-green-500" : "text-red-500"}`}>
                           {row.amount >= 0 ? "+" : ""}{formatCurrency(row.amount)}
                         </div>
-                        <div className={`font-mono text-xs ${row.runningBalance >= 0 ? "text-muted-foreground" : "text-red-500"}`}>
-                          = {formatCurrency(row.runningBalance)}
-                        </div>
+                        {!isChild && (
+                          <div className={`font-mono text-xs ${row.runningBalance >= 0 ? "text-muted-foreground" : "text-red-500"}`}>
+                            = {formatCurrency(row.runningBalance)}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

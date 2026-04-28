@@ -123,9 +123,12 @@ export async function GET(request: NextRequest) {
     const initialBalanceBase = initialBalanceSetting ? parseInt(initialBalanceSetting.value, 10) : 0;
     const balanceDate = balanceDateSetting?.value || "2026-01-01";
 
-    // Somma transactions reali tra balanceDate (inclusivo) e firstOfMonth (esclusivo)
+    // Somma transactions reali tra balanceDate (inclusivo) e firstOfMonth (esclusivo).
+    // ESCLUSE le righe figlie di split (isTransfer=true): vivono nel ledger come breakdown
+    // informativo dell'incasso padre, ma non incidono sul saldo cassa (il bonifico bancario
+    // reale arriverà come riga propria).
     const pastTxs = await db
-      .select({ amount: transactions.amount })
+      .select({ amount: transactions.amount, isTransfer: transactions.isTransfer })
       .from(transactions)
       .where(
         and(
@@ -134,7 +137,7 @@ export async function GET(request: NextRequest) {
           lt(transactions.date, firstOfMonth),
         ),
       );
-    const pastTxSum = pastTxs.reduce((s, t) => s + t.amount, 0);
+    const pastTxSum = pastTxs.reduce((s, t) => (t.isTransfer ? s : s + t.amount), 0);
     const initialBalance = initialBalanceBase + pastTxSum;
 
     // ───── 2. Programmati: expected_expenses attivi nel mese ─────
@@ -354,9 +357,14 @@ export async function GET(request: NextRequest) {
     });
 
     // ───── 7. Calcola saldo running ─────
+    // Le righe split (isTransfer=true) NON incidono sul saldo: sono breakdown informativo
+    // dell'incasso padre (IVA/Alessio/Daniela), il vero impatto in cassa lo darà il
+    // bonifico bancario reale quando arriverà.
     let running = initialBalance;
     for (const row of all) {
-      running += row.amount;
+      if (!row.isTransfer) {
+        running += row.amount;
+      }
       row.runningBalance = running;
     }
     const finalBalance = running;

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { TableCell, TableRow } from "@/components/ui/table";
-import { CheckCircle2, Loader2, Split as SplitIcon, Trash2 } from "lucide-react";
+import { CheckCircle2, CornerDownRight, Loader2, Split as SplitIcon, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { centsToEuros, eurosToCents, formatCurrency } from "@/lib/utils/currency";
 import { formatDate } from "@/lib/utils/dates";
@@ -311,12 +311,19 @@ export function TransactionEditableRow({
     }
   };
 
+  const isChild = !!row.isTransfer;
+  const rowClass = [
+    isToday ? "bg-primary/5" : "",
+    isChild ? "bg-muted/20" : "",
+  ].filter(Boolean).join(" ");
+
   return (
-    <TableRow className={isToday ? "bg-primary/5" : ""}>
-      <TableCell>
+    <TableRow className={rowClass}>
+      <TableCell className={isChild ? "pl-6" : ""}>
         <div className="flex items-center gap-1">
+          {isChild && <CornerDownRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
           <CheckCircle2
-            className={`h-4 w-4 shrink-0 ${isExpense ? "text-red-500" : "text-green-500"}`}
+            className={`h-4 w-4 shrink-0 ${isExpense ? "text-red-500" : "text-green-500"} ${isChild ? "opacity-60" : ""}`}
           />
           {canSplit && (
             <button
@@ -500,11 +507,12 @@ export function TransactionEditableRow({
         {saving && <Loader2 className="inline h-3 w-3 animate-spin ml-1" />}
       </TableCell>
 
-      {/* Saldo (read-only) */}
+      {/* Saldo (read-only). Per le righe split (isTransfer) il saldo running NON cambia,
+          quindi mostriamo "—" per evidenziare che la riga non incide sul saldo. */}
       <TableCell
         className={`text-right font-mono font-medium ${row.runningBalance >= 0 ? "text-foreground" : "text-red-500"}`}
       >
-        {formatCurrency(row.runningBalance)}
+        {isChild ? <span className="text-muted-foreground/60">—</span> : formatCurrency(row.runningBalance)}
       </TableCell>
     </TableRow>
   );
