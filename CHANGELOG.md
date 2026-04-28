@@ -7,6 +7,20 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.45] - 2026-04-28
+
+### Modificato
+- feat(movimenti): bottone Split su incassi previsti + auto-split alla conferma + sidebar pulita (retry)
+
+---
+
+## [2.3.44] - 2026-04-28
+
+### Modificato
+- feat(movimenti): bottone Split su incassi previsti + auto-split alla conferma + sidebar pulita
+
+---
+
 ## [2.3.43] - 2026-04-28
 
 ### Modificato

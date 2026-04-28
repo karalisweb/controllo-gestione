@@ -179,6 +179,10 @@ export const expectedIncomes = sqliteTable("expected_incomes", {
   reliability: text("reliability", {
     enum: ["high", "medium", "low"]
   }).default("high"), // affidabilità incasso
+  // Se true: l'incasso previsto genera nel ledger una riga "Bonifico soci+IVA previsto"
+  // virtuale (per anticipare i Valori del box header e mostrare cassa agenzia reale).
+  // Alla conferma in transaction reale, lo split viene applicato automaticamente.
+  autoSplit: integer("auto_split", { mode: "boolean" }).default(false),
   notes: text("notes"),
   isActive: integer("is_active", { mode: "boolean" }).default(true),
   createdAt: integer("created_at", { mode: "timestamp" }).default(sql`(unixepoch())`),

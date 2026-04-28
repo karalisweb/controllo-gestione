@@ -63,6 +63,7 @@ export async function PUT(
     startDate,
     endDate,
     reliability,
+    autoSplit,
     notes,
     isActive,
   } = body;
@@ -78,6 +79,7 @@ export async function PUT(
       startDate: startDate ?? existing.startDate,
       endDate: endDate !== undefined ? endDate : existing.endDate,
       reliability: reliability ?? existing.reliability,
+      autoSplit: autoSplit !== undefined ? autoSplit : existing.autoSplit,
       notes: notes !== undefined ? notes : existing.notes,
       isActive: isActive !== undefined ? isActive : existing.isActive,
     })

@@ -16,18 +16,19 @@ import { MobileHeader } from "@/components/MobileHeader";
 import { NewMovementForm } from "@/components/movimenti/NewMovementForm";
 import { TransactionEditableRow } from "@/components/movimenti/TransactionEditableRow";
 import { ConfirmExpectedDialog, type PreviewRow } from "@/components/movimenti/ConfirmExpectedDialog";
-import { ChevronLeft, ChevronRight, ChevronDown, CalendarRange, CheckCircle2, Clock, CreditCard, ArrowDownToLine, ArrowUpFromLine, X, CornerDownRight, Pencil } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, CalendarRange, CheckCircle2, Clock, CreditCard, ArrowDownToLine, ArrowUpFromLine, X, CornerDownRight, Pencil, Split as SplitIcon } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils/currency";
 import { formatDate } from "@/lib/utils/dates";
 
+interface SplitDetailLite { iva: number; alessio: number; daniela: number; agency: number }
 interface MovementRow {
   id: string;
   date: string;
   description: string;
   amount: number;
   runningBalance: number;
-  type: "expected_expense" | "expected_income" | "pdr_installment" | "transaction";
+  type: "expected_expense" | "expected_income" | "expected_split" | "pdr_installment" | "transaction";
   status: "planned" | "realized";
   sourceId: number;
   categoryName?: string | null;
@@ -40,6 +41,8 @@ interface MovementRow {
   isTransfer?: boolean;
   linkedTransactionId?: number | null;
   paymentPlanId?: number | null;
+  autoSplit?: boolean;
+  splitDetail?: SplitDetailLite | null;
 }
 
 interface Contact {
@@ -83,6 +86,7 @@ const MONTH_LABELS = [
 const TYPE_ICONS: Record<MovementRow["type"], React.ComponentType<{ className?: string }>> = {
   expected_expense: ArrowUpFromLine,
   expected_income: ArrowDownToLine,
+  expected_split: ArrowUpFromLine,
   pdr_installment: CreditCard,
   transaction: CheckCircle2,
 };
@@ -90,6 +94,7 @@ const TYPE_ICONS: Record<MovementRow["type"], React.ComponentType<{ className?: 
 const TYPE_LABELS: Record<MovementRow["type"], string> = {
   expected_expense: "Spesa prevista",
   expected_income: "Incasso previsto",
+  expected_split: "Bonifico soci+IVA previsto",
   pdr_installment: "Rata PDR",
   transaction: "Realizzato",
 };
@@ -111,6 +116,35 @@ export default function MovimentiPage() {
   const [editingPdrDateId, setEditingPdrDateId] = useState<number | null>(null);
   const [editingPdrDateValue, setEditingPdrDateValue] = useState("");
   const [expandedBoxes, setExpandedBoxes] = useState<Set<string>>(new Set());
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+
+  const toggleRowExpanded = (id: string) => {
+    setExpandedRows((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAutoSplit = async (row: MovementRow) => {
+    if (row.type !== "expected_income") return;
+    try {
+      const r = await fetch(`/api/expected-incomes/${row.sourceId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ autoSplit: !row.autoSplit }),
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${r.status}`);
+      }
+      toast.success(row.autoSplit ? "Split previsto rimosso" : "Split previsto attivato");
+      fetchMovements(year, month);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Errore");
+    }
+  };
 
   const toggleBox = (key: string) => {
     setExpandedBoxes((prev) => {
@@ -154,6 +188,7 @@ export default function MovimentiPage() {
       description: row.description,
       amount: row.amount,
       categoryName: row.categoryName,
+      autoSplit: row.autoSplit,
     });
     setConfirmDialogOpen(true);
   };
@@ -652,14 +687,29 @@ export default function MovimentiPage() {
                         />
                       );
                     }
-                    const Icon = TYPE_ICONS[row.type];
+                    const Icon = TYPE_ICONS[row.type] || CheckCircle2;
                     const isExpectedRow = row.type === "expected_expense" || row.type === "expected_income";
+                    const isExpectedIncome = row.type === "expected_income";
+                    const isExpectedSplit = row.type === "expected_split";
                     const isPdr = row.type === "pdr_installment";
                     const isPdrPlanned = isPdr && row.status === "planned";
+                    const isExpanded = expandedRows.has(row.id);
                     return (
-                      <TableRow key={row.id} className={isToday ? "bg-primary/5" : ""}>
-                        <TableCell>
+                      <>
+                      <TableRow key={row.id} className={`${isToday ? "bg-primary/5" : ""} ${isExpectedSplit ? "bg-muted/20" : ""}`}>
+                        <TableCell className={isExpectedSplit ? "pl-6" : ""}>
                           <div className="flex items-center gap-1">
+                            {isExpectedSplit && <CornerDownRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
+                            {row.splitDetail && (
+                              <button
+                                type="button"
+                                onClick={() => toggleRowExpanded(row.id)}
+                                title="Espandi spaccato"
+                                className="p-0.5 rounded hover:bg-muted text-muted-foreground transition-colors"
+                              >
+                                {isExpanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                              </button>
+                            )}
                             <Icon className={`h-4 w-4 shrink-0 ${row.amount >= 0 ? "text-green-500" : "text-red-500"} ${row.status === "planned" ? "opacity-60" : ""}`} />
                             {isExpectedRow && (
                               <>
@@ -682,6 +732,17 @@ export default function MovimentiPage() {
                                   Salta
                                 </button>
                               </>
+                            )}
+                            {isExpectedIncome && (
+                              <button
+                                type="button"
+                                onClick={() => toggleAutoSplit(row)}
+                                title={row.autoSplit ? "Disattiva split previsto" : "Attiva split previsto (anticipa IVA/Alessio/Daniela nei Valori)"}
+                                className={`px-1.5 py-0.5 text-[10px] rounded transition-colors flex items-center gap-0.5 ${row.autoSplit ? "bg-amber-500/15 text-amber-500 hover:bg-amber-500/25" : "bg-primary/10 text-primary hover:bg-primary/20"}`}
+                              >
+                                <SplitIcon className="h-2.5 w-2.5" />
+                                {row.autoSplit ? "Annulla split" : "Split"}
+                              </button>
                             )}
                             {isPdrPlanned && (
                               <button
@@ -753,6 +814,34 @@ export default function MovimentiPage() {
                           {formatCurrency(row.runningBalance)}
                         </TableCell>
                       </TableRow>
+                      {row.splitDetail && isExpanded && (
+                        <TableRow className="bg-muted/30">
+                          <TableCell colSpan={8} className="py-2 px-4">
+                            <div className="flex flex-wrap items-center gap-4 text-xs">
+                              <span className="text-muted-foreground italic">Spaccato:</span>
+                              <span className="flex items-center gap-1">
+                                <CornerDownRight className="h-3 w-3 text-muted-foreground" />
+                                <span className="text-muted-foreground">IVA</span>
+                                <span className="font-mono text-red-500">-{formatCurrency(row.splitDetail.iva)}</span>
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <CornerDownRight className="h-3 w-3 text-muted-foreground" />
+                                <span className="text-muted-foreground">Alessio</span>
+                                <span className="font-mono text-red-500">-{formatCurrency(row.splitDetail.alessio)}</span>
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <CornerDownRight className="h-3 w-3 text-muted-foreground" />
+                                <span className="text-muted-foreground">Daniela</span>
+                                <span className="font-mono text-red-500">-{formatCurrency(row.splitDetail.daniela)}</span>
+                              </span>
+                              <span className="ml-auto text-muted-foreground italic">
+                                Guadagno agenzia: <span className="font-mono not-italic text-green-500">{formatCurrency(row.splitDetail.agency)}</span>
+                              </span>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                      </>
                     );
                   })}
                   {/* Riga "saldo finale" */}

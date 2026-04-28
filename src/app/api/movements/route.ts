@@ -15,6 +15,8 @@ import {
   settings,
 } from "@/lib/db/schema";
 import { and, eq, isNull, lte, gte, or, lt, sql, inArray } from "drizzle-orm";
+import { calculateSplit } from "@/lib/utils/splits";
+import { getSplitConfig } from "@/lib/utils/settings-server";
 
 /**
  * GET /api/movements?year=YYYY&month=M
@@ -41,7 +43,7 @@ interface MovementRow {
   description: string;
   amount: number; // centesimi, segno: + entrata, - uscita
   runningBalance: number; // centesimi
-  type: "expected_expense" | "expected_income" | "pdr_installment" | "transaction";
+  type: "expected_expense" | "expected_income" | "expected_split" | "pdr_installment" | "transaction";
   status: "planned" | "realized";
   sourceId: number;
   categoryName?: string | null; // centro di costo o ricavo (display)
@@ -59,6 +61,8 @@ interface MovementRow {
   splitDetail?: SplitDetail | null;
   // Per rate PDR: id del piano (per "Segna pagata")
   paymentPlanId?: number | null;
+  // Per expected_income: stato del flag autoSplit (per UI bottone Split)
+  autoSplit?: boolean;
 }
 
 // Calcola se il mese (1-12) di un dato anno è "coperto" da una expected_expense/income
@@ -360,7 +364,14 @@ export async function GET(request: NextRequest) {
       .where(isNull(revenueCenters.deletedAt));
     const revCenterById = new Map(revenueCentersList.map((r) => [r.id, r.name]));
 
+    // Carica config split (per riga split virtuale e per aggregati Valori previsti)
+    const splitConfig = await getSplitConfig();
+
     const plannedIncomeRows: MovementRow[] = [];
+    let plannedValuesIva = 0;
+    let plannedValuesAlessio = 0;
+    let plannedValuesDaniela = 0;
+    let plannedValuesAgency = 0;
     for (const i of allIncomes) {
       if (!monthMatches(i.startDate, i.endDate, i.frequency, year, month)) continue;
       const day = Math.min(Math.max(i.expectedDay || 1, 1), lastDayDate.getUTCDate());
@@ -382,7 +393,37 @@ export async function GET(request: NextRequest) {
         sourceId: i.id,
         categoryName: i.revenueCenterId ? revCenterById.get(i.revenueCenterId) || null : null,
         isOverride: overrideAmount !== undefined,
+        autoSplit: i.autoSplit ?? false,
       });
+
+      // Se autoSplit=true: genera riga split virtuale + aggrega Valori previsti
+      if (i.autoSplit) {
+        const split = calculateSplit(amount, splitConfig);
+        const transferAmount = split.vatAmount + split.alessioAmount + split.danielaAmount;
+        if (transferAmount > 0) {
+          plannedIncomeRows.push({
+            id: `ei-split-${i.id}`,
+            date,
+            description: `Bonifico soci+IVA ${i.clientName}`,
+            amount: -transferAmount,
+            runningBalance: 0,
+            type: "expected_split",
+            status: "planned",
+            sourceId: i.id,
+            categoryName: "Soci",
+            splitDetail: {
+              iva: split.vatAmount,
+              alessio: split.alessioAmount,
+              daniela: split.danielaAmount,
+              agency: split.agencyAmount,
+            },
+          });
+        }
+        plannedValuesIva += split.vatAmount;
+        plannedValuesAlessio += split.alessioAmount;
+        plannedValuesDaniela += split.danielaAmount;
+        plannedValuesAgency += split.agencyAmount;
+      }
     }
 
     // ───── 4. Rate piani di rientro scadute nel mese ─────
@@ -510,13 +551,26 @@ export async function GET(request: NextRequest) {
 
     // ───── 6. Unisci e ordina cronologicamente ─────
     // Ordine: data ASC, poi planned prima di realized (a parità data),
-    // poi importo asc (così le uscite stesso giorno vengono prima degli incassi)
+    // poi expected_income prima di expected_split (subito dopo l'incasso),
+    // poi importo asc (uscite stesso giorno prima degli incassi).
     const statusOrder: Record<string, number> = { planned: 0, realized: 1 };
+    const typeOrder: Record<string, number> = {
+      expected_income: 0,
+      expected_split: 1,
+      expected_expense: 2,
+      pdr_installment: 3,
+      transaction: 4,
+    };
     const all: MovementRow[] = [...plannedExpenseRows, ...plannedIncomeRows, ...pdrRows, ...txRows];
     all.sort((a, b) => {
       if (a.date !== b.date) return a.date.localeCompare(b.date);
       const so = statusOrder[a.status] - statusOrder[b.status];
       if (so !== 0) return so;
+      // Per le righe planned con stessa data: incasso → split previsto
+      if (a.status === "planned" && b.status === "planned") {
+        const to = (typeOrder[a.type] ?? 99) - (typeOrder[b.type] ?? 99);
+        if (to !== 0) return to;
+      }
       return a.amount - b.amount;
     });
 
@@ -526,6 +580,8 @@ export async function GET(request: NextRequest) {
     //   - rate PDR pagate (la realtà è già nelle transactions linkate, evita doppio conteggio)
     //   - rate PDR scadute non pagate (date < today: coerenza con la regola "passato=solo realtà"
     //     applicata ai previsti expected_*; il saldo iniziale del mese successivo non le include)
+    // Le righe expected_split (split virtuale di un previsto) INCIDONO sul saldo:
+    // mostrano la cassa "agenzia reale" prevista invece di quella lorda.
     let running = initialBalance;
     for (const row of all) {
       const isPdrPaid = row.type === "pdr_installment" && row.status === "realized";
@@ -539,10 +595,11 @@ export async function GET(request: NextRequest) {
     const finalBalance = running;
 
     // ───── 8. Aggregati del mese (per i 3 box header) ─────
-    // Esclusi:
+    // Esclusi dalla parte operativa (Uscite/Ingressi per centro):
     //   - isTransfer=true (vecchie 3 righe split modello v2.3.28-32)
     //   - linkedTransactionId NOT NULL (riga "[SPLIT-TOTAL]" nuova: è giroconto soci+IVA,
     //     non spesa operativa; lo spaccato vive nel box "Valori da split")
+    // Le righe expected_split virtuali NON entrano (sono solo nel ledger, non in monthTxs).
     const incomeByCenterMap = new Map<string, number>();
     const expenseByCenterMap = new Map<string, number>();
     for (const t of monthTxs) {
@@ -564,7 +621,7 @@ export async function GET(request: NextRequest) {
       .sort((a, b) => b.amount - a.amount);
 
     // Valori dagli incomeSplits del mese (Guadagno = agency, IVA, Alessio, Daniela)
-    // Riusa monthSplitsRaw già caricato sopra per popolare splitDetail.
+    // = somma split realizzati + somma split previsti (autoSplit su expected_incomes)
     const values = monthSplitsRaw.reduce(
       (acc, s) => {
         acc.iva += s.vatAmount;
@@ -575,6 +632,10 @@ export async function GET(request: NextRequest) {
       },
       { iva: 0, alessio: 0, daniela: 0, guadagno: 0 },
     );
+    values.iva += plannedValuesIva;
+    values.alessio += plannedValuesAlessio;
+    values.daniela += plannedValuesDaniela;
+    values.guadagno += plannedValuesAgency;
 
     return NextResponse.json({
       year,

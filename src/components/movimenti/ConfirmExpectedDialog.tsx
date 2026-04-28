@@ -30,6 +30,7 @@ export interface PreviewRow {
   description: string;
   amount: number; // centesimi (negativo per uscita, positivo per entrata)
   categoryName?: string | null;
+  autoSplit?: boolean; // se true e tipo income, applica split sulla tx creata
 }
 
 interface Props {
@@ -172,6 +173,20 @@ export function ConfirmExpectedDialog({
       if (!txRes.ok) {
         const err = await txRes.json().catch(() => ({}));
         throw new Error(err.error || `HTTP ${txRes.status}`);
+      }
+      const txJson = await txRes.json();
+      const newTxId = txJson?.transaction?.id ?? null;
+
+      // 1b. Se autoSplit attivo sul previsto, applica split sulla transaction appena creata
+      if (row.autoSplit && !isExpense && newTxId) {
+        const splitRes = await fetch("/api/splits", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ transactionId: newTxId }),
+        });
+        if (!splitRes.ok) {
+          console.warn("Auto-split alla conferma fallito (transaction creata, ma split non applicato)");
+        }
       }
 
       // 2. Crea override amount=0 per "saltare" il previsto in questo mese

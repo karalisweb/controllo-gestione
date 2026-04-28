@@ -35,8 +35,6 @@ const navSections = [
       { href: "/", label: "Dashboard", icon: LayoutDashboard },
       { href: "/movimenti", label: "Movimenti", icon: CalendarRange },
       { href: "/riconcilia", label: "Riconcilia", icon: Wand2 },
-      { href: "/forecast", label: "Previsionale", icon: CalendarRange },
-      { href: "/transactions", label: "Consuntivo", icon: Receipt },
     ],
   },
   {
