@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.53] - 2026-04-29
+
+### Modificato
+- fix(dashboard): ultimi 7gg ordinati DESC per data (mostra le tx più recenti per prime)
+
+---
+
 ## [2.3.52] - 2026-04-29
 
 ### Modificato

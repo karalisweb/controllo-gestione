@@ -532,8 +532,9 @@ export async function GET(request: NextRequest) {
     const next7DaysExpense = upcomingExpenses.reduce((s, e) => s + e.amount, 0);
 
     // ============ 6. ULTIMI 7 GIORNI ============
-    const last7DaysIncomes = txsLast7Days.filter(tx => tx.amount > 0);
-    const last7DaysExpenses = txsLast7Days.filter(tx => tx.amount < 0);
+    // Ordina per data DESC (più recenti per prime, così lo slice nel frontend prende le tx di ieri/oggi)
+    const last7DaysIncomes = txsLast7Days.filter(tx => tx.amount > 0).sort((a, b) => b.date.localeCompare(a.date));
+    const last7DaysExpenses = txsLast7Days.filter(tx => tx.amount < 0).sort((a, b) => b.date.localeCompare(a.date));
 
     const last7DaysTotalIncome = last7DaysIncomes.reduce((s, tx) => s + tx.amount, 0);
     const last7DaysTotalExpense = last7DaysExpenses.reduce((s, tx) => s + tx.amount, 0);
