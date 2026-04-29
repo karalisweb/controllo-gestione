@@ -7,6 +7,27 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.52] - 2026-04-29
+
+### Modificato
+- fix(dashboard): prossimi 7gg replica logica ledger /movimenti (retry 2)
+
+---
+
+## [2.3.51] - 2026-04-29
+
+### Modificato
+- fix(dashboard): prossimi 7gg replica logica ledger /movimenti (retry)
+
+---
+
+## [2.3.50] - 2026-04-29
+
+### Modificato
+- fix(dashboard): prossimi 7gg usa stessa logica del ledger /movimenti (override, monthMatches, frequenze diverse da monthly, transactions future)
+
+---
+
 ## [2.3.49] - 2026-04-29
 
 ### Modificato

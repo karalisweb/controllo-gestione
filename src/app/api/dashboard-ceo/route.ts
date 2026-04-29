@@ -3,7 +3,9 @@ import { db } from "@/lib/db";
 import {
   settings,
   expectedExpenses,
+  expectedExpenseOverrides,
   expectedIncomes,
+  expectedIncomeOverrides,
   transactions,
   paymentPlans,
   paymentPlanInstallments,
@@ -11,7 +13,7 @@ import {
   salesOpportunities,
   forecastItems,
 } from "@/lib/db/schema";
-import { eq, and, gte, lte, isNull, or, asc, desc, lt } from "drizzle-orm";
+import { eq, and, gte, lte, isNull, or, asc, desc, lt, inArray } from "drizzle-orm";
 
 // Helper per calcolare l'available da un lordo (dopo IVA 22%, commissione, soci 30%)
 function calculateAvailableFromGross(grossAmount: number, commissionRate: number = 0): number {
@@ -340,12 +342,11 @@ export async function GET(request: NextRequest) {
     const prevMonthAvailableIncome = Math.round(prevMonthIncomes * 0.48);
     const prevMonthMargin = prevMonthAvailableIncome - prevMonthExpenses - prevMonthPdrTotal;
 
-    // ============ 5. PROSSIMI 7 GIORNI ============
+    // ============ 5. PROSSIMI 7 GIORNI (stessa logica ledger /movimenti) ============
     const next7Days = new Date(today);
     next7Days.setDate(next7Days.getDate() + 7);
     const next7DaysStr = next7Days.toISOString().split("T")[0];
 
-    // Incassi previsti prossimi 7gg
     const upcomingIncomes: Array<{
       id: number;
       date: string;
@@ -353,47 +354,6 @@ export async function GET(request: NextRequest) {
       amount: number;
       clientName: string;
     }> = [];
-
-    const activeIncomes = await db.select().from(expectedIncomes).where(
-      and(eq(expectedIncomes.isActive, true), isNull(expectedIncomes.deletedAt))
-    );
-
-    // Carica forecast realizzati per questo mese (per evitare doppio conteggio)
-    const realizedRangeStart = `${year}-${String(currentMonth).padStart(2, "0")}-01`;
-    const realizedRangeEnd = `${year}-${String(currentMonth).padStart(2, "0")}-31`;
-    const realizedForecasts = await db.select().from(forecastItems).where(
-      and(
-        eq(forecastItems.isRealized, true),
-        isNull(forecastItems.deletedAt),
-        gte(forecastItems.date, realizedRangeStart),
-        lte(forecastItems.date, realizedRangeEnd)
-      )
-    );
-
-    for (const income of activeIncomes) {
-      const expectedDay = income.expectedDay || 20;
-      if (income.frequency === "monthly") {
-        const dueDate = new Date(year, currentMonth - 1, expectedDay);
-        const dueDateStr = dueDate.toISOString().split("T")[0];
-        if (dueDateStr >= todayStr && dueDateStr <= next7DaysStr) {
-          // Verifica se il forecast corrispondente è già stato realizzato
-          const isRealized = realizedForecasts.some(
-            (f) => f.sourceType === "expected_income" && f.sourceId === income.id
-          );
-          if (!isRealized) {
-            upcomingIncomes.push({
-              id: income.id,
-              date: dueDateStr,
-              description: `Canone ${income.clientName}`,
-              amount: income.amount,
-              clientName: income.clientName,
-            });
-          }
-        }
-      }
-    }
-
-    // Uscite previste prossimi 7gg
     const upcomingExpenses: Array<{
       id: number;
       date: string;
@@ -403,35 +363,106 @@ export async function GET(request: NextRequest) {
       isEssential: boolean;
     }> = [];
 
-    const activeExpenses = await db.select().from(expectedExpenses).where(
-      and(eq(expectedExpenses.isActive, true), isNull(expectedExpenses.deletedAt))
-    );
-
-    for (const expense of activeExpenses) {
-      const paymentDay = expense.expectedDay || 1;
-      if (expense.frequency === "monthly") {
-        const dueDate = new Date(year, currentMonth - 1, paymentDay);
-        const dueDateStr = dueDate.toISOString().split("T")[0];
-        if (dueDateStr >= todayStr && dueDateStr <= next7DaysStr) {
-          // Verifica se il forecast corrispondente è già stato realizzato
-          const isRealized = realizedForecasts.some(
-            (f) => f.sourceType === "expected_expense" && f.sourceId === expense.id
-          );
-          if (!isRealized) {
-            upcomingExpenses.push({
-              id: expense.id,
-              date: dueDateStr,
-              description: expense.name,
-              amount: expense.amount,
-              type: "cost",
-              isEssential: expense.priority === "essential",
-            });
-          }
-        }
+    // Helper monthMatches inline (replica logica /api/movements)
+    const monthMatchesNext = (startDate: string, endDate: string | null, frequency: string, y: number, m: number): boolean => {
+      const [sy, sm] = startDate.split("-").map(Number);
+      const startYM = sy * 12 + (sm - 1);
+      const targetYM = y * 12 + (m - 1);
+      if (targetYM < startYM) return false;
+      if (endDate) {
+        const [ey, em] = endDate.split("-").map(Number);
+        const endYM = ey * 12 + (em - 1);
+        if (targetYM > endYM) return false;
       }
+      const monthsFromStart = targetYM - startYM;
+      switch (frequency) {
+        case "monthly": return true;
+        case "quarterly": return monthsFromStart % 3 === 0;
+        case "semiannual": return monthsFromStart % 6 === 0;
+        case "annual":
+        case "one_time": return monthsFromStart % 12 === 0;
+        default: return monthsFromStart === 0;
+      }
+    };
+
+    // Carica expected_* attivi che potrebbero ricadere nel range
+    const allExpensesNext7 = await db.select().from(expectedExpenses).where(
+      and(
+        isNull(expectedExpenses.deletedAt),
+        eq(expectedExpenses.isActive, true),
+        lte(expectedExpenses.startDate, next7DaysStr),
+        or(isNull(expectedExpenses.endDate), gte(expectedExpenses.endDate, todayStr)),
+      ),
+    );
+    const allIncomesNext7 = await db.select().from(expectedIncomes).where(
+      and(
+        isNull(expectedIncomes.deletedAt),
+        eq(expectedIncomes.isActive, true),
+        lte(expectedIncomes.startDate, next7DaysStr),
+        or(isNull(expectedIncomes.endDate), gte(expectedIncomes.endDate, todayStr)),
+      ),
+    );
+    // Override per i mesi coperti dal range
+    const expIdsN7 = allExpensesNext7.map((e) => e.id);
+    const incIdsN7 = allIncomesNext7.map((i) => i.id);
+    const expOvrN7 = expIdsN7.length > 0
+      ? await db.select().from(expectedExpenseOverrides).where(inArray(expectedExpenseOverrides.expectedExpenseId, expIdsN7))
+      : [];
+    const incOvrN7 = incIdsN7.length > 0
+      ? await db.select().from(expectedIncomeOverrides).where(inArray(expectedIncomeOverrides.expectedIncomeId, incIdsN7))
+      : [];
+    const expOvMapN7 = new Map<string, number>();
+    for (const o of expOvrN7) expOvMapN7.set(`${o.expectedExpenseId}-${o.year}-${o.month}`, o.amount);
+    const incOvMapN7 = new Map<string, number>();
+    for (const o of incOvrN7) incOvMapN7.set(`${o.expectedIncomeId}-${o.year}-${o.month}`, o.amount);
+
+    // Itera sui mesi nel range [today, next7]
+    const startYN = today.getFullYear();
+    const startMN = today.getMonth() + 1;
+    const endYN = next7Days.getFullYear();
+    const endMN = next7Days.getMonth() + 1;
+    const endYmN = endYN * 12 + (endMN - 1);
+    let cyN = startYN, cmN = startMN;
+    while (cyN * 12 + (cmN - 1) <= endYmN) {
+      const lastDayOfCurN = new Date(Date.UTC(cyN, cmN, 0)).getUTCDate();
+      for (const e of allExpensesNext7) {
+        if (!monthMatchesNext(e.startDate, e.endDate, e.frequency, cyN, cmN)) continue;
+        const day = Math.min(Math.max(e.expectedDay || 1, 1), lastDayOfCurN);
+        const dateStr = `${cyN}-${String(cmN).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+        if (dateStr < todayStr || dateStr > next7DaysStr) continue;
+        const ov = expOvMapN7.get(`${e.id}-${cyN}-${cmN}`);
+        const amt = ov !== undefined ? ov : e.amount;
+        if (amt === 0) continue;
+        upcomingExpenses.push({
+          id: e.id,
+          date: dateStr,
+          description: e.name,
+          amount: amt,
+          type: "cost",
+          isEssential: e.priority === "essential",
+        });
+      }
+      for (const i of allIncomesNext7) {
+        if (!monthMatchesNext(i.startDate, i.endDate, i.frequency, cyN, cmN)) continue;
+        const day = Math.min(Math.max(i.expectedDay || 1, 1), lastDayOfCurN);
+        const dateStr = `${cyN}-${String(cmN).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+        if (dateStr < todayStr || dateStr > next7DaysStr) continue;
+        const ov = incOvMapN7.get(`${i.id}-${cyN}-${cmN}`);
+        const amt = ov !== undefined ? ov : i.amount;
+        if (amt === 0) continue;
+        upcomingIncomes.push({
+          id: i.id,
+          date: dateStr,
+          description: i.clientName,
+          amount: amt,
+          clientName: i.clientName,
+        });
+      }
+      cmN++;
+      if (cmN > 12) { cmN = 1; cyN++; }
     }
 
-    // Rate PDR prossimi 7gg
+    // Rate PDR nel range (solo non pagate, piani attivi)
     const pdrNext7Days = await db
       .select({
         id: paymentPlanInstallments.id,
@@ -455,11 +486,42 @@ export async function GET(request: NextRequest) {
       upcomingExpenses.push({
         id: inst.id,
         date: inst.dueDate,
-        description: `PDR ${inst.creditorName}`,
+        description: `Rata ${inst.creditorName}`,
         amount: inst.amount,
         type: "pdr",
         isEssential: true,
       });
+    }
+
+    // Transactions reali nel range (rare per il futuro, ma possibili — es. movimento già registrato in anticipo)
+    const futureTxs = await db
+      .select()
+      .from(transactions)
+      .where(and(
+        isNull(transactions.deletedAt),
+        gte(transactions.date, todayStr),
+        lte(transactions.date, next7DaysStr),
+      ));
+    for (const t of futureTxs) {
+      if (t.isTransfer) continue; // escludi vecchie figlie split
+      if (t.amount > 0) {
+        upcomingIncomes.push({
+          id: t.id,
+          date: t.date,
+          description: t.description || "(senza descrizione)",
+          amount: t.amount,
+          clientName: t.description || "",
+        });
+      } else if (t.amount < 0) {
+        upcomingExpenses.push({
+          id: t.id,
+          date: t.date,
+          description: t.description || "(senza descrizione)",
+          amount: -t.amount,
+          type: "cost",
+          isEssential: false,
+        });
+      }
     }
 
     // Ordina per data
@@ -494,17 +556,17 @@ export async function GET(request: NextRequest) {
       ))
       .orderBy(asc(paymentPlanInstallments.dueDate));
 
-    // Fatture da emettere (incassi previsti del mese non ancora incassati)
-    // Per ora usiamo gli expectedIncomes del mese corrente
-    const invoicesToIssue = activeIncomes.filter(income => {
+    // Fatture da emettere e incassi in ritardo (vecchi calcoli, conservati per retro-compat
+    // ma non più usati nella UI dashboard dopo v2.3.46. Carica activeIncomes locale.)
+    const _activeIncomesAll = await db.select().from(expectedIncomes).where(
+      and(eq(expectedIncomes.isActive, true), isNull(expectedIncomes.deletedAt))
+    );
+    const invoicesToIssue = _activeIncomesAll.filter(income => {
       if (income.frequency !== "monthly") return false;
       const startDate = new Date(income.startDate);
       return startDate <= today;
     }).slice(0, 5);
-
-    // Incassi in ritardo (incassi previsti passati non registrati)
-    // Semplificato: incassi con expectedDay < oggi nel mese corrente
-    const latePayments = activeIncomes.filter(income => {
+    const latePayments = _activeIncomesAll.filter(income => {
       const expectedDay = income.expectedDay || 20;
       const expectedDate = new Date(year, currentMonth - 1, expectedDay);
       return expectedDate < today && income.frequency === "monthly";
