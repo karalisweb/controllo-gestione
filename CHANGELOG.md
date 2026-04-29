@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.4.0] - 2026-04-29
+
+### Modificato
+- chore: bump versione 2.4.0 — Movimenti come cuore + Dashboard rifatta + Piano commerciale mensile + Split previsti
+
+---
+
 ## [2.3.54] - 2026-04-29
 
 ### Modificato
