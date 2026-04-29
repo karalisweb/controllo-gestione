@@ -369,6 +369,21 @@ export default function MovimentiPage() {
     }
   }, [shouldScrollToToday, data]);
 
+  // Auto-scroll alla riga oggi al primo caricamento del mese corrente
+  const [didAutoScroll, setDidAutoScroll] = useState(false);
+  useEffect(() => { setDidAutoScroll(false); }, [year, month]);
+  useEffect(() => {
+    const isCurMonth = year === today.getFullYear() && month === today.getMonth() + 1;
+    if (!didAutoScroll && isCurMonth && data) {
+      const t = setTimeout(() => {
+        const el = document.querySelector('[data-today="true"]');
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+        setDidAutoScroll(true);
+      }, 200);
+      return () => clearTimeout(t);
+    }
+  }, [didAutoScroll, year, month, today, data]);
+
   const isCurrentMonth = year === today.getFullYear() && month === today.getMonth() + 1;
   // Backend ritorna sempre DESC; per ASC inverto. Uso useMemo per stabilità.
   const displayedRows = useMemo(() => {
@@ -644,9 +659,11 @@ export default function MovimentiPage() {
               {displayedRows.map((row) => {
                 const Icon = TYPE_ICONS[row.type];
                 const isToday = row.date === todayStr;
+                const isPast = row.date < todayStr;
                 const isChild = !!row.isTransfer;
+                const pastClass = isPast && !isToday ? "opacity-50" : "";
                 return (
-                  <div key={row.id} className={`p-3 ${isToday ? "bg-primary/5" : ""} ${isChild ? "bg-muted/20 pl-8" : ""}`}>
+                  <div key={row.id} className={`p-3 ${isToday ? "bg-primary/5" : ""} ${isChild ? "bg-muted/20 pl-8" : ""} ${pastClass}`}>
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-start gap-2 min-w-0 flex-1">
                         {isChild && <CornerDownRight className="h-3.5 w-3.5 mt-1 text-muted-foreground shrink-0" />}
@@ -740,12 +757,14 @@ export default function MovimentiPage() {
                   )}
                   {displayedRows.map((row) => {
                     const isToday = row.date === todayStr;
+                    const isPast = row.date < todayStr;
                     if (row.type === "transaction") {
                       return (
                         <TransactionEditableRow
                           key={row.id}
                           row={row}
                           isToday={isToday}
+                          isPast={isPast}
                           contacts={contacts}
                           costCenters={costCenters}
                           revenueCenters={revenueCenters}
@@ -762,9 +781,10 @@ export default function MovimentiPage() {
                     const isPdr = row.type === "pdr_installment";
                     const isPdrPlanned = isPdr && row.status === "planned";
                     const isExpanded = expandedRows.has(row.id);
+                    const pastClass = isPast && !isToday ? "opacity-50" : "";
                     return (
                       <>
-                      <TableRow key={row.id} className={`${isToday ? "bg-primary/5" : ""} ${isExpectedSplit ? "bg-muted/20" : ""}`}>
+                      <TableRow key={row.id} className={`${isToday ? "bg-primary/5" : ""} ${isExpectedSplit ? "bg-muted/20" : ""} ${pastClass}`}>
                         <TableCell className={isExpectedSplit ? "pl-6" : ""}>
                           <div className="flex items-center gap-1">
                             {isExpectedSplit && <CornerDownRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}

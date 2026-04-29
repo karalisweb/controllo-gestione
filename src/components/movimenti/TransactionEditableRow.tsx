@@ -48,6 +48,7 @@ type EditField = "date" | "description" | "contact" | "center" | "amount" | null
 interface Props {
   row: MovementRowData;
   isToday: boolean;
+  isPast?: boolean;
   contacts: Contact[];
   costCenters: Center[];
   revenueCenters: Center[];
@@ -59,6 +60,7 @@ interface Props {
 export function TransactionEditableRow({
   row,
   isToday,
+  isPast = false,
   contacts,
   costCenters,
   revenueCenters,
@@ -322,6 +324,7 @@ export function TransactionEditableRow({
   const rowClass = [
     isToday ? "bg-primary/5" : "",
     isChild ? "bg-muted/20" : "",
+    isPast && !isToday ? "opacity-50" : "",
   ].filter(Boolean).join(" ");
 
   return (

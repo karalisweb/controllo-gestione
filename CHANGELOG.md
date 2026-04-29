@@ -7,6 +7,20 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.4.3] - 2026-04-29
+
+### Modificato
+- feat(movimenti): auto-scroll a oggi + righe passate sbiadite (retry)
+
+---
+
+## [2.4.2] - 2026-04-29
+
+### Modificato
+- feat(movimenti): auto-scroll a oggi all'apertura mese corrente + righe passate sbiadite (opacity 50%)
+
+---
+
 ## [2.4.1] - 2026-04-29
 
 ### Modificato
