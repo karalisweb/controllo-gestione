@@ -594,6 +594,19 @@ export async function GET(request: NextRequest) {
     }
     const finalBalance = running;
 
+    // Ri-ordina per il display: data DESC (più recente in alto), intra-giorno ASC mantenuto
+    // (incasso prima dello split previsto, planned prima di realized, ecc.).
+    all.sort((a, b) => {
+      if (a.date !== b.date) return b.date.localeCompare(a.date);
+      const so = statusOrder[a.status] - statusOrder[b.status];
+      if (so !== 0) return so;
+      if (a.status === "planned" && b.status === "planned") {
+        const to = (typeOrder[a.type] ?? 99) - (typeOrder[b.type] ?? 99);
+        if (to !== 0) return to;
+      }
+      return a.amount - b.amount;
+    });
+
     // ───── 8. Aggregati del mese (per i 3 box header) ─────
     // Esclusi dalla parte operativa (Uscite/Ingressi per centro):
     //   - isTransfer=true (vecchie 3 righe split modello v2.3.28-32)

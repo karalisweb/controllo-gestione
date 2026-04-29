@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.54] - 2026-04-29
+
+### Modificato
+- feat(movimenti): ordine ledger DESC per data (più recente in alto), saldo finale in cima e iniziale in fondo
+
+---
+
 ## [2.3.53] - 2026-04-29
 
 ### Modificato

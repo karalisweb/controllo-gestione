@@ -688,14 +688,16 @@ export default function MovimentiPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {/* Riga "saldo iniziale" */}
-                  <TableRow className="bg-muted/30">
+                  {/* Riga "saldo finale previsto" — in cima perché data DESC */}
+                  <TableRow className="bg-muted/30 font-bold">
                     <TableCell></TableCell>
-                    <TableCell className="text-xs text-muted-foreground italic">{`${year}-${String(month).padStart(2, "0")}-01`}</TableCell>
-                    <TableCell colSpan={4} className="text-sm italic text-muted-foreground">Saldo a inizio mese</TableCell>
-                    <TableCell></TableCell>
-                    <TableCell className={`text-right font-mono font-bold ${data.initialBalance >= 0 ? "text-foreground" : "text-red-500"}`}>
-                      {formatCurrency(data.initialBalance)}
+                    <TableCell className="text-xs text-muted-foreground italic">fine mese</TableCell>
+                    <TableCell colSpan={4} className="text-sm italic text-muted-foreground">Saldo finale previsto</TableCell>
+                    <TableCell className={`text-right font-mono ${data.finalBalance - data.initialBalance >= 0 ? "text-green-500" : "text-red-500"}`}>
+                      {data.finalBalance - data.initialBalance >= 0 ? "+" : ""}{formatCurrency(data.finalBalance - data.initialBalance)}
+                    </TableCell>
+                    <TableCell className={`text-right font-mono ${data.finalBalance >= 0 ? "text-green-500" : "text-red-500"}`}>
+                      {formatCurrency(data.finalBalance)}
                     </TableCell>
                   </TableRow>
                   {data.rows.map((row) => {
@@ -872,16 +874,14 @@ export default function MovimentiPage() {
                       </>
                     );
                   })}
-                  {/* Riga "saldo finale" */}
-                  <TableRow className="bg-muted/30 font-bold">
+                  {/* Riga "saldo iniziale" — in fondo perché data DESC */}
+                  <TableRow className="bg-muted/30">
                     <TableCell></TableCell>
-                    <TableCell className="text-xs text-muted-foreground italic">fine mese</TableCell>
-                    <TableCell colSpan={4} className="text-sm italic text-muted-foreground">Saldo finale previsto</TableCell>
-                    <TableCell className={`text-right font-mono ${data.finalBalance - data.initialBalance >= 0 ? "text-green-500" : "text-red-500"}`}>
-                      {data.finalBalance - data.initialBalance >= 0 ? "+" : ""}{formatCurrency(data.finalBalance - data.initialBalance)}
-                    </TableCell>
-                    <TableCell className={`text-right font-mono ${data.finalBalance >= 0 ? "text-green-500" : "text-red-500"}`}>
-                      {formatCurrency(data.finalBalance)}
+                    <TableCell className="text-xs text-muted-foreground italic">{`${year}-${String(month).padStart(2, "0")}-01`}</TableCell>
+                    <TableCell colSpan={4} className="text-sm italic text-muted-foreground">Saldo a inizio mese</TableCell>
+                    <TableCell></TableCell>
+                    <TableCell className={`text-right font-mono font-bold ${data.initialBalance >= 0 ? "text-foreground" : "text-red-500"}`}>
+                      {formatCurrency(data.initialBalance)}
                     </TableCell>
                   </TableRow>
                 </TableBody>
