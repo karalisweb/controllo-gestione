@@ -177,8 +177,10 @@ export async function GET(request: NextRequest) {
       .from(transactions)
       .where(and(gte(transactions.date, balanceDate), lte(transactions.date, todayStr), isNull(transactions.deletedAt)));
 
+    // Cassa: escludi righe isTransfer (vecchie figlie split modello v2.3.28-32, breakdown informativo).
     let currentBalance = initialBalance;
     for (const tx of pastTransactions) {
+      if (tx.isTransfer) continue;
       currentBalance += tx.amount;
     }
 
@@ -187,7 +189,7 @@ export async function GET(request: NextRequest) {
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     const sevenDaysAgoStr = sevenDaysAgo.toISOString().split("T")[0];
 
-    const txsLast7Days = pastTransactions.filter(tx => tx.date > sevenDaysAgoStr);
+    const txsLast7Days = pastTransactions.filter(tx => tx.date > sevenDaysAgoStr && !tx.isTransfer);
     const balanceChange7Days = txsLast7Days.reduce((sum, tx) => sum + tx.amount, 0);
 
     // ============ 2. RUNWAY ============
@@ -210,8 +212,10 @@ export async function GET(request: NextRequest) {
       : 0;
 
     const totalMonthlyBurn = avgMonthlyExpenses + avgMonthlyPdr;
-    const runwayMonths = totalMonthlyBurn > 0 ? currentBalance / totalMonthlyBurn : 99;
-    const runwayTarget = 3; // Target 3 mesi
+    // Runway in GIORNI: cassa / burn giornaliero medio (mensile / 30.4).
+    const dailyBurn = totalMonthlyBurn / 30.4;
+    const runwayDays = dailyBurn > 0 ? Math.round(currentBalance / dailyBurn) : 9999;
+    const runwayTargetDays = 90; // Target 3 mesi = 90 giorni
 
     // ============ 3. OBIETTIVO VENDITE TRIMESTRE ============
     const quarterStartMonth = (currentQuarter - 1) * 3 + 1;
@@ -440,6 +444,8 @@ export async function GET(request: NextRequest) {
       .innerJoin(paymentPlans, eq(paymentPlanInstallments.paymentPlanId, paymentPlans.id))
       .where(and(
         eq(paymentPlanInstallments.isPaid, false),
+        eq(paymentPlans.isActive, true),
+        isNull(paymentPlans.deletedAt),
         gte(paymentPlanInstallments.dueDate, todayStr),
         lte(paymentPlanInstallments.dueDate, next7DaysStr)
       ))
@@ -542,6 +548,11 @@ export async function GET(request: NextRequest) {
     const monthlyPdrTotal = currentMonthPdrTotal;
 
     // ============ 9. TREND (ultimi 3 mesi) ============
+    // Carica setting target di default (per la linea obiettivo nel chart)
+    const allSettings = await db.select().from(settings);
+    const settingsMap = new Map(allSettings.map((s) => [s.key, s.value]));
+    const defaultTargetCents = parseInt(settingsMap.get("sales_target_default") ?? "1000000", 10);
+
     const trend = [];
     for (let i = 2; i >= 0; i--) {
       const trendMonth = currentMonth - i;
@@ -555,25 +566,37 @@ export async function GET(request: NextRequest) {
       const mLastDay = new Date(trendYear, actualMonth, 0).getDate();
       const mEnd = `${trendYear}-${String(actualMonth).padStart(2, '0')}-${mLastDay}`;
 
+      // Rate PDR: filtra solo piani attivi (esclude sospesi/eliminati)
       const mPdrData = await db
         .select({ amount: paymentPlanInstallments.amount })
         .from(paymentPlanInstallments)
         .innerJoin(paymentPlans, eq(paymentPlanInstallments.paymentPlanId, paymentPlans.id))
         .where(and(
           gte(paymentPlanInstallments.dueDate, mStart),
-          lte(paymentPlanInstallments.dueDate, mEnd)
+          lte(paymentPlanInstallments.dueDate, mEnd),
+          eq(paymentPlans.isActive, true),
+          isNull(paymentPlans.deletedAt),
         ));
 
       const mPdr = mPdrData.reduce((s, p) => s + p.amount, 0);
-      const mAvailable = Math.round(mIncomes * 0.48);
-      const mMargin = mAvailable - mExpenses - mPdr;
+
+      // Guadagno (formula b): netto (lordo / 1.22) - spese - rate PDR.
+      // Le quote Alessio/Daniela sono "dentro" questo numero (parte aziendale).
+      const mNet = Math.round(mIncomes / 1.22);
+      const mEarnings = mNet - mExpenses - mPdr;
+
+      // Obiettivo del mese (per-mese se override, altrimenti default)
+      const targetKey = `sales_target_${trendYear}_${actualMonth}`;
+      const mTarget = parseInt(settingsMap.get(targetKey) ?? String(defaultTargetCents), 10);
 
       trend.push({
         month: actualMonth,
         year: trendYear,
-        income: mAvailable,
-        expenses: mExpenses + mPdr,
-        margin: mMargin,
+        income: mIncomes,           // lordo previsto
+        expenses: mExpenses + mPdr, // spese operative + PDR
+        earnings: mEarnings,        // netto - spese - PDR
+        target: mTarget,            // obiettivo del mese
+        margin: mEarnings,          // alias retro-compat (era available - spese)
       });
     }
 
@@ -582,11 +605,11 @@ export async function GET(request: NextRequest) {
       currentBalance,
       balanceChange7Days,
 
-      // 2. Runway
+      // 2. Runway in giorni
       runway: {
-        months: Math.round(runwayMonths * 10) / 10,
-        target: runwayTarget,
-        percent: Math.min(100, Math.round((runwayMonths / runwayTarget) * 100)),
+        days: runwayDays,
+        target: runwayTargetDays,
+        percent: Math.min(100, Math.max(0, Math.round((runwayDays / runwayTargetDays) * 100))),
         avgMonthlyBurn: totalMonthlyBurn,
       },
 

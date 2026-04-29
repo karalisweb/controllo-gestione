@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.49] - 2026-04-29
+
+### Modificato
+- fix(dashboard): cassa esclude isTransfer + runway in giorni + PDR prossimi 7gg filtra isActive + trend con guadagno+obiettivo
+
+---
+
 ## [2.3.48] - 2026-04-29
 
 ### Modificato

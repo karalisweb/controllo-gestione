@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Line, ComposedChart } from "recharts";
 import { QuickEntry } from "@/components/dashboard/QuickEntry";
 import { SalesForecastTable } from "@/components/dashboard/SalesForecastTable";
 import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
@@ -49,7 +49,7 @@ interface DashboardData {
   currentBalance: number;
   balanceChange7Days: number;
   runway: {
-    months: number;
+    days: number;
     target: number;
     percent: number;
     avgMonthlyBurn: number;
@@ -122,6 +122,8 @@ interface DashboardData {
     year: number;
     income: number;
     expenses: number;
+    earnings: number;
+    target: number;
     margin: number;
   }>;
 }
@@ -233,14 +235,15 @@ export default function Home() {
           </CardHeader>
           <CardContent className="px-4 pb-4">
             {data.trend.length > 0 && (
-              <div className="h-40">
+              <div className="h-48">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart
+                  <ComposedChart
                     data={data.trend.map(m => ({
                       name: formatMonth(m.month),
                       entrate: m.income / 100,
                       uscite: m.expenses / 100,
-                      margine: m.margin / 100,
+                      guadagno: m.earnings / 100,
+                      obiettivo: m.target / 100,
                     }))}
                     margin={{ top: 5, right: 5, left: -20, bottom: 0 }}
                   >
@@ -292,11 +295,33 @@ export default function Home() {
                       fill="url(#colorUscite)"
                       strokeWidth={2}
                     />
-                  </AreaChart>
+                    <Line
+                      type="monotone"
+                      dataKey="guadagno"
+                      stroke="#eab308"
+                      strokeWidth={2}
+                      dot={{ r: 3, fill: "#eab308" }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="obiettivo"
+                      stroke="#d4a726"
+                      strokeWidth={1.5}
+                      strokeDasharray="5 3"
+                      dot={false}
+                    />
+                  </ComposedChart>
                 </ResponsiveContainer>
               </div>
             )}
-            {/* Margine per mese sotto il chart */}
+            {/* Legenda compatta */}
+            <div className="flex flex-wrap gap-3 text-[10px] text-muted-foreground mt-2">
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500"></span>Entrate</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500"></span>Uscite</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-0.5 bg-yellow-500"></span>Guadagno (netto − spese)</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-0.5 bg-amber-600 border-dashed border-amber-600 border-t"></span>Obiettivo</span>
+            </div>
+            {/* Card per mese sotto il chart */}
             <div className="grid grid-cols-3 gap-2 mt-3">
               {data.trend.map((month, idx) => (
                 <div
@@ -308,10 +333,13 @@ export default function Home() {
                   <div className="text-xs text-muted-foreground">
                     {formatMonth(month.month)} {idx === data.trend.length - 1 && "(prev)"}
                   </div>
+                  <div className="text-[10px] text-muted-foreground mt-1">
+                    Fatturato: <span className="font-mono text-green-500">{formatCurrency(month.income)}</span>
+                  </div>
                   <div className={`font-mono text-sm font-bold ${
-                    month.margin >= 0 ? "text-green-600" : "text-red-600"
+                    (month.earnings ?? month.margin) >= 0 ? "text-yellow-500" : "text-red-500"
                   }`}>
-                    {month.margin >= 0 ? "+" : ""}{formatCurrency(month.margin)}
+                    Guadagno: {(month.earnings ?? month.margin) >= 0 ? "+" : ""}{formatCurrency(month.earnings ?? month.margin)}
                   </div>
                 </div>
               ))}
@@ -351,7 +379,13 @@ export default function Home() {
                 <span className="text-xs text-muted-foreground">RUNWAY</span>
               </div>
               <div className="text-2xl sm:text-3xl font-bold font-mono">
-                {data.runway.months} <span className="text-base font-normal text-muted-foreground">mesi</span>
+                {data.runway.days < 0 ? (
+                  <span className="text-red-500">esaurita {Math.abs(data.runway.days)}g fa</span>
+                ) : (
+                  <>
+                    {data.runway.days} <span className="text-base font-normal text-muted-foreground">giorni</span>
+                  </>
+                )}
               </div>
               <div className="mt-2">
                 <div className="h-2 bg-muted rounded-full overflow-hidden">
@@ -360,11 +394,11 @@ export default function Home() {
                       data.runway.percent >= 100 ? "bg-green-500" :
                       data.runway.percent >= 60 ? "bg-amber-500" : "bg-red-500"
                     }`}
-                    style={{ width: `${Math.min(100, data.runway.percent)}%` }}
+                    style={{ width: `${Math.min(100, Math.max(0, data.runway.percent))}%` }}
                   />
                 </div>
                 <div className="text-xs text-muted-foreground mt-1">
-                  target: {data.runway.target} mesi
+                  target: {data.runway.target} giorni
                 </div>
               </div>
             </CardContent>
