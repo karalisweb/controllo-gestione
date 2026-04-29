@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.4.1] - 2026-04-29
+
+### Modificato
+- feat(movimenti): toggle ordinamento data ASC/DESC nell'header tabella
+
+---
+
 ## [2.4.0] - 2026-04-29
 
 ### Modificato
