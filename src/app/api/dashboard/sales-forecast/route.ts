@@ -204,8 +204,11 @@ export async function GET(request: NextRequest) {
       const splitPrev = calculateSplit(revenuePrev, splitConfig);
       const splitTarget = calculateSplit(target, splitConfig);
 
-      const earningsPrev = splitPrev.agencyAmount - expensePrev;
-      const earningsTarget = splitTarget.agencyAmount - expensePrev;
+      // Guadagno = netto (lordo - IVA) - spese.
+      // Le quote Alessio/Daniela vivono in righe separate; questo numero
+      // rappresenta il margine aziendale prima della divisione fra soci/agenzia.
+      const earningsPrev = splitPrev.netAmount - expensePrev;
+      const earningsTarget = splitTarget.netAmount - expensePrev;
 
       return {
         year, month,

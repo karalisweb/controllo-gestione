@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.48] - 2026-04-29
+
+### Modificato
+- fix(dashboard): guadagno previsto/target = netto (IVA scorporata) - spese, non agency residua
+
+---
+
 ## [2.3.47] - 2026-04-29
 
 ### Modificato
