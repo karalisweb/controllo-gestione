@@ -31,6 +31,7 @@ export interface PreviewRow {
   amount: number; // centesimi (negativo per uscita, positivo per entrata)
   categoryName?: string | null;
   autoSplit?: boolean; // se true e tipo income, applica split sulla tx creata
+  autoSplitNoVat?: boolean; // se true, lo split alla conferma è senza IVA
 }
 
 interface Props {
@@ -177,12 +178,13 @@ export function ConfirmExpectedDialog({
       const txJson = await txRes.json();
       const newTxId = txJson?.transaction?.id ?? null;
 
-      // 1b. Se autoSplit attivo sul previsto, applica split sulla transaction appena creata
+      // 1b. Se autoSplit attivo sul previsto, applica split sulla transaction appena creata.
+      // autoSplitNoVat eredita la modalità no-IVA (fatture estere/reverse charge).
       if (row.autoSplit && !isExpense && newTxId) {
         const splitRes = await fetch("/api/splits", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ transactionId: newTxId }),
+          body: JSON.stringify({ transactionId: newTxId, noVat: !!row.autoSplitNoVat }),
         });
         if (!splitRes.ok) {
           console.warn("Auto-split alla conferma fallito (transaction creata, ma split non applicato)");

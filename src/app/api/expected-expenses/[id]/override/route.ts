@@ -9,11 +9,12 @@ interface RouteParams {
 
 /**
  * POST /api/expected-expenses/[id]/override
- * Body: { year: number, month: number, amount: number, notes?: string }
+ * Body: { year, month, amount?, day?, notes? }
  *
  * Upsert dell'override per il (year, month) di una spesa prevista.
- * Se l'amount === expense.amount (default del template), l'override viene
- * cancellato (la cella torna al default).
+ * `amount` opzionale: se omesso conserva quello esistente (o usa il default).
+ * `day` opzionale (1-31): sposta solo quel mese; null = giorno default del template.
+ * Se sia amount che day combaciano col default, l'override viene cancellato.
  */
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
@@ -22,14 +23,16 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     if (Number.isNaN(id)) return NextResponse.json({ error: "ID non valido" }, { status: 400 });
 
     const body = await request.json();
-    const { year, month, amount, notes } = body;
+    const { year, month, amount, day, notes } = body;
 
     if (!Number.isInteger(year) || year < 2000 || year > 2100)
       return NextResponse.json({ error: "Anno non valido" }, { status: 400 });
     if (!Number.isInteger(month) || month < 1 || month > 12)
       return NextResponse.json({ error: "Mese non valido (1-12)" }, { status: 400 });
-    if (!Number.isFinite(amount) || amount < 0)
+    if (amount !== undefined && (!Number.isFinite(amount) || amount < 0))
       return NextResponse.json({ error: "Importo non valido" }, { status: 400 });
+    if (day !== undefined && day !== null && (!Number.isInteger(day) || day < 1 || day > 31))
+      return NextResponse.json({ error: "Giorno non valido (1-31)" }, { status: 400 });
 
     // Verifica che la spesa esista
     const [expense] = await db
@@ -41,7 +44,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // Cerca override esistente
     const existing = await db
-      .select({ id: expectedExpenseOverrides.id })
+      .select()
       .from(expectedExpenseOverrides)
       .where(
         and(
@@ -52,8 +55,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       )
       .limit(1);
 
-    // Se l'amount coincide col default del template → cancella l'override (cella torna al default)
-    if (Math.round(amount) === expense.amount) {
+    const nextAmount = amount !== undefined
+      ? Math.round(amount)
+      : existing[0]?.amount ?? expense.amount;
+    const nextDay = day !== undefined ? day : existing[0]?.day ?? null;
+
+    // Override "vuoto" (amount default + day default): cancella se esiste
+    if (nextAmount === expense.amount && (nextDay === null || nextDay === undefined)) {
       if (existing.length > 0) {
         await db
           .delete(expectedExpenseOverrides)
@@ -66,7 +74,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     if (existing.length > 0) {
       const [updated] = await db
         .update(expectedExpenseOverrides)
-        .set({ amount: Math.round(amount), notes: notes ?? null, updatedAt: new Date() })
+        .set({
+          amount: nextAmount,
+          day: nextDay,
+          notes: notes ?? existing[0].notes ?? null,
+          updatedAt: new Date(),
+        })
         .where(eq(expectedExpenseOverrides.id, existing[0].id))
         .returning();
       return NextResponse.json({ success: true, action: "updated", override: updated });
@@ -77,7 +90,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           expectedExpenseId: id,
           year,
           month,
-          amount: Math.round(amount),
+          amount: nextAmount,
+          day: nextDay,
           notes: notes ?? null,
         })
         .returning();

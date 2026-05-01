@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.4.5] - 2026-05-01
+
+### Modificato
+- feat: UI split no-IVA + data previsti editabile inline in /movimenti
+
+---
+
 ## [2.4.4] - 2026-05-01
 
 ### Modificato

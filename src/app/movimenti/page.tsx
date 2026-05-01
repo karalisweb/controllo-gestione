@@ -42,6 +42,7 @@ interface MovementRow {
   linkedTransactionId?: number | null;
   paymentPlanId?: number | null;
   autoSplit?: boolean;
+  autoSplitNoVat?: boolean;
   splitDetail?: SplitDetailLite | null;
 }
 
@@ -115,6 +116,8 @@ export default function MovimentiPage() {
   const [markingPaid, setMarkingPaid] = useState<number | null>(null);
   const [editingPdrDateId, setEditingPdrDateId] = useState<number | null>(null);
   const [editingPdrDateValue, setEditingPdrDateValue] = useState("");
+  const [editingExpectedDateRowId, setEditingExpectedDateRowId] = useState<string | null>(null);
+  const [editingExpectedDateValue, setEditingExpectedDateValue] = useState("");
   const [monthTarget, setMonthTarget] = useState<{ target: number; revenuePrev: number; gap: number } | null>(null);
   const [expandedBoxes, setExpandedBoxes] = useState<Set<string>>(new Set());
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
@@ -128,19 +131,27 @@ export default function MovimentiPage() {
     });
   };
 
-  const toggleAutoSplit = async (row: MovementRow) => {
+  const toggleAutoSplit = async (row: MovementRow, noVat = false) => {
     if (row.type !== "expected_income") return;
+    const isActive = noVat ? !!row.autoSplitNoVat : !!row.autoSplit && !row.autoSplitNoVat;
+    const body = isActive
+      ? { autoSplit: false } // disattiva qualsiasi split
+      : noVat
+        ? { autoSplitNoVat: true } // backend forza autoSplit=true
+        : { autoSplit: true, autoSplitNoVat: false };
     try {
       const r = await fetch(`/api/expected-incomes/${row.sourceId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ autoSplit: !row.autoSplit }),
+        body: JSON.stringify(body),
       });
       if (!r.ok) {
         const err = await r.json().catch(() => ({}));
         throw new Error(err.error || `HTTP ${r.status}`);
       }
-      toast.success(row.autoSplit ? "Split previsto rimosso" : "Split previsto attivato");
+      const labelOff = "Split previsto rimosso";
+      const labelOn = noVat ? "Split no-IVA previsto attivato" : "Split previsto attivato";
+      toast.success(isActive ? labelOff : labelOn);
       fetchMovements(year, month);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Errore");
@@ -190,6 +201,7 @@ export default function MovimentiPage() {
       amount: row.amount,
       categoryName: row.categoryName,
       autoSplit: row.autoSplit,
+      autoSplitNoVat: row.autoSplitNoVat,
     });
     setConfirmDialogOpen(true);
   };
@@ -217,6 +229,37 @@ export default function MovimentiPage() {
         throw new Error(err.error || `HTTP ${r.status}`);
       }
       toast.success("Saltato per questo mese");
+      fetchMovements(year, month);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Errore");
+    }
+  };
+
+  const commitExpectedDate = async (row: MovementRow) => {
+    const newDate = editingExpectedDateValue;
+    setEditingExpectedDateRowId(null);
+    if (row.type !== "expected_expense" && row.type !== "expected_income") return;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(newDate) || newDate === row.date) return;
+    const [y, m, d] = newDate.split("-").map(Number);
+    if (y !== year || m !== month) {
+      toast.error("La data deve restare nel mese corrente. Per spostare in un altro mese usa Salta + nuovo previsto.");
+      return;
+    }
+    const isExpense = row.type === "expected_expense";
+    const url = isExpense
+      ? `/api/expected-expenses/${row.sourceId}/override`
+      : `/api/expected-incomes/${row.sourceId}/override`;
+    try {
+      const r = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ year: y, month: m, day: d }),
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${r.status}`);
+      }
+      toast.success("Data previsto aggiornata per questo mese");
       fetchMovements(year, month);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Errore");
@@ -783,16 +826,37 @@ export default function MovimentiPage() {
                                 </button>
                               </>
                             )}
-                            {isExpectedIncome && (
+                            {isExpectedIncome && row.autoSplit && (
                               <button
                                 type="button"
-                                onClick={() => toggleAutoSplit(row)}
-                                title={row.autoSplit ? "Disattiva split previsto" : "Attiva split previsto (anticipa IVA/Alessio/Daniela nei Valori)"}
-                                className={`px-1.5 py-0.5 text-[10px] rounded transition-colors flex items-center gap-0.5 ${row.autoSplit ? "bg-amber-500/15 text-amber-500 hover:bg-amber-500/25" : "bg-primary/10 text-primary hover:bg-primary/20"}`}
+                                onClick={() => toggleAutoSplit(row, !!row.autoSplitNoVat)}
+                                title={row.autoSplitNoVat ? "Disattiva split no-IVA previsto" : "Disattiva split previsto"}
+                                className="px-1.5 py-0.5 text-[10px] rounded bg-amber-500/15 text-amber-500 hover:bg-amber-500/25 transition-colors flex items-center gap-0.5"
                               >
                                 <SplitIcon className="h-2.5 w-2.5" />
-                                {row.autoSplit ? "Annulla split" : "Split"}
+                                {row.autoSplitNoVat ? "Annulla split no-IVA" : "Annulla split"}
                               </button>
+                            )}
+                            {isExpectedIncome && !row.autoSplit && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => toggleAutoSplit(row, false)}
+                                  title="Attiva split previsto (scorpora IVA + quote soci)"
+                                  className="px-1.5 py-0.5 text-[10px] rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors flex items-center gap-0.5"
+                                >
+                                  <SplitIcon className="h-2.5 w-2.5" />
+                                  Split
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => toggleAutoSplit(row, true)}
+                                  title="Attiva split senza IVA (fattura estera/reverse charge): solo Alessio + Daniela sul lordo"
+                                  className="px-1.5 py-0.5 text-[10px] rounded bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 transition-colors"
+                                >
+                                  no-IVA
+                                </button>
+                              </>
                             )}
                             {isPdrPlanned && (
                               <button
@@ -828,6 +892,33 @@ export default function MovimentiPage() {
                                 type="button"
                                 onClick={() => { setEditingPdrDateId(row.sourceId); setEditingPdrDateValue(row.date); }}
                                 title="Clicca per modificare la data scadenza (es. anticipo pagamento)"
+                                className="px-1 py-0.5 rounded hover:bg-amber-500/10 transition-colors text-left flex items-center gap-1 text-amber-600 dark:text-amber-500"
+                              >
+                                {formatDate(row.date)}
+                                <Pencil className="h-3 w-3 opacity-70" />
+                              </button>
+                            )
+                          ) : (row.type === "expected_income" || row.type === "expected_expense") ? (
+                            editingExpectedDateRowId === row.id ? (
+                              <input
+                                type="date"
+                                value={editingExpectedDateValue}
+                                min={`${year}-${String(month).padStart(2, "0")}-01`}
+                                max={`${year}-${String(month).padStart(2, "0")}-${new Date(year, month, 0).getDate()}`}
+                                onChange={(e) => setEditingExpectedDateValue(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") { e.preventDefault(); commitExpectedDate(row); }
+                                  else if (e.key === "Escape") { e.preventDefault(); setEditingExpectedDateRowId(null); }
+                                }}
+                                onBlur={() => commitExpectedDate(row)}
+                                autoFocus
+                                className="h-7 px-1 text-xs rounded border border-primary/60 bg-background outline-none w-full"
+                              />
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => { setEditingExpectedDateRowId(row.id); setEditingExpectedDateValue(row.date); }}
+                                title="Clicca per spostare la data del previsto (solo questo mese)"
                                 className="px-1 py-0.5 rounded hover:bg-amber-500/10 transition-colors text-left flex items-center gap-1 text-amber-600 dark:text-amber-500"
                               >
                                 {formatDate(row.date)}

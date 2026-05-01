@@ -12,6 +12,7 @@ export const expectedExpenseOverrides = sqliteTable("expected_expense_overrides"
   year: integer("year").notNull(),
   month: integer("month").notNull(), // 1-12
   amount: integer("amount").notNull(), // centesimi, valore effettivo per quel (year, month)
+  day: integer("day"), // 1-31, override del giorno solo per quel mese (null = usa expectedDay del template)
   notes: text("notes"),
   createdAt: integer("created_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
   updatedAt: integer("updated_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
@@ -25,6 +26,7 @@ export const expectedIncomeOverrides = sqliteTable("expected_income_overrides", 
   year: integer("year").notNull(),
   month: integer("month").notNull(),
   amount: integer("amount").notNull(),
+  day: integer("day"), // 1-31, override del giorno solo per quel mese (null = usa expectedDay del template)
   notes: text("notes"),
   createdAt: integer("created_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
   updatedAt: integer("updated_at", { mode: "timestamp" }).default(sql`(unixepoch())`),

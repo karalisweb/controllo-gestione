@@ -275,21 +275,24 @@ export function TransactionEditableRow({
     }
   };
 
-  const handleSplit = async () => {
+  const handleSplit = async (noVat = false) => {
     if (saving) return;
-    if (!confirm("Generare 3 righe (IVA, Quota Alessio, Quota Daniela) dall'incasso?")) return;
+    const promptMsg = noVat
+      ? "Split senza IVA (fattura estera/reverse charge): genera la riga Bonifico soci con solo Alessio + Daniela. Procedere?"
+      : "Generare la riga Bonifico soci+IVA dall'incasso?";
+    if (!confirm(promptMsg)) return;
     setSaving(true);
     try {
       const r = await fetch("/api/splits", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ transactionId: row.sourceId }),
+        body: JSON.stringify({ transactionId: row.sourceId, noVat }),
       });
       if (!r.ok) {
         const err = await r.json().catch(() => ({}));
         throw new Error(err.error || `HTTP ${r.status}`);
       }
-      toast.success("Split generato — 3 righe create");
+      toast.success(noVat ? "Split no-IVA generato" : "Split generato");
       onSaved();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Errore split");
@@ -347,16 +350,27 @@ export function TransactionEditableRow({
             className={`h-4 w-4 shrink-0 ${isExpense ? "text-red-500" : "text-green-500"} ${isChild ? "opacity-60" : ""}`}
           />
           {canSplit && (
-            <button
-              type="button"
-              onClick={handleSplit}
-              disabled={saving}
-              title="Split: genera 3 righe (IVA, Quota Alessio, Quota Daniela)"
-              className="px-1.5 py-0.5 text-[10px] rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors disabled:opacity-50 flex items-center gap-0.5"
-            >
-              <SplitIcon className="h-2.5 w-2.5" />
-              Split
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => handleSplit(false)}
+                disabled={saving}
+                title="Split standard: scorpora IVA + quote soci"
+                className="px-1.5 py-0.5 text-[10px] rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors disabled:opacity-50 flex items-center gap-0.5"
+              >
+                <SplitIcon className="h-2.5 w-2.5" />
+                Split
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSplit(true)}
+                disabled={saving}
+                title="Split senza IVA (fatture estere/reverse charge): solo Alessio + Daniela sul lordo"
+                className="px-1.5 py-0.5 text-[10px] rounded bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 transition-colors disabled:opacity-50"
+              >
+                no-IVA
+              </button>
+            </>
           )}
           {row.isSplit && (
             <button

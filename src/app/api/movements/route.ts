@@ -284,7 +284,7 @@ export async function GET(request: NextRequest) {
       );
 
     const expenseIds = allExpenses.map((e) => e.id);
-    const expenseOverridesMap: Record<number, number> = {};
+    const expenseOverridesMap: Record<number, { amount: number; day: number | null }> = {};
     if (expenseIds.length > 0) {
       const overrides = await db
         .select()
@@ -296,7 +296,7 @@ export async function GET(request: NextRequest) {
             eq(expectedExpenseOverrides.month, month),
           ),
         );
-      for (const o of overrides) expenseOverridesMap[o.expectedExpenseId] = o.amount;
+      for (const o of overrides) expenseOverridesMap[o.expectedExpenseId] = { amount: o.amount, day: o.day };
     }
 
     // Centri di costo per nome
@@ -309,12 +309,13 @@ export async function GET(request: NextRequest) {
     const plannedExpenseRows: MovementRow[] = [];
     for (const e of allExpenses) {
       if (!monthMatches(e.startDate, e.endDate, e.frequency, year, month)) continue;
-      const day = Math.min(Math.max(e.expectedDay || 1, 1), lastDayDate.getUTCDate());
+      const ov = expenseOverridesMap[e.id];
+      const dayBase = ov?.day ?? e.expectedDay ?? 1;
+      const day = Math.min(Math.max(dayBase, 1), lastDayDate.getUTCDate());
       const date = `${year}-${pad2(month)}-${pad2(day)}`;
       // Skip previsti con data < oggi (passato già "successo" — vedi solo la realtà)
       if (date < today) continue;
-      const overrideAmount = expenseOverridesMap[e.id];
-      const amount = overrideAmount !== undefined ? overrideAmount : e.amount;
+      const amount = ov ? ov.amount : e.amount;
       // Skip override esplicitamente saltati (amount=0)
       if (amount === 0) continue;
       plannedExpenseRows.push({
@@ -327,7 +328,7 @@ export async function GET(request: NextRequest) {
         status: "planned",
         sourceId: e.id,
         categoryName: e.costCenterId ? costCenterById.get(e.costCenterId) || null : null,
-        isOverride: overrideAmount !== undefined,
+        isOverride: !!ov,
       });
     }
 
@@ -345,7 +346,7 @@ export async function GET(request: NextRequest) {
       );
 
     const incomeIds = allIncomes.map((i) => i.id);
-    const incomeOverridesMap: Record<number, number> = {};
+    const incomeOverridesMap: Record<number, { amount: number; day: number | null }> = {};
     if (incomeIds.length > 0) {
       const overrides = await db
         .select()
@@ -357,7 +358,7 @@ export async function GET(request: NextRequest) {
             eq(expectedIncomeOverrides.month, month),
           ),
         );
-      for (const o of overrides) incomeOverridesMap[o.expectedIncomeId] = o.amount;
+      for (const o of overrides) incomeOverridesMap[o.expectedIncomeId] = { amount: o.amount, day: o.day };
     }
 
     const revenueCentersList = await db
@@ -376,12 +377,13 @@ export async function GET(request: NextRequest) {
     let plannedValuesAgency = 0;
     for (const i of allIncomes) {
       if (!monthMatches(i.startDate, i.endDate, i.frequency, year, month)) continue;
-      const day = Math.min(Math.max(i.expectedDay || 1, 1), lastDayDate.getUTCDate());
+      const ov = incomeOverridesMap[i.id];
+      const dayBase = ov?.day ?? i.expectedDay ?? 1;
+      const day = Math.min(Math.max(dayBase, 1), lastDayDate.getUTCDate());
       const date = `${year}-${pad2(month)}-${pad2(day)}`;
       // Skip previsti con data < oggi (passato già "successo" — vedi solo la realtà)
       if (date < today) continue;
-      const overrideAmount = incomeOverridesMap[i.id];
-      const amount = overrideAmount !== undefined ? overrideAmount : i.amount;
+      const amount = ov ? ov.amount : i.amount;
       // Skip override esplicitamente saltati (amount=0)
       if (amount === 0) continue;
       plannedIncomeRows.push({
@@ -394,7 +396,7 @@ export async function GET(request: NextRequest) {
         status: "planned",
         sourceId: i.id,
         categoryName: i.revenueCenterId ? revCenterById.get(i.revenueCenterId) || null : null,
-        isOverride: overrideAmount !== undefined,
+        isOverride: !!ov,
         autoSplit: i.autoSplit ?? false,
         autoSplitNoVat: i.autoSplitNoVat ?? false,
       });

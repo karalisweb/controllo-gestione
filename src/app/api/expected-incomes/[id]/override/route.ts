@@ -9,10 +9,13 @@ interface RouteParams {
 
 /**
  * POST /api/expected-incomes/[id]/override
- * Body: { year, month, amount, notes? }
+ * Body: { year, month, amount?, day?, notes? }
  *
- * Upsert dell'override per il (year, month). Se l'amount === income.amount
- * (default), l'override viene cancellato.
+ * Upsert dell'override per il (year, month). Se non viene passato `amount`,
+ * conserva l'amount esistente (o usa l'amount base del template).
+ * `day` opzionale: 1-31 per spostare la data del solo mese (null = giorno
+ * default del template). Se sia amount che day combaciano col default, l'override
+ * viene cancellato.
  */
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
@@ -21,14 +24,16 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     if (Number.isNaN(id)) return NextResponse.json({ error: "ID non valido" }, { status: 400 });
 
     const body = await request.json();
-    const { year, month, amount, notes } = body;
+    const { year, month, amount, day, notes } = body;
 
     if (!Number.isInteger(year) || year < 2000 || year > 2100)
       return NextResponse.json({ error: "Anno non valido" }, { status: 400 });
     if (!Number.isInteger(month) || month < 1 || month > 12)
       return NextResponse.json({ error: "Mese non valido (1-12)" }, { status: 400 });
-    if (!Number.isFinite(amount) || amount < 0)
+    if (amount !== undefined && (!Number.isFinite(amount) || amount < 0))
       return NextResponse.json({ error: "Importo non valido" }, { status: 400 });
+    if (day !== undefined && day !== null && (!Number.isInteger(day) || day < 1 || day > 31))
+      return NextResponse.json({ error: "Giorno non valido (1-31)" }, { status: 400 });
 
     const [income] = await db
       .select({ id: expectedIncomes.id, amount: expectedIncomes.amount })
@@ -38,7 +43,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     if (!income) return NextResponse.json({ error: "Incasso non trovato" }, { status: 404 });
 
     const existing = await db
-      .select({ id: expectedIncomeOverrides.id })
+      .select()
       .from(expectedIncomeOverrides)
       .where(
         and(
@@ -49,7 +54,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       )
       .limit(1);
 
-    if (Math.round(amount) === income.amount) {
+    const nextAmount = amount !== undefined
+      ? Math.round(amount)
+      : existing[0]?.amount ?? income.amount;
+    const nextDay = day !== undefined ? day : existing[0]?.day ?? null;
+
+    // Override "vuoto" (amount default + day default): cancella se esiste
+    if (nextAmount === income.amount && (nextDay === null || nextDay === undefined)) {
       if (existing.length > 0) {
         await db
           .delete(expectedIncomeOverrides)
@@ -61,7 +72,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     if (existing.length > 0) {
       const [updated] = await db
         .update(expectedIncomeOverrides)
-        .set({ amount: Math.round(amount), notes: notes ?? null, updatedAt: new Date() })
+        .set({
+          amount: nextAmount,
+          day: nextDay,
+          notes: notes ?? existing[0].notes ?? null,
+          updatedAt: new Date(),
+        })
         .where(eq(expectedIncomeOverrides.id, existing[0].id))
         .returning();
       return NextResponse.json({ success: true, action: "updated", override: updated });
@@ -72,7 +88,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           expectedIncomeId: id,
           year,
           month,
-          amount: Math.round(amount),
+          amount: nextAmount,
+          day: nextDay,
           notes: notes ?? null,
         })
         .returning();
