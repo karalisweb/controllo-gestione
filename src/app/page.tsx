@@ -30,6 +30,7 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceL
 import { QuickEntry } from "@/components/dashboard/QuickEntry";
 import { SalesForecastTable } from "@/components/dashboard/SalesForecastTable";
 import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
+import { FiveQuestionsBlock } from "@/components/dashboard/FiveQuestionsBlock";
 import { AnimatedNumber } from "@/components/ui/animated-number";
 
 const fadeInUp = {
@@ -204,6 +205,11 @@ export default function Home() {
         initial="hidden"
         animate="visible"
       >
+        {/* ============ 0. LE 5 DOMANDE OPERATIVE ============ */}
+        <motion.div variants={fadeInUp} transition={{ duration: 0.4 }}>
+          <FiveQuestionsBlock />
+        </motion.div>
+
         {/* ============ 1. PREVISIONALE 4 MESI ============ */}
         <motion.div variants={fadeInUp} transition={{ duration: 0.4 }}>
           <SalesForecastTable />

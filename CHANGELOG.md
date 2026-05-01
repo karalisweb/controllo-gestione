@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.4.9] - 2026-05-01
+
+### Modificato
+- feat: Dashboard 5 domande in homepage (sopra le sezioni esistenti)
+
+---
+
 ## [2.4.8] - 2026-05-01
 
 ### Modificato
