@@ -251,6 +251,25 @@ export const incomeSplits = sqliteTable("income_splits", {
   createdAt: integer("created_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
 });
 
+// Fondi: gruzzolo di emergenza dell'agenzia. Sono conti REALI separati
+// (altra banca o contanti), saldo aggiornato manualmente. Niente regola
+// automatica di accantonamento — l'utente decide a mano se versare e quanto.
+//   - type "liquid" → target fisso (default 100000 = 1.000 €)
+//   - type "emergency" → target dinamico (3 mesi di spese fisse strutturali);
+//     se targetCents è impostato, sovrascrive la formula dinamica.
+export const funds = sqliteTable("funds", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull(),
+  type: text("type", { enum: ["liquid", "emergency"] }).notNull(),
+  targetCents: integer("target_cents"), // null per "emergency" = calcolato dinamicamente
+  currentCents: integer("current_cents").notNull().default(0),
+  notes: text("notes"),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: integer("created_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
+  deletedAt: integer("deleted_at", { mode: "timestamp" }),
+});
+
 // Impostazioni globali dell'app
 export const settings = sqliteTable("settings", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -481,6 +500,9 @@ export type NewPaymentPlanInstallment = typeof paymentPlanInstallments.$inferIns
 
 export type Setting = typeof settings.$inferSelect;
 export type NewSetting = typeof settings.$inferInsert;
+
+export type Fund = typeof funds.$inferSelect;
+export type NewFund = typeof funds.$inferInsert;
 
 export type SalesOpportunity = typeof salesOpportunities.$inferSelect;
 export type NewSalesOpportunity = typeof salesOpportunities.$inferInsert;

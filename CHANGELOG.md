@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.4.10] - 2026-05-01
+
+### Modificato
+- feat: pagina /fondi + Card 4 collegata + fix box Uscite/Ingressi (filtro date<=today)
+
+---
+
 ## [2.4.9] - 2026-05-01
 
 ### Modificato

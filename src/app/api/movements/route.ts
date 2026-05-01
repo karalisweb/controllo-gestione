@@ -606,16 +606,21 @@ export async function GET(request: NextRequest) {
     // il running balance calcolato al passo 7 e leggibile come un estratto conto Excel.
 
     // ───── 8. Aggregati del mese (per i 3 box header) ─────
+    // I box mostrano la REALTÀ già accaduta del mese (date <= today).
+    // Le transactions con data futura (es. previsti confermati in anticipo, o
+    // movimenti datati lunedì prossimo perché oggi è festivo) non entrano nei
+    // box: per il sistema esistono come record, ma non sono ancora "vissute".
     // Esclusi dalla parte operativa (Uscite/Ingressi per centro):
     //   - isTransfer=true (vecchie 3 righe split modello v2.3.28-32)
     //   - linkedTransactionId NOT NULL (riga "[SPLIT-TOTAL]" nuova: è giroconto soci+IVA,
     //     non spesa operativa; lo spaccato vive nel box "Valori da split")
-    // Le righe expected_split virtuali NON entrano (sono solo nel ledger, non in monthTxs).
+    //   - date > today (futuro: non ancora successo)
     const incomeByCenterMap = new Map<string, number>();
     const expenseByCenterMap = new Map<string, number>();
     for (const t of monthTxs) {
       if (t.isTransfer) continue;
       if (t.linkedTransactionId) continue;
+      if (t.date > today) continue;
       if (t.amount > 0) {
         const name = t.revenueCenterId ? (revCenterById.get(t.revenueCenterId) || "Senza centro") : "Senza centro";
         incomeByCenterMap.set(name, (incomeByCenterMap.get(name) || 0) + t.amount);

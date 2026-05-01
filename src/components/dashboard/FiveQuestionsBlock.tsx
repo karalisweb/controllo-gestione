@@ -50,6 +50,19 @@ interface DashboardQuestionsResponse {
   };
 }
 
+interface FundRow {
+  id: number;
+  name: string;
+  type: "liquid" | "emergency";
+  targetCents: number;
+  currentCents: number;
+  progressPct: number;
+}
+interface FundsResponse {
+  funds: FundRow[];
+  totals: { target: number; current: number };
+}
+
 const MONTH_LABELS = [
   "gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno",
   "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre",
@@ -61,16 +74,25 @@ function trafficLight(state: "green" | "yellow" | "red"): string {
 
 export function FiveQuestionsBlock() {
   const [data, setData] = useState<DashboardQuestionsResponse | null>(null);
+  const [funds, setFunds] = useState<FundsResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const r = await fetch("/api/dashboard-questions");
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        const json: DashboardQuestionsResponse = await r.json();
-        if (!cancelled) setData(json);
+        const [r1, r2] = await Promise.all([
+          fetch("/api/dashboard-questions"),
+          fetch("/api/funds"),
+        ]);
+        if (r1.ok) {
+          const json: DashboardQuestionsResponse = await r1.json();
+          if (!cancelled) setData(json);
+        }
+        if (r2.ok) {
+          const json: FundsResponse = await r2.json();
+          if (!cancelled) setFunds(json);
+        }
       } catch {
         // silent: la pagina ha le altre sezioni che continuano a funzionare
       } finally {
@@ -236,27 +258,77 @@ export function FiveQuestionsBlock() {
         </CardContent>
       </Card>
 
-      {/* Card 4 — Sto costruendo il gruzzolo? (placeholder) */}
-      <Card className="border-dashed">
-        <CardContent className="p-5">
-          <div className="flex items-start justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <div className="h-2.5 w-2.5 rounded-full bg-muted" />
-              <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">
-                Sto costruendo il gruzzolo?
-              </h3>
-            </div>
-            <PiggyBank className="h-4 w-4 text-muted-foreground" />
-          </div>
-          <div className="flex flex-col items-center justify-center py-6 text-center">
-            <p className="text-sm text-muted-foreground mb-2">Fondo non ancora configurato</p>
-            <p className="text-[11px] text-muted-foreground mb-3">Fondo liquido 1.000 € + Fondo 3 mesi spese fisse</p>
-            <span className="text-xs text-primary inline-flex items-center gap-1 opacity-50 cursor-not-allowed">
-              Configura i fondi <ArrowRight className="h-3 w-3" />
-            </span>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Card 4 — Sto costruendo il gruzzolo? */}
+      {(() => {
+        const totalCurrent = funds?.totals.current ?? 0;
+        const totalTarget = funds?.totals.target ?? 0;
+        const overallPct = totalTarget > 0 ? Math.round((totalCurrent / totalTarget) * 100) : 0;
+        const card4State: "green" | "yellow" | "red" = overallPct >= 100 ? "green" : overallPct >= 30 ? "yellow" : "red";
+        const liquid = funds?.funds.find((f) => f.type === "liquid");
+        const emergency = funds?.funds.find((f) => f.type === "emergency");
+
+        return (
+          <Card>
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className={`h-2.5 w-2.5 rounded-full ${trafficLight(card4State)}`} />
+                  <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">
+                    Sto costruendo il gruzzolo?
+                  </h3>
+                </div>
+                <PiggyBank className="h-4 w-4 text-muted-foreground" />
+              </div>
+              {funds && funds.funds.length > 0 ? (
+                <>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    {liquid && (
+                      <div>
+                        <p className="text-xs text-muted-foreground">{liquid.name}</p>
+                        <p className="font-mono font-bold">
+                          {formatCurrency(liquid.currentCents)} <span className="text-muted-foreground font-normal text-xs">/ {formatCurrency(liquid.targetCents)}</span>
+                        </p>
+                        <div className="w-full bg-muted rounded-full h-1.5 mt-1">
+                          <div className={`h-1.5 rounded-full ${liquid.progressPct >= 100 ? "bg-green-500" : "bg-primary"}`} style={{ width: `${liquid.progressPct}%` }} />
+                        </div>
+                      </div>
+                    )}
+                    {emergency && (
+                      <div>
+                        <p className="text-xs text-muted-foreground">{emergency.name}</p>
+                        <p className="font-mono font-bold">
+                          {formatCurrency(emergency.currentCents)} <span className="text-muted-foreground font-normal text-xs">/ {formatCurrency(emergency.targetCents)}</span>
+                        </p>
+                        <div className="w-full bg-muted rounded-full h-1.5 mt-1">
+                          <div className={`h-1.5 rounded-full ${emergency.progressPct >= 100 ? "bg-green-500" : "bg-primary"}`} style={{ width: `${emergency.progressPct}%` }} />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="mt-3 pt-3 border-t flex items-baseline justify-between">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Gruzzolo costruito</p>
+                      <p className={`font-mono font-bold text-2xl ${card4State === "green" ? "text-green-500" : card4State === "yellow" ? "text-amber-500" : "text-foreground"}`}>
+                        {overallPct}%
+                      </p>
+                    </div>
+                    <Link href="/fondi" className="text-xs text-primary inline-flex items-center gap-1 hover:underline">
+                      Aggiorna saldo <ArrowRight className="h-3 w-3" />
+                    </Link>
+                  </div>
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-6 text-center">
+                  <p className="text-sm text-muted-foreground mb-2">Fondi non ancora caricati</p>
+                  <Link href="/fondi" className="text-xs text-primary inline-flex items-center gap-1 hover:underline">
+                    Vai a /fondi <ArrowRight className="h-3 w-3" />
+                  </Link>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* Card 5 — Posso permettermi investimenti? — col-span-2 su lg */}
       <Card className="lg:col-span-2">
