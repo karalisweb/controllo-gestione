@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
   CalendarRange,
+  CalendarDays,
   Receipt,
   CreditCard,
   Target,
@@ -34,6 +35,7 @@ const navSections = [
     items: [
       { href: "/", label: "Dashboard", icon: LayoutDashboard },
       { href: "/movimenti", label: "Movimenti", icon: CalendarRange },
+      { href: "/annuale", label: "Annuale", icon: CalendarDays },
       { href: "/riconcilia", label: "Riconcilia", icon: Wand2 },
     ],
   },

@@ -106,3 +106,45 @@ export async function setSplitConfig(config: SplitConfig): Promise<SplitConfig> 
 
   return safe;
 }
+
+// ─── Monte ore agenzia (per costo orario fisso) ───────────────────────────
+// Default 480 = (Alessio+Daniela 6h × 2) + (Stefano+Davide+Matteo 4h × 3) = 24h/g × 20gg
+export const AGENCY_MONTHLY_HOURS_KEY = "agency_monthly_hours";
+export const DEFAULT_AGENCY_MONTHLY_HOURS = 480;
+
+export async function getAgencyMonthlyHours(): Promise<number> {
+  const rows = await db
+    .select()
+    .from(settings)
+    .where(eq(settings.key, AGENCY_MONTHLY_HOURS_KEY))
+    .limit(1);
+  if (rows.length === 0) return DEFAULT_AGENCY_MONTHLY_HOURS;
+  const v = parseFloat(rows[0].value);
+  return Number.isFinite(v) && v > 0 ? v : DEFAULT_AGENCY_MONTHLY_HOURS;
+}
+
+export async function setAgencyMonthlyHours(hours: number): Promise<number> {
+  if (!Number.isFinite(hours) || hours <= 0 || hours > 10000) {
+    throw new Error(`Monte ore non valido (atteso > 0, ricevuto ${hours})`);
+  }
+  const value = String(Math.round(hours));
+  const existing = await db
+    .select()
+    .from(settings)
+    .where(eq(settings.key, AGENCY_MONTHLY_HOURS_KEY))
+    .limit(1);
+  if (existing.length === 0) {
+    await db.insert(settings).values({
+      key: AGENCY_MONTHLY_HOURS_KEY,
+      value,
+      type: "number",
+      description: "Monte ore mensile agenzia (per costo orario fisso)",
+    });
+  } else {
+    await db
+      .update(settings)
+      .set({ value })
+      .where(eq(settings.key, AGENCY_MONTHLY_HOURS_KEY));
+  }
+  return Math.round(hours);
+}

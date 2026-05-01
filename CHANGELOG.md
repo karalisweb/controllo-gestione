@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.4.6] - 2026-05-01
+
+### Modificato
+- feat: pagina /annuale (sintesi 12 mesi + costo orario fisso)
+
+---
+
 ## [2.4.5] - 2026-05-01
 
 ### Modificato
