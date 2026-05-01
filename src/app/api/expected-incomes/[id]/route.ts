@@ -64,9 +64,24 @@ export async function PUT(
     endDate,
     reliability,
     autoSplit,
+    autoSplitNoVat,
     notes,
     isActive,
   } = body;
+
+  // autoSplit e autoSplitNoVat sono mutuamente esclusivi:
+  // - autoSplit=true (con noVat=false): split standard con IVA
+  // - autoSplitNoVat=true: forza autoSplit=true, modalità senza IVA
+  // - entrambi off: nessuno split
+  let nextAutoSplit = autoSplit !== undefined ? autoSplit : existing.autoSplit;
+  let nextAutoSplitNoVat = autoSplitNoVat !== undefined ? autoSplitNoVat : existing.autoSplitNoVat;
+  if (autoSplitNoVat === true) {
+    nextAutoSplit = true;
+  } else if (autoSplit === true && autoSplitNoVat === undefined) {
+    nextAutoSplitNoVat = false;
+  } else if (autoSplit === false) {
+    nextAutoSplitNoVat = false;
+  }
 
   const updateResult = await db
     .update(expectedIncomes)
@@ -79,7 +94,8 @@ export async function PUT(
       startDate: startDate ?? existing.startDate,
       endDate: endDate !== undefined ? endDate : existing.endDate,
       reliability: reliability ?? existing.reliability,
-      autoSplit: autoSplit !== undefined ? autoSplit : existing.autoSplit,
+      autoSplit: nextAutoSplit,
+      autoSplitNoVat: nextAutoSplitNoVat,
       notes: notes !== undefined ? notes : existing.notes,
       isActive: isActive !== undefined ? isActive : existing.isActive,
     })

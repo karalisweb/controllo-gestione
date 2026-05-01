@@ -63,6 +63,8 @@ interface MovementRow {
   paymentPlanId?: number | null;
   // Per expected_income: stato del flag autoSplit (per UI bottone Split)
   autoSplit?: boolean;
+  // Per expected_income: variante "split no-IVA" per fatture estere/reverse charge
+  autoSplitNoVat?: boolean;
 }
 
 // Calcola se il mese (1-12) di un dato anno è "coperto" da una expected_expense/income
@@ -394,17 +396,21 @@ export async function GET(request: NextRequest) {
         categoryName: i.revenueCenterId ? revCenterById.get(i.revenueCenterId) || null : null,
         isOverride: overrideAmount !== undefined,
         autoSplit: i.autoSplit ?? false,
+        autoSplitNoVat: i.autoSplitNoVat ?? false,
       });
 
-      // Se autoSplit=true: genera riga split virtuale + aggrega Valori previsti
+      // Se autoSplit=true: genera riga split virtuale + aggrega Valori previsti.
+      // autoSplitNoVat=true: variante per fatture estere — vatPct=0, soci sul lordo.
       if (i.autoSplit) {
-        const split = calculateSplit(amount, splitConfig);
+        const effectiveConfig = i.autoSplitNoVat ? { ...splitConfig, vatPct: 0 } : splitConfig;
+        const split = calculateSplit(amount, effectiveConfig);
         const transferAmount = split.vatAmount + split.alessioAmount + split.danielaAmount;
+        const sociLabel = i.autoSplitNoVat ? "Bonifico soci" : "Bonifico soci+IVA";
         if (transferAmount > 0) {
           plannedIncomeRows.push({
             id: `ei-split-${i.id}`,
             date,
-            description: `Bonifico soci+IVA ${i.clientName}`,
+            description: `${sociLabel} ${i.clientName}`,
             amount: -transferAmount,
             runningBalance: 0,
             type: "expected_split",
@@ -522,8 +528,8 @@ export async function GET(request: NextRequest) {
       const center = t.amount >= 0
         ? (t.revenueCenterId ? revCenterById.get(t.revenueCenterId) : null)
         : (t.costCenterId ? costCenterById.get(t.costCenterId) : null);
-      // splitDetail popolato solo per la riga "[SPLIT-TOTAL]" (modello attuale, 1 riga)
-      const isSplitTotal = !!(t.linkedTransactionId && t.notes?.startsWith("[SPLIT-TOTAL]"));
+      // splitDetail popolato per le righe "[SPLIT-TOTAL]" e "[SPLIT-TOTAL-NOVAT]" (modello attuale, 1 riga)
+      const isSplitTotal = !!(t.linkedTransactionId && t.notes?.startsWith("[SPLIT-TOTAL"));
       const splitDetail = isSplitTotal && t.linkedTransactionId
         ? splitByParentId.get(t.linkedTransactionId) ?? null
         : null;
@@ -594,18 +600,8 @@ export async function GET(request: NextRequest) {
     }
     const finalBalance = running;
 
-    // Ri-ordina per il display: data DESC (più recente in alto), intra-giorno ASC mantenuto
-    // (incasso prima dello split previsto, planned prima di realized, ecc.).
-    all.sort((a, b) => {
-      if (a.date !== b.date) return b.date.localeCompare(a.date);
-      const so = statusOrder[a.status] - statusOrder[b.status];
-      if (so !== 0) return so;
-      if (a.status === "planned" && b.status === "planned") {
-        const to = (typeOrder[a.type] ?? 99) - (typeOrder[b.type] ?? 99);
-        if (to !== 0) return to;
-      }
-      return a.amount - b.amount;
-    });
+    // Le righe restano in ordine ASC (1 del mese in alto → ultimo in basso): coerente con
+    // il running balance calcolato al passo 7 e leggibile come un estratto conto Excel.
 
     // ───── 8. Aggregati del mese (per i 3 box header) ─────
     // Esclusi dalla parte operativa (Uscite/Ingressi per centro):

@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.4.4] - 2026-05-01
+
+### Modificato
+- fix: ordine cronologico fisso /movimenti + schema split no-IVA
+
+---
+
 ## [2.4.3] - 2026-04-29
 
 ### Modificato

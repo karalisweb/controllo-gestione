@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
 // POST - Crea una nuova ripartizione per una transazione
 export async function POST(request: NextRequest) {
   const body = await request.json();
-  const { transactionId, customAmounts } = body;
+  const { transactionId, customAmounts, noVat } = body;
 
   if (!transactionId) {
     return NextResponse.json(
@@ -89,9 +89,12 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Usa importi custom se forniti, altrimenti calcola con percentuali configurate
+  // Usa importi custom se forniti, altrimenti calcola con percentuali configurate.
+  // Se noVat=true: fatture estere/reverse charge — calcola Ale/Dani sul lordo
+  // azzerando l'IVA (vatPct=0 → netto = lordo).
   const splitConfig = await getSplitConfig();
-  const baseSplit = calculateSplit(transaction.amount, splitConfig);
+  const effectiveConfig = noVat ? { ...splitConfig, vatPct: 0 } : splitConfig;
+  const baseSplit = calculateSplit(transaction.amount, effectiveConfig);
   const split = customAmounts ? {
     grossAmount: transaction.amount,
     netAmount: baseSplit.netAmount,
@@ -110,22 +113,23 @@ export async function POST(request: NextRequest) {
   // ed è esposto come dettaglio espandibile nella UI di /movimenti.
   const incassoDesc = (transaction.description || "").trim();
   const transferAmount = split.vatAmount + split.alessioAmount + split.danielaAmount;
-  const totalDescription = incassoDesc
-    ? `Bonifico soci+IVA ${incassoDesc}`
-    : "Bonifico soci+IVA";
+  const sociLabel = noVat ? "Bonifico soci" : "Bonifico soci+IVA";
+  const totalDescription = incassoDesc ? `${sociLabel} ${incassoDesc}` : sociLabel;
 
   const ts = Date.now();
+  const idPrefix = noVat ? "SPLIT-TOTAL-NOVAT" : "SPLIT-TOTAL";
+  const noteTag = noVat ? "[SPLIT-TOTAL-NOVAT]" : "[SPLIT-TOTAL]";
   const transferResult = await db
     .insert(transactions)
     .values({
-      externalId: `SPLIT-TOTAL-${transactionId}-${ts}`,
+      externalId: `${idPrefix}-${transactionId}-${ts}`,
       date: transaction.date,
       description: totalDescription,
       amount: -transferAmount,
       costCenterId: sociCenterId,
       isTransfer: false, // INCIDE sul saldo (corrisponde al bonifico bancario reale)
       linkedTransactionId: transactionId,
-      notes: `[SPLIT-TOTAL] da incasso #${transactionId}`,
+      notes: `${noteTag} da incasso #${transactionId}`,
       isSplit: false,
       isVerified: true,
     })

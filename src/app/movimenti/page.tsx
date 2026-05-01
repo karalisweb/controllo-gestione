@@ -16,7 +16,7 @@ import { MobileHeader } from "@/components/MobileHeader";
 import { NewMovementForm } from "@/components/movimenti/NewMovementForm";
 import { TransactionEditableRow } from "@/components/movimenti/TransactionEditableRow";
 import { ConfirmExpectedDialog, type PreviewRow } from "@/components/movimenti/ConfirmExpectedDialog";
-import { ChevronLeft, ChevronRight, ChevronDown, CalendarRange, CheckCircle2, Clock, CreditCard, ArrowDownToLine, ArrowUpFromLine, X, CornerDownRight, Pencil, Split as SplitIcon, ArrowDown, ArrowUp } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, CalendarRange, CheckCircle2, Clock, CreditCard, ArrowDownToLine, ArrowUpFromLine, X, CornerDownRight, Pencil, Split as SplitIcon } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils/currency";
 import { formatDate } from "@/lib/utils/dates";
@@ -116,7 +116,6 @@ export default function MovimentiPage() {
   const [editingPdrDateId, setEditingPdrDateId] = useState<number | null>(null);
   const [editingPdrDateValue, setEditingPdrDateValue] = useState("");
   const [monthTarget, setMonthTarget] = useState<{ target: number; revenuePrev: number; gap: number } | null>(null);
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [expandedBoxes, setExpandedBoxes] = useState<Set<string>>(new Set());
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
@@ -385,11 +384,8 @@ export default function MovimentiPage() {
   }, [didAutoScroll, year, month, today, data]);
 
   const isCurrentMonth = year === today.getFullYear() && month === today.getMonth() + 1;
-  // Backend ritorna sempre DESC; per ASC inverto. Uso useMemo per stabilità.
-  const displayedRows = useMemo(() => {
-    if (!data) return [];
-    return sortOrder === "desc" ? data.rows : [...data.rows].reverse();
-  }, [data, sortOrder]);
+  // Backend ritorna ASC (1 del mese in alto → ultimo in basso): coerente con il running.
+  const displayedRows = data?.rows ?? [];
   const monthLabel = `${MONTH_LABELS[month - 1]} ${year}`;
   const todayStr = today.toISOString().slice(0, 10);
 
@@ -646,16 +642,6 @@ export default function MovimentiPage() {
               <>
                 {/* Mobile: cards compatte */}
                 <div className="sm:hidden divide-y">
-              {/* Toggle ordinamento mobile */}
-              <div className="p-2 flex justify-end border-b">
-                <button
-                  type="button"
-                  onClick={() => setSortOrder((s) => (s === "desc" ? "asc" : "desc"))}
-                  className="px-2 py-1 text-xs rounded border border-border hover:bg-muted flex items-center gap-1"
-                >
-                  Data {sortOrder === "desc" ? <ArrowDown className="h-3 w-3" /> : <ArrowUp className="h-3 w-3" />}
-                </button>
-              </div>
               {displayedRows.map((row) => {
                 const Icon = TYPE_ICONS[row.type];
                 const isToday = row.date === todayStr;
@@ -711,17 +697,7 @@ export default function MovimentiPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-[40px]"></TableHead>
-                    <TableHead className="w-[130px]">
-                      <button
-                        type="button"
-                        onClick={() => setSortOrder((s) => (s === "desc" ? "asc" : "desc"))}
-                        title={`Ordine attuale: ${sortOrder === "desc" ? "più recenti in alto" : "più vecchi in alto"}. Clicca per invertire.`}
-                        className="flex items-center gap-1 hover:text-foreground transition-colors"
-                      >
-                        Data
-                        {sortOrder === "desc" ? <ArrowDown className="h-3 w-3" /> : <ArrowUp className="h-3 w-3" />}
-                      </button>
-                    </TableHead>
+                    <TableHead className="w-[130px]">Data</TableHead>
                     <TableHead>Descrizione</TableHead>
                     <TableHead className="w-[160px]">Contatto</TableHead>
                     <TableHead className="w-[160px]">Categoria</TableHead>
@@ -731,30 +707,16 @@ export default function MovimentiPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {/* Riga TOP: in DESC = saldo finale; in ASC = saldo iniziale */}
-                  {sortOrder === "desc" ? (
-                    <TableRow className="bg-muted/30 font-bold">
-                      <TableCell></TableCell>
-                      <TableCell className="text-xs text-muted-foreground italic">fine mese</TableCell>
-                      <TableCell colSpan={4} className="text-sm italic text-muted-foreground">Saldo finale previsto</TableCell>
-                      <TableCell className={`text-right font-mono ${data.finalBalance - data.initialBalance >= 0 ? "text-green-500" : "text-red-500"}`}>
-                        {data.finalBalance - data.initialBalance >= 0 ? "+" : ""}{formatCurrency(data.finalBalance - data.initialBalance)}
-                      </TableCell>
-                      <TableCell className={`text-right font-mono ${data.finalBalance >= 0 ? "text-green-500" : "text-red-500"}`}>
-                        {formatCurrency(data.finalBalance)}
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    <TableRow className="bg-muted/30">
-                      <TableCell></TableCell>
-                      <TableCell className="text-xs text-muted-foreground italic">{`${year}-${String(month).padStart(2, "0")}-01`}</TableCell>
-                      <TableCell colSpan={4} className="text-sm italic text-muted-foreground">Saldo a inizio mese</TableCell>
-                      <TableCell></TableCell>
-                      <TableCell className={`text-right font-mono font-bold ${data.initialBalance >= 0 ? "text-foreground" : "text-red-500"}`}>
-                        {formatCurrency(data.initialBalance)}
-                      </TableCell>
-                    </TableRow>
-                  )}
+                  {/* Riga TOP: saldo iniziale (ordine ASC, 1 del mese in alto) */}
+                  <TableRow className="bg-muted/30">
+                    <TableCell></TableCell>
+                    <TableCell className="text-xs text-muted-foreground italic">{`${year}-${String(month).padStart(2, "0")}-01`}</TableCell>
+                    <TableCell colSpan={4} className="text-sm italic text-muted-foreground">Saldo a inizio mese</TableCell>
+                    <TableCell></TableCell>
+                    <TableCell className={`text-right font-mono font-bold ${data.initialBalance >= 0 ? "text-foreground" : "text-red-500"}`}>
+                      {formatCurrency(data.initialBalance)}
+                    </TableCell>
+                  </TableRow>
                   {displayedRows.map((row) => {
                     const isToday = row.date === todayStr;
                     const isPast = row.date < todayStr;
@@ -932,30 +894,18 @@ export default function MovimentiPage() {
                       </>
                     );
                   })}
-                  {/* Riga BOTTOM: in DESC = saldo iniziale; in ASC = saldo finale */}
-                  {sortOrder === "desc" ? (
-                    <TableRow className="bg-muted/30">
-                      <TableCell></TableCell>
-                      <TableCell className="text-xs text-muted-foreground italic">{`${year}-${String(month).padStart(2, "0")}-01`}</TableCell>
-                      <TableCell colSpan={4} className="text-sm italic text-muted-foreground">Saldo a inizio mese</TableCell>
-                      <TableCell></TableCell>
-                      <TableCell className={`text-right font-mono font-bold ${data.initialBalance >= 0 ? "text-foreground" : "text-red-500"}`}>
-                        {formatCurrency(data.initialBalance)}
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    <TableRow className="bg-muted/30 font-bold">
-                      <TableCell></TableCell>
-                      <TableCell className="text-xs text-muted-foreground italic">fine mese</TableCell>
-                      <TableCell colSpan={4} className="text-sm italic text-muted-foreground">Saldo finale previsto</TableCell>
-                      <TableCell className={`text-right font-mono ${data.finalBalance - data.initialBalance >= 0 ? "text-green-500" : "text-red-500"}`}>
-                        {data.finalBalance - data.initialBalance >= 0 ? "+" : ""}{formatCurrency(data.finalBalance - data.initialBalance)}
-                      </TableCell>
-                      <TableCell className={`text-right font-mono ${data.finalBalance >= 0 ? "text-green-500" : "text-red-500"}`}>
-                        {formatCurrency(data.finalBalance)}
-                      </TableCell>
-                    </TableRow>
-                  )}
+                  {/* Riga BOTTOM: saldo finale (ordine ASC, ultimo del mese in basso) */}
+                  <TableRow className="bg-muted/30 font-bold">
+                    <TableCell></TableCell>
+                    <TableCell className="text-xs text-muted-foreground italic">fine mese</TableCell>
+                    <TableCell colSpan={4} className="text-sm italic text-muted-foreground">Saldo finale previsto</TableCell>
+                    <TableCell className={`text-right font-mono ${data.finalBalance - data.initialBalance >= 0 ? "text-green-500" : "text-red-500"}`}>
+                      {data.finalBalance - data.initialBalance >= 0 ? "+" : ""}{formatCurrency(data.finalBalance - data.initialBalance)}
+                    </TableCell>
+                    <TableCell className={`text-right font-mono ${data.finalBalance >= 0 ? "text-green-500" : "text-red-500"}`}>
+                      {formatCurrency(data.finalBalance)}
+                    </TableCell>
+                  </TableRow>
                 </TableBody>
               </Table>
             </div>

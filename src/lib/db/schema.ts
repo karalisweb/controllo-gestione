@@ -183,6 +183,10 @@ export const expectedIncomes = sqliteTable("expected_incomes", {
   // virtuale (per anticipare i Valori del box header e mostrare cassa agenzia reale).
   // Alla conferma in transaction reale, lo split viene applicato automaticamente.
   autoSplit: integer("auto_split", { mode: "boolean" }).default(false),
+  // Variante per fatture senza IVA (es. estere/reverse charge): se true, lo split
+  // calcola Alessio/Daniela sul lordo e azzera la quota IVA. Mutuamente esclusivo
+  // con autoSplit standard: settare autoSplitNoVat=true forza autoSplit=true.
+  autoSplitNoVat: integer("auto_split_no_vat", { mode: "boolean" }).default(false),
   notes: text("notes"),
   isActive: integer("is_active", { mode: "boolean" }).default(true),
   createdAt: integer("created_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
