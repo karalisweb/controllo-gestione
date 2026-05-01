@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.4.7] - 2026-05-01
+
+### Modificato
+- fix: /annuale calcola Alessio/Daniela/IVA su tutti gli incassi (anche non splittati) + colonna Daniela
+
+---
+
 ## [2.4.6] - 2026-05-01
 
 ### Modificato

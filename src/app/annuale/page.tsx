@@ -24,6 +24,7 @@ interface MonthRow {
   expenses: number;
   balance: number;
   alessio: number;
+  daniela: number;
   iva: number;
   isPartial: boolean;
 }
@@ -31,8 +32,8 @@ interface MonthRow {
 interface YearlyResponse {
   year: number;
   months: MonthRow[];
-  totals: { income: number; expenses: number; balance: number; alessio: number; iva: number };
-  averages: { income: number; expenses: number; balance: number; alessio: number; iva: number };
+  totals: { income: number; expenses: number; balance: number; alessio: number; daniela: number; iva: number };
+  averages: { income: number; expenses: number; balance: number; alessio: number; daniela: number; iva: number };
   fixedMonthlyCosts: number;
   monthlyHours: number;
   fixedHourlyCost: number;
@@ -134,6 +135,7 @@ export default function AnnualePage() {
                     <TableHead className="text-right">Costi</TableHead>
                     <TableHead className="text-right">Saldo mese</TableHead>
                     <TableHead className="text-right">Alessio</TableHead>
+                    <TableHead className="text-right">Daniela</TableHead>
                     <TableHead className="text-right">IVA</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -169,6 +171,9 @@ export default function AnnualePage() {
                           {m.alessio > 0 ? formatCurrency(m.alessio) : "—"}
                         </TableCell>
                         <TableCell className={`text-right font-mono ${partialClass}`}>
+                          {m.daniela > 0 ? formatCurrency(m.daniela) : "—"}
+                        </TableCell>
+                        <TableCell className={`text-right font-mono ${partialClass}`}>
                           {m.iva > 0 ? formatCurrency(m.iva) : "—"}
                         </TableCell>
                       </TableRow>
@@ -184,6 +189,7 @@ export default function AnnualePage() {
                         {formatCurrency(data.totals.balance)}
                       </TableCell>
                       <TableCell className="text-right font-mono">{formatCurrency(data.totals.alessio)}</TableCell>
+                      <TableCell className="text-right font-mono">{formatCurrency(data.totals.daniela)}</TableCell>
                       <TableCell className="text-right font-mono">{formatCurrency(data.totals.iva)}</TableCell>
                     </TableRow>
                   )}
@@ -195,6 +201,7 @@ export default function AnnualePage() {
                       <TableCell className="text-right font-mono">-{formatCurrency(data.averages.expenses)}</TableCell>
                       <TableCell className="text-right font-mono">{formatCurrency(data.averages.balance)}</TableCell>
                       <TableCell className="text-right font-mono">{formatCurrency(data.averages.alessio)}</TableCell>
+                      <TableCell className="text-right font-mono">{formatCurrency(data.averages.daniela)}</TableCell>
                       <TableCell className="text-right font-mono">{formatCurrency(data.averages.iva)}</TableCell>
                     </TableRow>
                   )}

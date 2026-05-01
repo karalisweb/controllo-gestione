@@ -39,6 +39,7 @@ interface MonthRow {
   expenses: number; // centesimi (positivi)
   balance: number; // income - expenses
   alessio: number;
+  daniela: number;
   iva: number;
   isPartial: boolean;
 }
@@ -126,13 +127,13 @@ export async function GET(request: NextRequest) {
         ),
       );
 
-    // incomeSplits dell'anno (per Alessio/IVA realizzati)
-    const splits = await db
+    // incomeSplits dell'anno mappate per transactionId (per look-up O(1))
+    const splitsRows = await db
       .select({
         transactionId: incomeSplits.transactionId,
         vatAmount: incomeSplits.vatAmount,
         alessioAmount: incomeSplits.alessioAmount,
-        date: transactions.date,
+        danielaAmount: incomeSplits.danielaAmount,
       })
       .from(incomeSplits)
       .innerJoin(transactions, eq(incomeSplits.transactionId, transactions.id))
@@ -143,6 +144,15 @@ export async function GET(request: NextRequest) {
           lte(transactions.date, yearEnd),
         ),
       );
+    const splitByTxId = new Map<number, { iva: number; alessio: number; daniela: number }>();
+    for (const s of splitsRows) {
+      if (s.transactionId == null) continue;
+      splitByTxId.set(s.transactionId, {
+        iva: s.vatAmount,
+        alessio: s.alessioAmount,
+        daniela: s.danielaAmount,
+      });
+    }
 
     // ───── 2. Carica template attivi nell'anno ─────
     const expensesTpl = await db
@@ -215,29 +225,39 @@ export async function GET(request: NextRequest) {
       const monthEnd = `${year}-${pad2(m)}-${pad2(lastDayOfMonth(year, m))}`;
       const isPartial = monthEnd >= today;
 
-      // Realtà del mese
+      // Realtà del mese.
+      // Alessio/Daniela/IVA = quota di OGNI incasso reale (amount > 0, no transfer, no figlia split):
+      //   - se l'incasso è già stato splittato → uso i valori storici da incomeSplits
+      //   - altrimenti calcolo virtualmente con la config attuale (modalità standard)
+      // Così la sintesi annuale riflette il "netto teorico" anche per incassi non splittati.
       let income = 0;
       let expenses = 0; // valore positivo (somma di |amount|)
+      let alessio = 0;
+      let daniela = 0;
+      let iva = 0;
       for (const t of txs) {
         if (t.date < monthStart || t.date > monthEnd) continue;
         if (t.isTransfer) continue; // vecchie figlie split
         if (t.amount > 0) {
+          if (t.linkedTransactionId != null) continue; // figlia split (giroconto)
           income += t.amount;
+          const recorded = splitByTxId.get(t.id);
+          if (recorded) {
+            alessio += recorded.alessio;
+            daniela += recorded.daniela;
+            iva += recorded.iva;
+          } else {
+            const split = calculateSplit(t.amount, splitConfig);
+            alessio += split.alessioAmount;
+            daniela += split.danielaAmount;
+            iva += split.vatAmount;
+          }
         } else {
           // Esclude giroconti soci+IVA (linkedTransactionId NOT NULL = riga split)
           if (t.linkedTransactionId == null) {
             expenses += -t.amount;
           }
         }
-      }
-
-      // Realtà split (Alessio/IVA realizzati)
-      let alessio = 0;
-      let iva = 0;
-      for (const s of splits) {
-        if (s.date < monthStart || s.date > monthEnd) continue;
-        alessio += s.alessioAmount;
-        iva += s.vatAmount;
       }
 
       // Previsti residui (solo per data >= today)
@@ -252,7 +272,9 @@ export async function GET(request: NextRequest) {
         if (amount === 0) continue;
         expenses += amount;
       }
-      // Incassi template
+      // Incassi template — quota Alessio/Daniela/IVA SEMPRE calcolata
+      // (anche senza autoSplit: la quota teorica esiste comunque).
+      // Se autoSplitNoVat=true, vatPct=0.
       for (const i of incomesTpl) {
         if (!monthMatches(i.startDate, i.endDate, i.frequency, year, m)) continue;
         const day = Math.min(Math.max(i.expectedDay || 1, 1), lastDayOfMonth(year, m));
@@ -262,13 +284,11 @@ export async function GET(request: NextRequest) {
         const amount = overrideAmount !== undefined ? overrideAmount : i.amount;
         if (amount === 0) continue;
         income += amount;
-        // Alessio/IVA previsti se autoSplit attivo
-        if (i.autoSplit) {
-          const effectiveConfig = i.autoSplitNoVat ? { ...splitConfig, vatPct: 0 } : splitConfig;
-          const split = calculateSplit(amount, effectiveConfig);
-          alessio += split.alessioAmount;
-          iva += split.vatAmount;
-        }
+        const effectiveConfig = i.autoSplitNoVat ? { ...splitConfig, vatPct: 0 } : splitConfig;
+        const split = calculateSplit(amount, effectiveConfig);
+        alessio += split.alessioAmount;
+        daniela += split.danielaAmount;
+        iva += split.vatAmount;
       }
 
       // Rate PDR del mese (escluse pagate del passato — il loro impatto è già nelle txs)
@@ -285,6 +305,7 @@ export async function GET(request: NextRequest) {
         expenses,
         balance: income - expenses,
         alessio,
+        daniela,
         iva,
         isPartial,
       });
@@ -297,15 +318,17 @@ export async function GET(request: NextRequest) {
         expenses: acc.expenses + r.expenses,
         balance: acc.balance + r.balance,
         alessio: acc.alessio + r.alessio,
+        daniela: acc.daniela + r.daniela,
         iva: acc.iva + r.iva,
       }),
-      { income: 0, expenses: 0, balance: 0, alessio: 0, iva: 0 },
+      { income: 0, expenses: 0, balance: 0, alessio: 0, daniela: 0, iva: 0 },
     );
     const averages = {
       income: Math.round(totals.income / 12),
       expenses: Math.round(totals.expenses / 12),
       balance: Math.round(totals.balance / 12),
       alessio: Math.round(totals.alessio / 12),
+      daniela: Math.round(totals.daniela / 12),
       iva: Math.round(totals.iva / 12),
     };
 
