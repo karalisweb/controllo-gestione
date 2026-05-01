@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.4.8] - 2026-05-01
+
+### Modificato
+- feat: importo previsti editabile inline in /movimenti
+
+---
+
 ## [2.4.7] - 2026-05-01
 
 ### Modificato

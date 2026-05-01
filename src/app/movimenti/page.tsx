@@ -18,7 +18,7 @@ import { TransactionEditableRow } from "@/components/movimenti/TransactionEditab
 import { ConfirmExpectedDialog, type PreviewRow } from "@/components/movimenti/ConfirmExpectedDialog";
 import { ChevronLeft, ChevronRight, ChevronDown, CalendarRange, CheckCircle2, Clock, CreditCard, ArrowDownToLine, ArrowUpFromLine, X, CornerDownRight, Pencil, Split as SplitIcon } from "lucide-react";
 import { toast } from "sonner";
-import { formatCurrency } from "@/lib/utils/currency";
+import { formatCurrency, centsToEuros, eurosToCents } from "@/lib/utils/currency";
 import { formatDate } from "@/lib/utils/dates";
 
 interface SplitDetailLite { iva: number; alessio: number; daniela: number; agency: number }
@@ -118,6 +118,8 @@ export default function MovimentiPage() {
   const [editingPdrDateValue, setEditingPdrDateValue] = useState("");
   const [editingExpectedDateRowId, setEditingExpectedDateRowId] = useState<string | null>(null);
   const [editingExpectedDateValue, setEditingExpectedDateValue] = useState("");
+  const [editingExpectedAmountRowId, setEditingExpectedAmountRowId] = useState<string | null>(null);
+  const [editingExpectedAmountValue, setEditingExpectedAmountValue] = useState("");
   const [monthTarget, setMonthTarget] = useState<{ target: number; revenuePrev: number; gap: number } | null>(null);
   const [expandedBoxes, setExpandedBoxes] = useState<Set<string>>(new Set());
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
@@ -229,6 +231,41 @@ export default function MovimentiPage() {
         throw new Error(err.error || `HTTP ${r.status}`);
       }
       toast.success("Saltato per questo mese");
+      fetchMovements(year, month);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Errore");
+    }
+  };
+
+  const commitExpectedAmount = async (row: MovementRow) => {
+    const raw = editingExpectedAmountValue.trim().replace(",", ".");
+    setEditingExpectedAmountRowId(null);
+    if (row.type !== "expected_expense" && row.type !== "expected_income") return;
+    if (raw === "") return;
+    const euros = Number(raw);
+    if (!Number.isFinite(euros) || euros < 0) {
+      toast.error("Importo non valido");
+      return;
+    }
+    const cents = eurosToCents(euros);
+    const currentMagnitude = Math.abs(row.amount);
+    if (cents === currentMagnitude) return; // nessuna modifica
+    const [y, m] = row.date.split("-").map(Number);
+    const isExpense = row.type === "expected_expense";
+    const url = isExpense
+      ? `/api/expected-expenses/${row.sourceId}/override`
+      : `/api/expected-incomes/${row.sourceId}/override`;
+    try {
+      const r = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ year: y, month: m, amount: cents }),
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${r.status}`);
+      }
+      toast.success("Importo previsto aggiornato per questo mese");
       fetchMovements(year, month);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Errore");
@@ -949,7 +986,38 @@ export default function MovimentiPage() {
                           )}
                         </TableCell>
                         <TableCell className={`text-right font-mono ${row.amount >= 0 ? "text-green-500" : "text-red-500"}`}>
-                          {row.amount >= 0 ? "+" : ""}{formatCurrency(row.amount)}
+                          {isExpectedRow ? (
+                            editingExpectedAmountRowId === row.id ? (
+                              <input
+                                type="text"
+                                inputMode="decimal"
+                                value={editingExpectedAmountValue}
+                                onChange={(e) => setEditingExpectedAmountValue(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") { e.preventDefault(); commitExpectedAmount(row); }
+                                  else if (e.key === "Escape") { e.preventDefault(); setEditingExpectedAmountRowId(null); }
+                                }}
+                                onBlur={() => commitExpectedAmount(row)}
+                                autoFocus
+                                className="h-7 px-1 text-xs rounded border border-primary/60 bg-background outline-none w-24 text-right font-mono"
+                              />
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingExpectedAmountRowId(row.id);
+                                  setEditingExpectedAmountValue(String(centsToEuros(Math.abs(row.amount))));
+                                }}
+                                title="Clicca per modificare l'importo (solo questo mese)"
+                                className="px-1 py-0.5 rounded hover:bg-amber-500/10 transition-colors inline-flex items-center gap-1 font-mono"
+                              >
+                                {row.amount >= 0 ? "+" : ""}{formatCurrency(row.amount)}
+                                <Pencil className="h-3 w-3 opacity-70" />
+                              </button>
+                            )
+                          ) : (
+                            <>{row.amount >= 0 ? "+" : ""}{formatCurrency(row.amount)}</>
+                          )}
                         </TableCell>
                         <TableCell className={`text-right font-mono font-medium ${row.runningBalance >= 0 ? "text-foreground" : "text-red-500"}`}>
                           {formatCurrency(row.runningBalance)}
