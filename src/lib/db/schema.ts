@@ -251,6 +251,19 @@ export const incomeSplits = sqliteTable("income_splits", {
   createdAt: integer("created_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
 });
 
+// Fatturato storico mensile (anni precedenti l'app). Importato come seed dal
+// foglio Excel originale di Alessio. Tipicamente 1 riga per (year, month).
+// L'anno corrente NON è qui — viene calcolato dinamicamente dalle transactions
+// reali via /api/yearly.
+export const historicalRevenue = sqliteTable("historical_revenue", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  year: integer("year").notNull(),
+  month: integer("month").notNull(), // 1-12
+  amountCents: integer("amount_cents").notNull(), // centesimi, lordo
+  notes: text("notes"),
+  createdAt: integer("created_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
+});
+
 // Fondi: gruzzolo di emergenza dell'agenzia. Sono conti REALI separati
 // (altra banca o contanti), saldo aggiornato manualmente. Niente regola
 // automatica di accantonamento — l'utente decide a mano se versare e quanto.
@@ -503,6 +516,9 @@ export type NewSetting = typeof settings.$inferInsert;
 
 export type Fund = typeof funds.$inferSelect;
 export type NewFund = typeof funds.$inferInsert;
+
+export type HistoricalRevenue = typeof historicalRevenue.$inferSelect;
+export type NewHistoricalRevenue = typeof historicalRevenue.$inferInsert;
 
 export type SalesOpportunity = typeof salesOpportunities.$inferSelect;
 export type NewSalesOpportunity = typeof salesOpportunities.$inferInsert;

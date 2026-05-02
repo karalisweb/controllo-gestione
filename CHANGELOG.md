@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.4.12] - 2026-05-02
+
+### Modificato
+- feat: pagina /storico (foglio 26 Excel: matrice 2015-2026 + AVG + best/worst + delta vs storico)
+
+---
+
 ## [2.4.11] - 2026-05-02
 
 ### Modificato

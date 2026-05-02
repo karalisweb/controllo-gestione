@@ -22,6 +22,7 @@ import {
   TrendingUp,
   Wand2,
   PiggyBank,
+  History,
 } from "lucide-react";
 import { APP_VERSION } from "@/lib/version";
 
@@ -37,6 +38,7 @@ const navSections = [
       { href: "/", label: "Dashboard", icon: LayoutDashboard },
       { href: "/movimenti", label: "Movimenti", icon: CalendarRange },
       { href: "/annuale", label: "Annuale", icon: CalendarDays },
+      { href: "/storico", label: "Storico", icon: History },
       { href: "/riconcilia", label: "Riconcilia", icon: Wand2 },
     ],
   },
