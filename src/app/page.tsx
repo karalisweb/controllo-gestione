@@ -208,39 +208,39 @@ export default function Home() {
         {/* ============ 0a. CASSA + RUNWAY (la prima cosa che vedo) ============ */}
         <motion.div variants={fadeInUp} transition={{ duration: 0.4 }} className="grid grid-cols-2 gap-3">
           <Card>
-            <CardContent className="p-4">
+            <CardContent className="p-3 sm:p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Wallet className="h-4 w-4 text-muted-foreground" />
                 <span className="text-xs text-muted-foreground">CASSA OGGI</span>
               </div>
-              <div className="text-2xl sm:text-3xl font-bold font-mono">
+              <div className="text-xl sm:text-3xl font-bold font-mono">
                 {formatCurrency(data.currentBalance)}
               </div>
-              <div className={`flex items-center gap-1 text-xs mt-1 ${
+              <div className={`flex items-center gap-1 text-[10px] sm:text-xs mt-1 ${
                 data.balanceChange7Days >= 0 ? "text-green-600" : "text-red-600"
               }`}>
                 {data.balanceChange7Days >= 0 ? (
-                  <TrendingUp className="h-3 w-3" />
+                  <TrendingUp className="h-3 w-3 shrink-0" />
                 ) : (
-                  <TrendingDown className="h-3 w-3" />
+                  <TrendingDown className="h-3 w-3 shrink-0" />
                 )}
-                <span>{data.balanceChange7Days >= 0 ? "+" : ""}{formatCurrency(data.balanceChange7Days)} vs 7gg</span>
+                <span className="truncate">{data.balanceChange7Days >= 0 ? "+" : ""}{formatCurrency(data.balanceChange7Days)} vs 7gg</span>
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-4">
+            <CardContent className="p-3 sm:p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Shield className="h-4 w-4 text-muted-foreground" />
                 <span className="text-xs text-muted-foreground">RUNWAY</span>
               </div>
-              <div className="text-2xl sm:text-3xl font-bold font-mono">
+              <div className="text-xl sm:text-3xl font-bold font-mono">
                 {data.runway.days < 0 ? (
-                  <span className="text-red-500">esaurita {Math.abs(data.runway.days)}g fa</span>
+                  <span className="text-red-500 text-sm sm:text-2xl">esaurita {Math.abs(data.runway.days)}gg fa</span>
                 ) : (
                   <>
-                    {data.runway.days} <span className="text-base font-normal text-muted-foreground">giorni</span>
+                    {data.runway.days} <span className="text-sm sm:text-base font-normal text-muted-foreground">gg</span>
                   </>
                 )}
               </div>
@@ -254,8 +254,8 @@ export default function Home() {
                     style={{ width: `${Math.min(100, Math.max(0, data.runway.percent))}%` }}
                   />
                 </div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  target: {data.runway.target} giorni
+                <div className="text-[10px] sm:text-xs text-muted-foreground mt-1">
+                  target: {data.runway.target}gg
                 </div>
               </div>
             </CardContent>
@@ -298,7 +298,7 @@ export default function Home() {
           </CardHeader>
           <CardContent className="px-4 pb-4">
             {data.trend.length > 0 && (
-              <div className="h-48">
+              <div className="h-48 hidden sm:block">
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart
                     data={data.trend.map(m => ({
@@ -308,7 +308,7 @@ export default function Home() {
                       guadagno: m.earnings / 100,
                       obiettivo: m.target / 100,
                     }))}
-                    margin={{ top: 5, right: 5, left: -20, bottom: 0 }}
+                    margin={{ top: 5, right: 5, left: 0, bottom: 0 }}
                   >
                     <defs>
                       <linearGradient id="colorEntrate" x1="0" y1="0" x2="0" y2="1">
@@ -377,8 +377,8 @@ export default function Home() {
                 </ResponsiveContainer>
               </div>
             )}
-            {/* Legenda compatta */}
-            <div className="flex flex-wrap gap-3 text-[10px] text-muted-foreground mt-2">
+            {/* Legenda compatta — nascosta su mobile dove il chart non si vede */}
+            <div className="hidden sm:flex flex-wrap gap-3 text-[10px] text-muted-foreground mt-2">
               <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500"></span>Entrate</span>
               <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500"></span>Uscite</span>
               <span className="flex items-center gap-1"><span className="w-2 h-0.5 bg-yellow-500"></span>Guadagno (netto − spese)</span>

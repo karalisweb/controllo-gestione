@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.4.15] - 2026-05-02
+
+### Modificato
+- ux mobile: CASSA/RUNWAY più compatti, target gg, nascondo chart Trend su mobile (mostro solo 3 box)
+
+---
+
 ## [2.4.14] - 2026-05-02
 
 ### Modificato
