@@ -20,24 +20,40 @@ import {
   Plus,
   Trash2,
   TrendingUp,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency, centsToEuros, eurosToCents } from "@/lib/utils/currency";
 
-interface PipelineResponse {
-  year: number;
+interface MonthRow {
   month: number;
   target: number;
-  targetNet: number;
+  targetIsOverride: boolean;
   alreadyInvoiced: number;
   recurringPlanned: number;
   oneTimePlanned: number;
   totalCertain: number;
-  totalCertainNet: number;
   gap: number;
-  pipelineGross: number;
   pipelineWeighted: number;
-  pipelineCount: number;
+}
+
+interface YearlyResponse {
+  year: number;
+  defaultTarget: number;
+  months: MonthRow[];
+  totals: {
+    target: number;
+    alreadyInvoiced: number;
+    recurringPlanned: number;
+    oneTimePlanned: number;
+    totalCertain: number;
+    gap: number;
+    pipelineWeighted: number;
+  };
+  unassignedPipelineGross: number;
+  unassignedPipelineWeighted: number;
+  currentMonth: number;
 }
 
 interface Deal {
@@ -72,45 +88,57 @@ const MONTH_LABELS = ["Gen","Feb","Mar","Apr","Mag","Giu","Lug","Ago","Set","Ott
 
 export default function SalesPage() {
   const today = new Date();
-  const [pipeline, setPipeline] = useState<PipelineResponse | null>(null);
+  const [year, setYear] = useState(today.getFullYear());
+  const [yearly, setYearly] = useState<YearlyResponse | null>(null);
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editingTarget, setEditingTarget] = useState(false);
-  const [targetValue, setTargetValue] = useState("");
+  const [editingTarget, setEditingTarget] = useState<{ month: number | "default"; value: string } | null>(null);
   const [newOpen, setNewOpen] = useState(false);
+  const [filterMonth, setFilterMonth] = useState<number | null>(null);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
       const [r1, r2] = await Promise.all([
-        fetch(`/api/sales-pipeline?year=${today.getFullYear()}&month=${today.getMonth() + 1}`),
+        fetch(`/api/sales-pipeline/yearly?year=${year}`),
         fetch("/api/deals"),
       ]);
-      if (r1.ok) setPipeline(await r1.json());
+      if (r1.ok) setYearly(await r1.json());
       if (r2.ok) setDeals((await r2.json()).deals || []);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Errore caricamento");
     } finally {
       setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [year]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
   const commitTarget = async () => {
-    const raw = targetValue.trim().replace(",", ".");
-    setEditingTarget(false);
+    if (!editingTarget) return;
+    const raw = editingTarget.value.trim().replace(",", ".");
+    const cur = editingTarget;
+    setEditingTarget(null);
     if (raw === "") return;
     const euros = Number(raw);
     if (!Number.isFinite(euros) || euros < 0) return;
+    const cents = eurosToCents(euros);
     try {
-      const r = await fetch("/api/sales-pipeline", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ target: eurosToCents(euros) }),
-      });
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      if (cur.month === "default") {
+        const r = await fetch("/api/sales-pipeline/yearly", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ defaultTarget: cents }),
+        });
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      } else {
+        const r = await fetch("/api/sales-pipeline/yearly", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ year, month: cur.month, amountCents: cents }),
+        });
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      }
       toast.success("Obiettivo aggiornato");
       fetchAll();
     } catch (e) {
@@ -144,23 +172,41 @@ export default function SalesPage() {
     }
   };
 
-  const monthName = MONTH_LABELS[today.getMonth()];
-  const progressPct = pipeline && pipeline.target > 0
-    ? Math.min(100, Math.round((pipeline.totalCertain / pipeline.target) * 100))
-    : 0;
+  // Filtra le trattative per mese se filterMonth è impostato (basato su expectedCloseDate)
+  const visibleDeals = filterMonth == null
+    ? deals
+    : deals.filter((d) => {
+        if (!d.expectedCloseDate) return false;
+        const [, m] = d.expectedCloseDate.split("-").map(Number);
+        return m === filterMonth;
+      });
+  const unassignedDeals = deals.filter((d) =>
+    (d.stage !== "won" && d.stage !== "lost") && !d.expectedCloseDate
+  );
 
   return (
     <div className="min-h-screen pb-20">
       <MobileHeader title="Piano Commerciale" />
-      <div className="container mx-auto px-4 py-6 max-w-5xl">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Target className="h-6 w-6" />
-            Piano Commerciale — {monthName} {today.getFullYear()}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Quanto devi muovere il culo per arrivare all&apos;obiettivo del mese.
-          </p>
+      <div className="container mx-auto px-4 py-6 max-w-6xl">
+        <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
+          <div>
+            <h1 className="text-2xl font-bold flex items-center gap-2">
+              <Target className="h-6 w-6" />
+              Piano Commerciale {year}
+            </h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Quanto devi muovere il culo, mese per mese.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="icon" onClick={() => setYear((y) => y - 1)} disabled={loading}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="font-mono font-bold text-lg w-16 text-center">{year}</span>
+            <Button variant="outline" size="icon" onClick={() => setYear((y) => y + 1)} disabled={loading}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
         {loading && (
@@ -169,101 +215,159 @@ export default function SalesPage() {
           </div>
         )}
 
-        {pipeline && (
+        {yearly && (
           <>
-            {/* Box obiettivo + progresso */}
+            {/* Riga obiettivo default */}
             <Card className="mb-4">
-              <CardContent className="p-5">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">Obiettivo {monthName} {today.getFullYear()}</p>
-                    {editingTarget ? (
-                      <input
-                        type="text"
-                        inputMode="decimal"
-                        value={targetValue}
-                        onChange={(e) => setTargetValue(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") { e.preventDefault(); commitTarget(); }
-                          else if (e.key === "Escape") { e.preventDefault(); setEditingTarget(false); }
-                        }}
-                        onBlur={commitTarget}
-                        autoFocus
-                        className="font-mono font-bold text-3xl h-12 px-2 rounded border border-primary/60 bg-background outline-none w-48"
-                      />
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => { setEditingTarget(true); setTargetValue(String(centsToEuros(pipeline.target))); }}
-                        className="font-mono font-bold text-3xl text-primary inline-flex items-center gap-2 hover:opacity-80 transition"
-                        title="Modifica obiettivo"
-                      >
-                        {formatCurrency(pipeline.target)} <span className="text-base text-muted-foreground font-normal">lordo</span>
-                        <Pencil className="h-4 w-4 opacity-60" />
-                      </button>
-                    )}
-                    <p className="text-[11px] text-muted-foreground mt-0.5">
-                      ≈ {formatCurrency(pipeline.targetNet)} netti
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-muted-foreground">Progresso</p>
-                    <p className={`font-mono font-bold text-3xl ${progressPct >= 100 ? "text-green-500" : progressPct >= 70 ? "text-amber-500" : "text-red-500"}`}>
-                      {progressPct}%
-                    </p>
-                  </div>
-                </div>
-
-                {/* Barra progresso a strati */}
-                <div className="h-3 bg-muted rounded-full overflow-hidden flex">
-                  {pipeline.target > 0 && (
-                    <>
-                      <div className="bg-green-500 h-full" style={{ width: `${Math.min(100, (pipeline.alreadyInvoiced / pipeline.target) * 100)}%` }} title="Già fatturato" />
-                      <div className="bg-blue-500 h-full" style={{ width: `${Math.min(100, (pipeline.recurringPlanned / pipeline.target) * 100)}%` }} title="Ricorrenti residui" />
-                      <div className="bg-amber-500 h-full" style={{ width: `${Math.min(100, (pipeline.oneTimePlanned / pipeline.target) * 100)}%` }} title="One-time previsti" />
-                    </>
+              <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div>
+                  <p className="text-xs text-muted-foreground">Obiettivo mensile DEFAULT (lordo IVA)</p>
+                  {editingTarget?.month === "default" ? (
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={editingTarget.value}
+                      onChange={(e) => setEditingTarget({ month: "default", value: e.target.value })}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") { e.preventDefault(); commitTarget(); }
+                        else if (e.key === "Escape") { e.preventDefault(); setEditingTarget(null); }
+                      }}
+                      onBlur={commitTarget}
+                      autoFocus
+                      className="font-mono font-bold text-2xl h-10 px-2 rounded border border-primary/60 bg-background outline-none w-40"
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setEditingTarget({ month: "default", value: String(centsToEuros(yearly.defaultTarget)) })}
+                      className="font-mono font-bold text-2xl text-primary inline-flex items-center gap-2"
+                    >
+                      {formatCurrency(yearly.defaultTarget)} <Pencil className="h-4 w-4 opacity-60" />
+                    </button>
                   )}
                 </div>
-                <div className="flex flex-wrap gap-3 text-[11px] text-muted-foreground mt-1.5">
-                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500" />Già fatturato</span>
-                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500" />Ricorrenti residui</span>
-                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500" />One-time previsti</span>
-                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Click su una cella obiettivo nella tabella sotto per fare un override mese-specifico.
+                </p>
               </CardContent>
             </Card>
 
-            {/* Già certo + da trovare */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-              <Card>
-                <CardContent className="p-5">
-                  <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-3">Già certo questo mese</p>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between"><span>🟢 Già fatturato</span><span className="font-mono">{formatCurrency(pipeline.alreadyInvoiced)}</span></div>
-                    <div className="flex justify-between"><span>🔵 Ricorrenti residui</span><span className="font-mono">{formatCurrency(pipeline.recurringPlanned)}</span></div>
-                    <div className="flex justify-between"><span>🟡 One-time previsti</span><span className="font-mono">{formatCurrency(pipeline.oneTimePlanned)}</span></div>
-                    <div className="flex justify-between border-t pt-2 mt-2 font-semibold">
-                      <span>Totale</span><span className="font-mono">{formatCurrency(pipeline.totalCertain)}</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className={pipeline.gap > 0 ? "border-red-500/40" : "border-green-500/40"}>
-                <CardContent className="p-5">
-                  <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-3">
-                    {pipeline.gap > 0 ? "Da trovare ancora" : "Sopra obiettivo"}
-                  </p>
-                  <p className={`font-mono font-bold text-3xl ${pipeline.gap > 0 ? "text-red-500" : "text-green-500"}`}>
-                    {pipeline.gap > 0 ? "" : "+"}{formatCurrency(Math.abs(pipeline.gap))}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">lordo IVA</p>
-                  {pipeline.pipelineCount > 0 && (
-                    <p className="text-[11px] text-muted-foreground mt-3 italic">
-                      Hai {pipeline.pipelineCount} trattative aperte per {formatCurrency(pipeline.pipelineGross)} totali (pesato: {formatCurrency(pipeline.pipelineWeighted)})
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
+            {/* Tabella 12 mesi */}
+            <Card className="mb-4">
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[80px]">Mese</TableHead>
+                        <TableHead className="text-right">Obiettivo</TableHead>
+                        <TableHead className="text-right">Già fatturato</TableHead>
+                        <TableHead className="text-right">Ricorrenti</TableHead>
+                        <TableHead className="text-right">One-time</TableHead>
+                        <TableHead className="text-right">Totale certo</TableHead>
+                        <TableHead className="text-right">Gap</TableHead>
+                        <TableHead className="text-right">Pipeline pesata</TableHead>
+                        <TableHead className="text-right w-[120px]">Stato</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {yearly.months.map((m) => {
+                        const isCurrent = m.month === yearly.currentMonth && yearly.year === today.getFullYear();
+                        const isPast = (yearly.year < today.getFullYear()) || (yearly.year === today.getFullYear() && m.month < today.getMonth() + 1);
+                        const finalGap = m.gap - m.pipelineWeighted; // dopo pipeline pesata
+                        const stateColor = finalGap <= 0 ? "text-green-500" : m.gap > 0 && (m.gap - m.pipelineWeighted) <= m.gap * 0.3 ? "text-amber-500" : "text-red-500";
+                        const isFilteredHere = filterMonth === m.month;
+                        const isEditingTargetCell = editingTarget?.month === m.month;
+                        return (
+                          <TableRow
+                            key={m.month}
+                            className={`${isCurrent ? "bg-primary/5" : ""} ${isPast ? "opacity-60" : ""} ${isFilteredHere ? "ring-1 ring-primary/40" : ""} hover:bg-muted/30 cursor-pointer`}
+                            onClick={() => setFilterMonth(filterMonth === m.month ? null : m.month)}
+                          >
+                            <TableCell className={`font-medium ${isCurrent ? "text-primary" : ""}`}>
+                              {MONTH_LABELS[m.month - 1]}
+                            </TableCell>
+                            <TableCell
+                              className="text-right font-mono"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (!isEditingTargetCell) {
+                                  setEditingTarget({ month: m.month, value: String(centsToEuros(m.target)) });
+                                }
+                              }}
+                            >
+                              {isEditingTargetCell ? (
+                                <input
+                                  type="text"
+                                  inputMode="decimal"
+                                  value={editingTarget!.value}
+                                  onChange={(ev) => setEditingTarget({ month: m.month, value: ev.target.value })}
+                                  onKeyDown={(ev) => {
+                                    if (ev.key === "Enter") { ev.preventDefault(); commitTarget(); }
+                                    else if (ev.key === "Escape") { ev.preventDefault(); setEditingTarget(null); }
+                                  }}
+                                  onBlur={commitTarget}
+                                  autoFocus
+                                  onClick={(ev) => ev.stopPropagation()}
+                                  className="h-7 px-1 text-xs rounded border border-primary/60 bg-background outline-none w-24 text-right font-mono"
+                                />
+                              ) : (
+                                <span className={`inline-flex items-center gap-1 ${m.targetIsOverride ? "text-amber-500" : ""}`}>
+                                  {formatCurrency(m.target)}
+                                  {m.targetIsOverride && <Badge variant="outline" className="text-[9px] px-1 py-0 bg-amber-500/10 text-amber-500 border-amber-500/40">★</Badge>}
+                                </span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-green-500">
+                              {m.alreadyInvoiced > 0 ? formatCurrency(m.alreadyInvoiced) : "—"}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-blue-500">
+                              {m.recurringPlanned > 0 ? formatCurrency(m.recurringPlanned) : "—"}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-amber-500">
+                              {m.oneTimePlanned > 0 ? formatCurrency(m.oneTimePlanned) : "—"}
+                            </TableCell>
+                            <TableCell className="text-right font-mono font-semibold">
+                              {formatCurrency(m.totalCertain)}
+                            </TableCell>
+                            <TableCell className={`text-right font-mono ${m.gap > 0 ? "text-red-500" : "text-green-500"}`}>
+                              {m.gap > 0 ? "" : "+"}{formatCurrency(Math.abs(m.gap))}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-muted-foreground">
+                              {m.pipelineWeighted > 0 ? `+${formatCurrency(m.pipelineWeighted)}` : "—"}
+                            </TableCell>
+                            <TableCell className={`text-right font-mono font-bold ${stateColor}`}>
+                              {finalGap <= 0
+                                ? <span title="Coperto anche con pipeline pesata">✓ {formatCurrency(-finalGap)}</span>
+                                : <span title="Manca anche dopo aver contato pipeline pesata">−{formatCurrency(finalGap)}</span>
+                              }
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                      {/* Totali anno */}
+                      <TableRow className="bg-muted/40 font-bold border-t-2">
+                        <TableCell>Anno {year}</TableCell>
+                        <TableCell className="text-right font-mono">{formatCurrency(yearly.totals.target)}</TableCell>
+                        <TableCell className="text-right font-mono text-green-500">{formatCurrency(yearly.totals.alreadyInvoiced)}</TableCell>
+                        <TableCell className="text-right font-mono text-blue-500">{formatCurrency(yearly.totals.recurringPlanned)}</TableCell>
+                        <TableCell className="text-right font-mono text-amber-500">{formatCurrency(yearly.totals.oneTimePlanned)}</TableCell>
+                        <TableCell className="text-right font-mono">{formatCurrency(yearly.totals.totalCertain)}</TableCell>
+                        <TableCell className={`text-right font-mono ${yearly.totals.gap > 0 ? "text-red-500" : "text-green-500"}`}>
+                          {yearly.totals.gap > 0 ? "" : "+"}{formatCurrency(Math.abs(yearly.totals.gap))}
+                        </TableCell>
+                        <TableCell className="text-right font-mono">+{formatCurrency(yearly.totals.pipelineWeighted)}</TableCell>
+                        <TableCell></TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
+                <p className="text-[10px] text-muted-foreground p-3 italic">
+                  Click su una riga mese per filtrare la pipeline qui sotto a quel mese. Click sull&apos;obiettivo per modificarlo (override).
+                  La colonna <strong>Stato</strong> tiene conto anche della pipeline pesata: ✓ verde = ce la fai anche solo coi deal aperti, − rosso = manca.
+                </p>
+              </CardContent>
+            </Card>
 
             {/* Pipeline trattative */}
             <Card>
@@ -273,9 +377,17 @@ export default function SalesPage() {
                     <h2 className="font-semibold flex items-center gap-2">
                       <TrendingUp className="h-5 w-5" />
                       Pipeline — cosa bolle in pentola
+                      {filterMonth != null && (
+                        <Badge variant="outline" className="ml-1 bg-primary/10 text-primary border-primary/40">
+                          Filtro: {MONTH_LABELS[filterMonth - 1]}
+                          <button type="button" className="ml-1.5 opacity-70 hover:opacity-100" onClick={() => setFilterMonth(null)}>×</button>
+                        </Badge>
+                      )}
                     </h2>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      Trattative aperte e potenzialità del mese
+                      {filterMonth != null
+                        ? `Trattative con chiusura prevista in ${MONTH_LABELS[filterMonth - 1]}`
+                        : "Tutte le trattative aperte"}
                     </p>
                   </div>
                   <Button size="sm" onClick={() => setNewOpen(true)}>
@@ -287,9 +399,11 @@ export default function SalesPage() {
                   <NewDealForm onClose={() => setNewOpen(false)} onSaved={fetchAll} />
                 )}
 
-                {deals.length === 0 ? (
+                {visibleDeals.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-8">
-                    Nessuna trattativa. Aggiungi qualcosa che sta bollendo in pentola.
+                    {filterMonth != null
+                      ? `Nessuna trattativa attesa a ${MONTH_LABELS[filterMonth - 1]}.`
+                      : "Nessuna trattativa. Aggiungi qualcosa che sta bollendo in pentola."}
                   </p>
                 ) : (
                   <div className="overflow-x-auto">
@@ -306,7 +420,7 @@ export default function SalesPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {deals.map((d) => (
+                        {visibleDeals.map((d) => (
                           <TableRow key={d.id} className={d.stage === "won" ? "bg-green-500/5" : d.stage === "lost" ? "opacity-50" : ""}>
                             <TableCell className="font-medium">{d.clientName}</TableCell>
                             <TableCell>
@@ -331,8 +445,13 @@ export default function SalesPage() {
                                 className="w-16 text-right text-xs px-1 py-0.5 rounded border border-border bg-background outline-none"
                               />
                             </TableCell>
-                            <TableCell className="text-right text-xs text-muted-foreground">
-                              {d.expectedCloseDate ? new Date(d.expectedCloseDate).toLocaleDateString("it-IT", { day: "2-digit", month: "short" }) : "—"}
+                            <TableCell className="text-right text-xs">
+                              <input
+                                type="date"
+                                value={d.expectedCloseDate || ""}
+                                onChange={(e) => updateDeal(d.id, { expectedCloseDate: e.target.value || null })}
+                                className="text-xs px-1 py-0.5 rounded border border-border bg-background outline-none"
+                              />
                             </TableCell>
                             <TableCell className="text-right font-mono text-amber-500">
                               {formatCurrency(Math.round(d.valueCents * d.probabilityPct / 100))}
@@ -349,23 +468,16 @@ export default function SalesPage() {
                             </TableCell>
                           </TableRow>
                         ))}
-                        <TableRow className="bg-muted/30 font-bold border-t-2">
-                          <TableCell colSpan={2}>Totale pipeline aperta</TableCell>
-                          <TableCell className="text-right font-mono">{formatCurrency(pipeline.pipelineGross)}</TableCell>
-                          <TableCell></TableCell>
-                          <TableCell></TableCell>
-                          <TableCell className="text-right font-mono text-amber-500">{formatCurrency(pipeline.pipelineWeighted)}</TableCell>
-                          <TableCell></TableCell>
-                        </TableRow>
                       </TableBody>
                     </Table>
                   </div>
                 )}
 
-                <p className="text-[11px] text-muted-foreground mt-3 italic">
-                  Il <Badge variant="outline" className="text-[10px] px-1 py-0 align-middle">Pesato</Badge> è il valore × probabilità. Usalo per stimare cosa entra davvero.
-                  La % default per stato (lead 10% / preventivo 40% / trattativa 70%) si può sovrascrivere a mano.
-                </p>
+                {filterMonth == null && unassignedDeals.length > 0 && (
+                  <p className="text-[11px] text-muted-foreground mt-3 italic">
+                    {unassignedDeals.length} trattative aperte senza data attesa: {formatCurrency(yearly.unassignedPipelineGross)} gross / {formatCurrency(yearly.unassignedPipelineWeighted)} pesato. Imposta una data per assegnarle a un mese.
+                  </p>
+                )}
               </CardContent>
             </Card>
           </>

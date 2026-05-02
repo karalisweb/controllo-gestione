@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.4.22] - 2026-05-02
+
+### Modificato
+- feat: /sales esteso a vista 12 mesi (tabella anno + obiettivo per mese override + filtro pipeline per mese)
+
+---
+
 ## [2.4.21] - 2026-05-02
 
 ### Modificato

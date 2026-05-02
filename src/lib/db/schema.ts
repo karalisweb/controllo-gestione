@@ -251,6 +251,20 @@ export const incomeSplits = sqliteTable("income_splits", {
   createdAt: integer("created_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
 });
 
+// Override mensili dell'obiettivo fatturato. La base default sta in
+// settings.monthly_revenue_target_cents (es. 12.200 € lordi). Per mesi
+// particolari (es. agosto ferie a 6k) inserisci una riga qui.
+// Lookup: se esiste (year, month) usa amountCents, altrimenti default.
+export const monthlyRevenueTargetOverrides = sqliteTable("monthly_revenue_target_overrides", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  year: integer("year").notNull(),
+  month: integer("month").notNull(), // 1-12
+  amountCents: integer("amount_cents").notNull(),
+  notes: text("notes"),
+  createdAt: integer("created_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
+});
+
 // Pipeline trattative commerciali. Sostituisce in pratica `salesOpportunities`
 // (più verbose) con un modello minimo: chi, quanto, a che stadio, % di chiusura,
 // quando chiude. Niente sub-rate (non servono per il piano d'attacco mensile).
@@ -543,6 +557,9 @@ export type NewHistoricalRevenue = typeof historicalRevenue.$inferInsert;
 
 export type Deal = typeof deals.$inferSelect;
 export type NewDeal = typeof deals.$inferInsert;
+
+export type MonthlyRevenueTargetOverride = typeof monthlyRevenueTargetOverrides.$inferSelect;
+export type NewMonthlyRevenueTargetOverride = typeof monthlyRevenueTargetOverrides.$inferInsert;
 
 export type SalesOpportunity = typeof salesOpportunities.$inferSelect;
 export type NewSalesOpportunity = typeof salesOpportunities.$inferInsert;
