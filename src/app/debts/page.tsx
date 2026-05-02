@@ -23,6 +23,26 @@ export default function PaymentPlansPage() {
   const [categoryManagerOpen, setCategoryManagerOpen] = useState(false);
   const [remodulateOpen, setRemodulateOpen] = useState(false);
   const [remodulatingPlan, setRemodulatingPlan] = useState<PaymentPlan | null>(null);
+  const [summary, setSummary] = useState<{
+    next6MonthsTotal: number;
+    lastClosureDate: string | null;
+    overduePlanIds: number[];
+  } | null>(null);
+
+  const fetchSummary = useCallback(async () => {
+    try {
+      const r = await fetch("/api/debts-summary");
+      if (!r.ok) return;
+      const json = await r.json();
+      setSummary({
+        next6MonthsTotal: json.next6MonthsTotal,
+        lastClosureDate: json.lastClosureDate,
+        overduePlanIds: json.overduePlanIds || [],
+      });
+    } catch {
+      // silent
+    }
+  }, []);
 
   const fetchPlans = useCallback(async () => {
     try {
@@ -43,7 +63,8 @@ export default function PaymentPlansPage() {
 
   useEffect(() => {
     fetchPlans();
-  }, [fetchPlans]);
+    fetchSummary();
+  }, [fetchPlans, fetchSummary]);
 
   const handleCreatePlan = async (data: {
     creditorName: string;
@@ -80,6 +101,7 @@ export default function PaymentPlansPage() {
 
     setEditingPlan(null);
     await fetchPlans();
+    fetchSummary();
   };
 
   const handleEditPlan = (plan: PaymentPlan) => {
@@ -110,6 +132,7 @@ export default function PaymentPlansPage() {
     }
 
     await fetchPlans();
+    fetchSummary();
   };
 
   const handleUnpayInstallment = async (
@@ -126,6 +149,7 @@ export default function PaymentPlansPage() {
     }
 
     await fetchPlans();
+    fetchSummary();
   };
 
   const handleDeletePlan = async (planId: number) => {
@@ -138,6 +162,7 @@ export default function PaymentPlansPage() {
     }
 
     await fetchPlans();
+    fetchSummary();
   };
 
   const handleUpdateInstallmentDate = async (
@@ -156,6 +181,7 @@ export default function PaymentPlansPage() {
     }
 
     await fetchPlans();
+    fetchSummary();
   };
 
   // Toggle attiva/disattiva piano
@@ -171,6 +197,7 @@ export default function PaymentPlansPage() {
     }
 
     await fetchPlans();
+    fetchSummary();
   };
 
   // Apri dialog rimodulazione
@@ -201,6 +228,7 @@ export default function PaymentPlansPage() {
     }
 
     await fetchPlans();
+    fetchSummary();
   };
 
   // Ordina per snowball: debito rimanente dal più piccolo al più grande
@@ -224,7 +252,7 @@ export default function PaymentPlansPage() {
   if (loading) {
     return (
       <div className="min-h-screen">
-        <MobileHeader title="Piani di Rientro" />
+        <MobileHeader title="Debiti" />
         <div className="flex items-center justify-center h-64">
           <div className="text-muted-foreground">Caricamento...</div>
         </div>
@@ -235,7 +263,7 @@ export default function PaymentPlansPage() {
   if (error) {
     return (
       <div className="min-h-screen">
-        <MobileHeader title="Piani di Rientro" />
+        <MobileHeader title="Debiti" />
         <div className="flex items-center justify-center h-64">
           <div className="text-red-500">Errore: {error}</div>
         </div>
@@ -245,13 +273,13 @@ export default function PaymentPlansPage() {
 
   return (
     <div className="min-h-screen">
-      <MobileHeader title="Piani di Rientro" />
+      <MobileHeader title="Debiti" />
 
       <div className="p-4 lg:p-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-6">
           <div>
-            <h1 className="text-xl lg:text-2xl font-bold">Piani di Rientro</h1>
+            <h1 className="text-xl lg:text-2xl font-bold">Debiti</h1>
             <p className="text-xs lg:text-sm text-muted-foreground">
               Gestisci i debiti rateizzati con fornitori e creditori
             </p>
@@ -275,7 +303,7 @@ export default function PaymentPlansPage() {
 
         {/* Riepilogo totali - cards compatte */}
         {activePlans.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
             <Card className="p-3 sm:p-4">
               <div className="text-xs text-muted-foreground mb-1">Debito Totale</div>
               <div className="text-lg sm:text-2xl font-bold">
@@ -292,6 +320,21 @@ export default function PaymentPlansPage() {
               <div className="text-xs text-muted-foreground mb-1">Da Pagare</div>
               <div className="text-lg sm:text-2xl font-bold text-red-600">
                 {formatCurrency(totalRemaining)}
+              </div>
+            </Card>
+            <Card className="p-3 sm:p-4">
+              <div className="text-xs text-muted-foreground mb-1">Prossimi 6 mesi</div>
+              <div className="text-lg sm:text-2xl font-bold text-amber-500">
+                {summary ? formatCurrency(summary.next6MonthsTotal) : "—"}
+              </div>
+              <div className="text-[10px] text-muted-foreground mt-0.5">rate da pagare</div>
+            </Card>
+            <Card className="p-3 sm:p-4">
+              <div className="text-xs text-muted-foreground mb-1">Chiusura ultimo piano</div>
+              <div className="text-lg sm:text-2xl font-bold">
+                {summary?.lastClosureDate
+                  ? new Date(summary.lastClosureDate).toLocaleDateString("it-IT", { month: "short", year: "numeric" })
+                  : "—"}
               </div>
             </Card>
           </div>
@@ -317,6 +360,7 @@ export default function PaymentPlansPage() {
               onUpdateInstallmentDate={handleUpdateInstallmentDate}
               onToggleActive={handleToggleActive}
               onRemodulate={handleRemodulate}
+              overduePlanIds={summary?.overduePlanIds || []}
             />
           </TabsContent>
 

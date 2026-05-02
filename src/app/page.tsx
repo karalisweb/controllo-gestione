@@ -551,9 +551,9 @@ export default function Home() {
               <CardTitle className="text-sm font-medium flex items-center justify-between">
                 <span className="flex items-center gap-2">
                   <CreditCard className="h-4 w-4" />
-                  Piani di Rientro
+                  Debiti
                 </span>
-                <Link href="/payment-plans">
+                <Link href="/debts">
                   <Button variant="ghost" size="sm" className="h-6 text-xs">
                     Gestisci <ChevronRight className="h-3 w-3 ml-1" />
                   </Button>

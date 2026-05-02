@@ -39,6 +39,7 @@ interface PaymentPlanListProps {
   onUpdateInstallmentDate?: (planId: number, installmentId: number, newDate: string) => Promise<void>;
   onToggleActive?: (planId: number, isActive: boolean) => Promise<void>;
   onRemodulate?: (plan: PaymentPlan) => void;
+  overduePlanIds?: number[];
 }
 
 export function PaymentPlanList({
@@ -50,6 +51,7 @@ export function PaymentPlanList({
   onUpdateInstallmentDate,
   onToggleActive,
   onRemodulate,
+  overduePlanIds = [],
 }: PaymentPlanListProps) {
   const [expandedPlan, setExpandedPlan] = useState<number | null>(null);
   const [loading, setLoading] = useState<string | null>(null);
@@ -194,6 +196,11 @@ export function PaymentPlanList({
                         ? "Completato"
                         : "Sospeso"}
                   </Badge>
+                  {overduePlanIds.includes(plan.id) && (
+                    <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/40">
+                      Rata scaduta
+                    </Badge>
+                  )}
                 </div>
                 <div className="flex gap-1">
                   {onRemodulate && plan.isActive && (plan.paidInstallments || 0) > 0 && (plan.paidInstallments || 0) < plan.totalInstallments && (

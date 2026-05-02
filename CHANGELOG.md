@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.4.11] - 2026-05-02
+
+### Modificato
+- feat: pagina /debts (rebrand /payment-plans) + box riepilogo + badge rata scaduta
+
+---
+
 ## [2.4.10] - 2026-05-01
 
 ### Modificato

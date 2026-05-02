@@ -77,9 +77,9 @@ export function DebtSummary({
           </div>
 
           {/* Link */}
-          <Link href="/payment-plans">
+          <Link href="/debts">
             <Button variant="outline" size="sm" className="w-full">
-              Gestisci Piani
+              Gestisci Debiti
               <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           </Link>
