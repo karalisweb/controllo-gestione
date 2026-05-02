@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.4.14] - 2026-05-02
+
+### Modificato
+- ux: dashboard riordinata (Cassa+Runway in cima) + 5 card collassate di default
+
+---
+
 ## [2.4.13] - 2026-05-02
 
 ### Modificato

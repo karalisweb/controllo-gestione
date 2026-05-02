@@ -205,7 +205,64 @@ export default function Home() {
         initial="hidden"
         animate="visible"
       >
-        {/* ============ 0. LE 5 DOMANDE OPERATIVE ============ */}
+        {/* ============ 0a. CASSA + RUNWAY (la prima cosa che vedo) ============ */}
+        <motion.div variants={fadeInUp} transition={{ duration: 0.4 }} className="grid grid-cols-2 gap-3">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Wallet className="h-4 w-4 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">CASSA OGGI</span>
+              </div>
+              <div className="text-2xl sm:text-3xl font-bold font-mono">
+                {formatCurrency(data.currentBalance)}
+              </div>
+              <div className={`flex items-center gap-1 text-xs mt-1 ${
+                data.balanceChange7Days >= 0 ? "text-green-600" : "text-red-600"
+              }`}>
+                {data.balanceChange7Days >= 0 ? (
+                  <TrendingUp className="h-3 w-3" />
+                ) : (
+                  <TrendingDown className="h-3 w-3" />
+                )}
+                <span>{data.balanceChange7Days >= 0 ? "+" : ""}{formatCurrency(data.balanceChange7Days)} vs 7gg</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Shield className="h-4 w-4 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">RUNWAY</span>
+              </div>
+              <div className="text-2xl sm:text-3xl font-bold font-mono">
+                {data.runway.days < 0 ? (
+                  <span className="text-red-500">esaurita {Math.abs(data.runway.days)}g fa</span>
+                ) : (
+                  <>
+                    {data.runway.days} <span className="text-base font-normal text-muted-foreground">giorni</span>
+                  </>
+                )}
+              </div>
+              <div className="mt-2">
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className={`h-full transition-all rounded-full ${
+                      data.runway.percent >= 100 ? "bg-green-500" :
+                      data.runway.percent >= 60 ? "bg-amber-500" : "bg-red-500"
+                    }`}
+                    style={{ width: `${Math.min(100, Math.max(0, data.runway.percent))}%` }}
+                  />
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  target: {data.runway.target} giorni
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* ============ 0b. LE 5 DOMANDE OPERATIVE (collassate) ============ */}
         <motion.div variants={fadeInUp} transition={{ duration: 0.4 }}>
           <FiveQuestionsBlock />
         </motion.div>
@@ -352,63 +409,6 @@ export default function Home() {
             </div>
           </CardContent>
         </Card>
-        </motion.div>
-
-        {/* ============ 2. CASSA + RUNWAY ============ */}
-        <motion.div variants={fadeInUp} transition={{ duration: 0.4 }} className="grid grid-cols-2 gap-3">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Wallet className="h-4 w-4 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">CASSA OGGI</span>
-              </div>
-              <div className="text-2xl sm:text-3xl font-bold font-mono">
-                {formatCurrency(data.currentBalance)}
-              </div>
-              <div className={`flex items-center gap-1 text-xs mt-1 ${
-                data.balanceChange7Days >= 0 ? "text-green-600" : "text-red-600"
-              }`}>
-                {data.balanceChange7Days >= 0 ? (
-                  <TrendingUp className="h-3 w-3" />
-                ) : (
-                  <TrendingDown className="h-3 w-3" />
-                )}
-                <span>{data.balanceChange7Days >= 0 ? "+" : ""}{formatCurrency(data.balanceChange7Days)} vs 7gg</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Shield className="h-4 w-4 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">RUNWAY</span>
-              </div>
-              <div className="text-2xl sm:text-3xl font-bold font-mono">
-                {data.runway.days < 0 ? (
-                  <span className="text-red-500">esaurita {Math.abs(data.runway.days)}g fa</span>
-                ) : (
-                  <>
-                    {data.runway.days} <span className="text-base font-normal text-muted-foreground">giorni</span>
-                  </>
-                )}
-              </div>
-              <div className="mt-2">
-                <div className="h-2 bg-muted rounded-full overflow-hidden">
-                  <div
-                    className={`h-full transition-all rounded-full ${
-                      data.runway.percent >= 100 ? "bg-green-500" :
-                      data.runway.percent >= 60 ? "bg-amber-500" : "bg-red-500"
-                    }`}
-                    style={{ width: `${Math.min(100, Math.max(0, data.runway.percent))}%` }}
-                  />
-                </div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  target: {data.runway.target} giorni
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </motion.div>
 
         {/* ============ 3. PROSSIMI 7GG + ULTIMI 7GG ============ */}
