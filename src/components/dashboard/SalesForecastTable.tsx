@@ -25,16 +25,99 @@ interface ApiResponse {
   months: MonthForecast[];
 }
 
-const ROWS: Array<{ key: keyof MonthForecast; label: string; color?: string }> = [
-  { key: "revenuePrev", label: "Fatturato previsto", color: "text-foreground" },
-  { key: "target", label: "Obiettivo fatturato", color: "text-amber-500" },
-  { key: "gap", label: "Gap mensile", color: "text-red-500" },
+// Le righe sono organizzate in 2 sezioni semantiche:
+// 1) PREVISTO — la realtà dei fatti: fatturato − spese = guadagno, poi quote soci
+// 2) OBIETTIVO — quanto vendere in più per arrivare al target + guadagno se ci si arriva
+type RowDef = {
+  key: keyof MonthForecast;
+  label: string;
+  color?: string;
+  bold?: boolean;
+  big?: boolean; // numero più grande per le righe "azione"
+  indent?: boolean;
+  emphasizeNeg?: boolean; // colore in funzione del segno
+};
+const SECTION_PREVISTO: RowDef[] = [
+  { key: "revenuePrev", label: "Fatturato previsto" },
   { key: "expensePrev", label: "Spese previste (incl. PDR)", color: "text-red-500" },
-  { key: "earningsPrev", label: "Guadagno previsto", color: "text-green-500" },
-  { key: "earningsTarget", label: "Guadagno con obiettivo", color: "text-green-500" },
-  { key: "alessioPrev", label: "Guadagno Alessio", color: "text-foreground" },
-  { key: "danielaPrev", label: "Guadagno Daniela", color: "text-foreground" },
+  { key: "earningsPrev", label: "Guadagno (o perdita)", bold: true, emphasizeNeg: true },
+  { key: "alessioPrev", label: "di cui Alessio", color: "text-muted-foreground", indent: true },
+  { key: "danielaPrev", label: "di cui Daniela", color: "text-muted-foreground", indent: true },
 ];
+const SECTION_OBIETTIVO: RowDef[] = [
+  { key: "target", label: "Obiettivo fatturato", color: "text-amber-500" },
+  { key: "gap", label: "DA VENDERE IN PIÙ", color: "text-red-500", bold: true, big: true, emphasizeNeg: true },
+  { key: "earningsTarget", label: "Guadagno con obiettivo", color: "text-green-500", bold: true },
+];
+
+function renderRow(
+  row: RowDef,
+  data: ApiResponse,
+  editing: { year: number; month: number } | null,
+  editValue: string,
+  setEditValue: (v: string) => void,
+  startEdit: (m: MonthForecast) => void,
+  commit: () => void,
+  cancel: () => void,
+) {
+  return (
+    <tr key={row.key} className="border-b border-border/40 last:border-0">
+      <td className={`py-1.5 pr-2 text-xs ${row.indent ? "pl-4 text-muted-foreground italic" : "text-muted-foreground"} ${row.bold ? "font-semibold" : ""}`}>
+        {row.label}
+      </td>
+      {data.months.map((m) => {
+        const value = m[row.key] as number;
+        const isTarget = row.key === "target";
+        const isEditing = isTarget && editing?.year === m.year && editing?.month === m.month;
+        // Colore dinamico per righe "emphasizeNeg" (gap, guadagno): rosso se neg, verde se pos
+        let dynColor = row.color || "";
+        if (row.emphasizeNeg) {
+          if (row.key === "gap") {
+            // gap > 0 = devi vendere ancora (rosso); gap <= 0 = sei oltre (verde)
+            dynColor = value > 0 ? "text-red-500" : "text-green-500";
+          } else {
+            dynColor = value >= 0 ? "text-green-500" : "text-red-500";
+          }
+        }
+        const sizeClass = row.big ? "text-base font-bold" : row.bold ? "font-semibold" : "";
+        return (
+          <td key={`${m.year}-${m.month}`} className={`py-1.5 px-2 text-right font-mono text-sm ${dynColor} ${sizeClass}`}>
+            {isEditing ? (
+              <input
+                type="text"
+                inputMode="decimal"
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") { e.preventDefault(); commit(); }
+                  else if (e.key === "Escape") { e.preventDefault(); cancel(); }
+                }}
+                onBlur={commit}
+                autoFocus
+                className="h-7 px-1 text-xs rounded border border-primary/60 bg-background outline-none w-24 text-right font-mono"
+              />
+            ) : isTarget ? (
+              <button
+                type="button"
+                onClick={() => startEdit(m)}
+                title="Clicca per modificare l'obiettivo"
+                className="px-1 py-0.5 rounded hover:bg-amber-500/10 transition-colors flex items-center gap-1 ml-auto"
+              >
+                {formatCurrency(value)}
+                <Pencil className="h-2.5 w-2.5 opacity-70" />
+              </button>
+            ) : (
+              <>
+                {row.key === "gap" && value <= 0 && "+"}
+                {formatCurrency(value)}
+              </>
+            )}
+          </td>
+        );
+      })}
+    </tr>
+  );
+}
 
 export function SalesForecastTable() {
   const [data, setData] = useState<ApiResponse | null>(null);
@@ -130,47 +213,21 @@ export function SalesForecastTable() {
             </tr>
           </thead>
           <tbody>
-            {ROWS.map((row) => (
-              <tr key={row.key} className="border-b border-border/40 last:border-0">
-                <td className="py-1.5 pr-2 text-xs text-muted-foreground">{row.label}</td>
-                {data.months.map((m) => {
-                  const value = m[row.key] as number;
-                  const isTarget = row.key === "target";
-                  const isEditing = isTarget && editing?.year === m.year && editing?.month === m.month;
-                  return (
-                    <td key={`${m.year}-${m.month}`} className={`py-1.5 px-2 text-right font-mono text-sm ${row.color || ""}`}>
-                      {isEditing ? (
-                        <input
-                          type="text"
-                          inputMode="decimal"
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") { e.preventDefault(); commit(); }
-                            else if (e.key === "Escape") { e.preventDefault(); cancel(); }
-                          }}
-                          onBlur={commit}
-                          autoFocus
-                          className="h-7 px-1 text-xs rounded border border-primary/60 bg-background outline-none w-24 text-right font-mono"
-                        />
-                      ) : isTarget ? (
-                        <button
-                          type="button"
-                          onClick={() => startEdit(m)}
-                          title="Clicca per modificare l'obiettivo"
-                          className="px-1 py-0.5 rounded hover:bg-amber-500/10 transition-colors flex items-center gap-1 ml-auto"
-                        >
-                          {formatCurrency(value)}
-                          <Pencil className="h-2.5 w-2.5 opacity-70" />
-                        </button>
-                      ) : (
-                        formatCurrency(value)
-                      )}
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
+            {/* === Sezione 1: PREVISTO === */}
+            <tr className="bg-muted/30">
+              <td colSpan={data.months.length + 1} className="py-1.5 px-2 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                Previsto — la realtà dei fatti
+              </td>
+            </tr>
+            {SECTION_PREVISTO.map((row) => renderRow(row, data, editing, editValue, setEditValue, startEdit, commit, cancel))}
+
+            {/* === Sezione 2: OBIETTIVO === */}
+            <tr className="bg-muted/30 border-t-2 border-border">
+              <td colSpan={data.months.length + 1} className="py-1.5 px-2 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                Obiettivo — quanto devi muovere il culo
+              </td>
+            </tr>
+            {SECTION_OBIETTIVO.map((row) => renderRow(row, data, editing, editValue, setEditValue, startEdit, commit, cancel))}
           </tbody>
         </table>
       </CardContent>

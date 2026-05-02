@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.4.19] - 2026-05-02
+
+### Modificato
+- ux: Previsionale 4 mesi diviso in 2 sezioni (PREVISTO realtà + OBIETTIVO 'da vendere in più')
+
+---
+
 ## [2.4.18] - 2026-05-02
 
 ### Modificato
