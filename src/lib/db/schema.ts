@@ -251,6 +251,27 @@ export const incomeSplits = sqliteTable("income_splits", {
   createdAt: integer("created_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
 });
 
+// Pipeline trattative commerciali. Sostituisce in pratica `salesOpportunities`
+// (più verbose) con un modello minimo: chi, quanto, a che stadio, % di chiusura,
+// quando chiude. Niente sub-rate (non servono per il piano d'attacco mensile).
+export const deals = sqliteTable("deals", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  clientName: text("client_name").notNull(),
+  contactId: integer("contact_id").references(() => contacts.id),
+  valueCents: integer("value_cents").notNull(), // lordo IVA, come l'utente lo dichiara
+  stage: text("stage", {
+    enum: ["lead", "preventivo", "trattativa", "won", "lost"]
+  }).notNull().default("lead"),
+  // Probabilità in %. Default automatico per stage (10/40/70/100/0) ma può
+  // essere overridato manualmente.
+  probabilityPct: integer("probability_pct").notNull().default(10),
+  expectedCloseDate: text("expected_close_date"), // YYYY-MM-DD
+  notes: text("notes"),
+  createdAt: integer("created_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
+  deletedAt: integer("deleted_at", { mode: "timestamp" }),
+});
+
 // Fatturato storico mensile (anni precedenti l'app). Importato come seed dal
 // foglio Excel originale di Alessio. Tipicamente 1 riga per (year, month).
 // L'anno corrente NON è qui — viene calcolato dinamicamente dalle transactions
@@ -519,6 +540,9 @@ export type NewFund = typeof funds.$inferInsert;
 
 export type HistoricalRevenue = typeof historicalRevenue.$inferSelect;
 export type NewHistoricalRevenue = typeof historicalRevenue.$inferInsert;
+
+export type Deal = typeof deals.$inferSelect;
+export type NewDeal = typeof deals.$inferInsert;
 
 export type SalesOpportunity = typeof salesOpportunities.$inferSelect;
 export type NewSalesOpportunity = typeof salesOpportunities.$inferInsert;

@@ -123,6 +123,45 @@ export async function getAgencyMonthlyHours(): Promise<number> {
   return Number.isFinite(v) && v > 0 ? v : DEFAULT_AGENCY_MONTHLY_HOURS;
 }
 
+// ─── Obiettivo fatturato mensile (per Piano Commerciale) ──────────────────
+// Default 1.220.000 cent = 12.200 € lordi (≈ 10.000 € netti)
+export const MONTHLY_REVENUE_TARGET_KEY = "monthly_revenue_target_cents";
+export const DEFAULT_MONTHLY_REVENUE_TARGET = 1220000;
+
+export async function getMonthlyRevenueTarget(): Promise<number> {
+  const rows = await db
+    .select()
+    .from(settings)
+    .where(eq(settings.key, MONTHLY_REVENUE_TARGET_KEY))
+    .limit(1);
+  if (rows.length === 0) return DEFAULT_MONTHLY_REVENUE_TARGET;
+  const v = parseInt(rows[0].value, 10);
+  return Number.isFinite(v) && v > 0 ? v : DEFAULT_MONTHLY_REVENUE_TARGET;
+}
+
+export async function setMonthlyRevenueTarget(cents: number): Promise<number> {
+  if (!Number.isFinite(cents) || cents < 0) {
+    throw new Error("Obiettivo non valido");
+  }
+  const value = String(Math.round(cents));
+  const existing = await db
+    .select()
+    .from(settings)
+    .where(eq(settings.key, MONTHLY_REVENUE_TARGET_KEY))
+    .limit(1);
+  if (existing.length === 0) {
+    await db.insert(settings).values({
+      key: MONTHLY_REVENUE_TARGET_KEY,
+      value,
+      type: "number",
+      description: "Obiettivo fatturato mensile lordo IVA (per Piano Commerciale)",
+    });
+  } else {
+    await db.update(settings).set({ value }).where(eq(settings.key, MONTHLY_REVENUE_TARGET_KEY));
+  }
+  return Math.round(cents);
+}
+
 export async function setAgencyMonthlyHours(hours: number): Promise<number> {
   if (!Number.isFinite(hours) || hours <= 0 || hours > 10000) {
     throw new Error(`Monte ore non valido (atteso > 0, ricevuto ${hours})`);

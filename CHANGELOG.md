@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.4.21] - 2026-05-02
+
+### Modificato
+- feat: Piano Commerciale rifatto da zero (target + già certo + da trovare + pipeline trattative)
+
+---
+
 ## [2.4.20] - 2026-05-02
 
 ### Modificato
