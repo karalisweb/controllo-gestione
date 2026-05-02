@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.4.17] - 2026-05-02
+
+### Modificato
+- ux: rimuovo Card 5 'Posso permettermi investimenti' dalla dashboard
+
+---
+
 ## [2.4.16] - 2026-05-02
 
 ### Modificato

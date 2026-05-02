@@ -6,11 +6,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils/currency";
 import {
   TrendingUp,
-  TrendingDown,
   Target,
   Repeat,
   PiggyBank,
-  Sparkles,
   Loader2,
   ArrowRight,
   ChevronDown,
@@ -139,12 +137,6 @@ export function FiveQuestionsBlock() {
   // Card 3 — copre o no la struttura
   const card3State: "green" | "yellow" | "red" =
     data.recurring.structureGap >= 0 ? "green" : "red";
-
-  // Card 5 — runway
-  const card5State: "green" | "yellow" | "red" =
-    data.investments.runwayDays >= 90 ? "green"
-      : data.investments.runwayDays >= 60 ? "yellow"
-        : "red";
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
@@ -364,53 +356,6 @@ export function FiveQuestionsBlock() {
         );
       })()}
 
-      {/* Card 5 — Posso permettermi investimenti? — col-span-2 su lg */}
-      <Card className="lg:col-span-2">
-        <CardContent className="p-5">
-          <button type="button" onClick={() => toggle(5)} className="w-full text-left">
-            <div className="flex items-start justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <div className={`h-2.5 w-2.5 rounded-full ${trafficLight(card5State)}`} />
-                <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">
-                  Posso permettermi investimenti?
-                </h3>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Sparkles className="h-4 w-4 text-muted-foreground" />
-                {expanded.has(5) ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground">Runway</p>
-            <p className={`font-mono font-bold text-2xl ${card5State === "green" ? "text-green-500" : card5State === "yellow" ? "text-amber-500" : "text-red-500"}`}>
-              {data.investments.runwayDays} <span className="text-base font-normal text-muted-foreground">giorni</span>
-              <span className="text-xs font-normal text-muted-foreground ml-2">target 90gg</span>
-            </p>
-          </button>
-          {expanded.has(5) && (
-            <div className="mt-3 pt-3 border-t grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
-              <div>
-                <p className="text-xs text-muted-foreground">Cassa oggi</p>
-                <p className="font-mono font-bold">{formatCurrency(data.investments.currentBalance)}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Burn medio/mese</p>
-                <p className="font-mono">-{formatCurrency(data.investments.monthlyBurn)}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Eccedenza sopra 90gg</p>
-                <p className={`font-mono font-bold ${data.investments.surplus > 0 ? "text-green-500" : "text-red-500"}`}>
-                  {data.investments.surplus > 0 ? "+" : ""}{formatCurrency(data.investments.surplus)}
-                </p>
-                {data.investments.surplus > 0 ? (
-                  <p className="text-[10px] text-green-500">disponibili per investimenti</p>
-                ) : (
-                  <p className="text-[10px] text-red-500">prima ricostruisci runway</p>
-                )}
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 }
