@@ -239,15 +239,31 @@ export default function PaymentPlansPage() {
       const remainingB = b.totalAmount - (b.paidInstallments || 0) * b.installmentAmount;
       return remainingA - remainingB;
     });
-  const completedPlans = plans.filter((p) => !p.isActive);
-
-  // Calcola totali
-  const totalDebt = activePlans.reduce((sum, p) => sum + p.totalAmount, 0);
-  const totalPaid = activePlans.reduce(
-    (sum, p) => sum + (p.paidInstallments || 0) * p.installmentAmount,
-    0
+  // Sospesi: isActive=false MA non ancora completamente pagati (da riprendere)
+  const suspendedPlans = plans.filter((p) =>
+    !p.isActive && (p.paidInstallments || 0) < p.totalInstallments
   );
-  const totalRemaining = totalDebt - totalPaid;
+  // Completati: isActive=false E già pagati per intero (debito estinto)
+  const completedPlans = plans.filter((p) =>
+    !p.isActive && (p.paidInstallments || 0) >= p.totalInstallments
+  );
+
+  // Funzione che calcola totali per un set di piani (riusabile per i 3 tab)
+  const sumTotals = (group: PaymentPlan[]) => {
+    const debt = group.reduce((s, p) => s + p.totalAmount, 0);
+    const paid = group.reduce((s, p) => s + (p.paidInstallments || 0) * p.installmentAmount, 0);
+    return { debt, paid, remaining: debt - paid };
+  };
+  const activeTotals = sumTotals(activePlans);
+  const suspendedTotals = sumTotals(suspendedPlans);
+  const completedTotals = sumTotals(completedPlans);
+
+  // Per il box "Prossimi 6 mesi" e "Chiusura ultimo piano" uso i totali
+  // del tab attivo: cambia in base a cosa stai guardando.
+  const currentTotals = activeTab === "active" ? activeTotals : activeTab === "suspended" ? suspendedTotals : completedTotals;
+  const totalDebt = currentTotals.debt;
+  const totalPaid = currentTotals.paid;
+  const totalRemaining = currentTotals.remaining;
 
   if (loading) {
     return (
@@ -301,8 +317,8 @@ export default function PaymentPlansPage() {
           </div>
         </div>
 
-        {/* Riepilogo totali - cards compatte */}
-        {activePlans.length > 0 && (
+        {/* Riepilogo totali - cards dinamiche per tab attivo */}
+        {(activePlans.length + suspendedPlans.length + completedPlans.length) > 0 && (
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
             <Card className="p-3 sm:p-4">
               <div className="text-xs text-muted-foreground mb-1">Debito Totale</div>
@@ -317,33 +333,44 @@ export default function PaymentPlansPage() {
               </div>
             </Card>
             <Card className="p-3 sm:p-4">
-              <div className="text-xs text-muted-foreground mb-1">Da Pagare</div>
-              <div className="text-lg sm:text-2xl font-bold text-red-600">
-                {formatCurrency(totalRemaining)}
+              <div className="text-xs text-muted-foreground mb-1">
+                {activeTab === "completed" ? "Estinto" : "Da Pagare"}
+              </div>
+              <div className={`text-lg sm:text-2xl font-bold ${activeTab === "completed" ? "text-green-600" : "text-red-600"}`}>
+                {formatCurrency(activeTab === "completed" ? totalPaid : totalRemaining)}
               </div>
             </Card>
             <Card className="p-3 sm:p-4">
               <div className="text-xs text-muted-foreground mb-1">Prossimi 6 mesi</div>
               <div className="text-lg sm:text-2xl font-bold text-amber-500">
-                {summary ? formatCurrency(summary.next6MonthsTotal) : "—"}
+                {activeTab === "active" && summary ? formatCurrency(summary.next6MonthsTotal) : "—"}
               </div>
-              <div className="text-[10px] text-muted-foreground mt-0.5">rate da pagare</div>
+              <div className="text-[10px] text-muted-foreground mt-0.5">
+                {activeTab === "active" ? "rate da pagare" : "solo sui piani attivi"}
+              </div>
             </Card>
             <Card className="p-3 sm:p-4">
-              <div className="text-xs text-muted-foreground mb-1">Chiusura ultimo piano</div>
+              <div className="text-xs text-muted-foreground mb-1">
+                {activeTab === "completed" ? "Numero piani chiusi" : "Chiusura ultimo piano"}
+              </div>
               <div className="text-lg sm:text-2xl font-bold">
-                {summary?.lastClosureDate
-                  ? new Date(summary.lastClosureDate).toLocaleDateString("it-IT", { month: "short", year: "numeric" })
-                  : "—"}
+                {activeTab === "completed"
+                  ? completedPlans.length
+                  : summary?.lastClosureDate
+                    ? new Date(summary.lastClosureDate).toLocaleDateString("it-IT", { month: "short", year: "numeric" })
+                    : "—"}
               </div>
             </Card>
           </div>
         )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="w-full sm:w-auto grid grid-cols-2 sm:flex">
+          <TabsList className="w-full sm:w-auto grid grid-cols-3 sm:flex">
             <TabsTrigger value="active" className="text-xs sm:text-sm">
               Attivi ({activePlans.length})
+            </TabsTrigger>
+            <TabsTrigger value="suspended" className="text-xs sm:text-sm">
+              Sospesi ({suspendedPlans.length})
             </TabsTrigger>
             <TabsTrigger value="completed" className="text-xs sm:text-sm">
               Completati ({completedPlans.length})
@@ -361,6 +388,19 @@ export default function PaymentPlansPage() {
               onToggleActive={handleToggleActive}
               onRemodulate={handleRemodulate}
               overduePlanIds={summary?.overduePlanIds || []}
+            />
+          </TabsContent>
+
+          <TabsContent value="suspended" className="mt-4">
+            <PaymentPlanList
+              plans={suspendedPlans}
+              onPayInstallment={handlePayInstallment}
+              onUnpayInstallment={handleUnpayInstallment}
+              onDeletePlan={handleDeletePlan}
+              onEditPlan={handleEditPlan}
+              onUpdateInstallmentDate={handleUpdateInstallmentDate}
+              onToggleActive={handleToggleActive}
+              onRemodulate={handleRemodulate}
             />
           </TabsContent>
 

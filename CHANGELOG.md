@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.4.20] - 2026-05-02
+
+### Modificato
+- ux: /debts ora ha 3 tab Attivi/Sospesi/Completati con box riepilogo dinamico per tab
+
+---
+
 ## [2.4.19] - 2026-05-02
 
 ### Modificato
