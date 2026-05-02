@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.4.16] - 2026-05-02
+
+### Modificato
+- ux: footer mobile + quick links → /movimenti /annuale /storico /debiti (basta vecchi /forecast /transactions)
+
+---
+
 ## [2.4.15] - 2026-05-02
 
 ### Modificato

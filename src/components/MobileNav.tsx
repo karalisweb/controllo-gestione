@@ -6,16 +6,16 @@ import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
   CalendarRange,
-  Receipt,
-  PlusCircle,
+  CalendarDays,
+  CreditCard,
   Menu,
 } from "lucide-react";
 
 const mobileNavItems = [
   { href: "/", label: "Home", icon: LayoutDashboard },
-  { href: "/forecast", label: "Previsionale", icon: CalendarRange },
-  { href: "/transactions?new=1", label: "Nuovo", icon: PlusCircle },
-  { href: "/transactions", label: "Consuntivo", icon: Receipt },
+  { href: "/movimenti", label: "Movimenti", icon: CalendarRange },
+  { href: "/annuale", label: "Annuale", icon: CalendarDays },
+  { href: "/debts", label: "Debiti", icon: CreditCard },
   { href: "/settings", label: "Altro", icon: Menu },
 ];
 

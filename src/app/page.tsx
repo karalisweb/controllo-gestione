@@ -464,14 +464,14 @@ export default function Home() {
                 <div className="flex flex-col items-center py-6 text-center">
                   <Calendar className="h-8 w-8 text-muted-foreground/40 mb-2" />
                   <p className="text-sm text-muted-foreground">Nessun movimento previsto</p>
-                  <Link href="/forecast">
+                  <Link href="/movimenti">
                     <Button variant="link" size="sm" className="text-xs mt-1 text-primary">
-                      Aggiungi previsione <ArrowRight className="h-3 w-3 ml-1" />
+                      Aggiungi movimento <ArrowRight className="h-3 w-3 ml-1" />
                     </Button>
                   </Link>
                 </div>
               )}
-              <Link href="/forecast" className="block mt-3">
+              <Link href="/movimenti" className="block mt-3">
                 <Button variant="ghost" size="sm" className="w-full text-xs">
                   Vedi tutti <ChevronRight className="h-3 w-3 ml-1" />
                 </Button>
@@ -527,14 +527,14 @@ export default function Home() {
                 <div className="flex flex-col items-center py-6 text-center">
                   <Receipt className="h-8 w-8 text-muted-foreground/40 mb-2" />
                   <p className="text-sm text-muted-foreground">Nessun movimento registrato</p>
-                  <Link href="/transactions?new=1">
+                  <Link href="/movimenti">
                     <Button variant="link" size="sm" className="text-xs mt-1 text-primary">
                       Registra movimento <ArrowRight className="h-3 w-3 ml-1" />
                     </Button>
                   </Link>
                 </div>
               )}
-              <Link href="/transactions" className="block mt-3">
+              <Link href="/movimenti" className="block mt-3">
                 <Button variant="ghost" size="sm" className="w-full text-xs">
                   Vedi tutti <ChevronRight className="h-3 w-3 ml-1" />
                 </Button>
@@ -611,28 +611,28 @@ export default function Home() {
 
         {/* Quick Links */}
         <motion.div variants={fadeInUp} transition={{ duration: 0.4 }} className="grid grid-cols-4 gap-2">
-          <Link href="/forecast" className="block">
+          <Link href="/movimenti" className="block">
             <Button variant="outline" className="w-full h-auto py-3 flex flex-col gap-1">
               <Calendar className="h-5 w-5" />
-              <span className="text-[10px]">Previsionale</span>
+              <span className="text-[10px]">Movimenti</span>
             </Button>
           </Link>
-          <Link href="/transactions" className="block">
+          <Link href="/annuale" className="block">
             <Button variant="outline" className="w-full h-auto py-3 flex flex-col gap-1">
               <FileText className="h-5 w-5" />
-              <span className="text-[10px]">Consuntivo</span>
+              <span className="text-[10px]">Annuale</span>
             </Button>
           </Link>
-          <Link href="/sales" className="block">
+          <Link href="/storico" className="block">
             <Button variant="outline" className="w-full h-auto py-3 flex flex-col gap-1">
               <Target className="h-5 w-5" />
-              <span className="text-[10px]">Commerciale</span>
+              <span className="text-[10px]">Storico</span>
             </Button>
           </Link>
-          <Link href="/settings" className="block">
+          <Link href="/debts" className="block">
             <Button variant="outline" className="w-full h-auto py-3 flex flex-col gap-1">
               <Receipt className="h-5 w-5" />
-              <span className="text-[10px]">Piano</span>
+              <span className="text-[10px]">Debiti</span>
             </Button>
           </Link>
         </motion.div>
