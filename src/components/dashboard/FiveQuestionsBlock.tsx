@@ -158,7 +158,7 @@ export function FiveQuestionsBlock() {
               <p className="font-mono">-{formatCurrency(data.monthSoFar.soci)}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Cassa agenzia</p>
+              <p className="text-xs text-muted-foreground">Resta a {monthName}</p>
               <p className="font-mono font-bold text-primary">{formatCurrency(data.monthSoFar.agency)}</p>
             </div>
             <div>
@@ -167,7 +167,7 @@ export function FiveQuestionsBlock() {
             </div>
           </div>
           <div className="mt-3 pt-3 border-t">
-            <p className="text-xs text-muted-foreground">Saldo agenzia mese</p>
+            <p className="text-xs text-muted-foreground">Saldo {monthName}</p>
             <p className={`font-mono font-bold text-2xl ${data.monthSoFar.balance >= 0 ? "text-green-500" : "text-red-500"}`}>
               {data.monthSoFar.balance >= 0 ? "+" : ""}{formatCurrency(data.monthSoFar.balance)}
             </p>
@@ -193,7 +193,7 @@ export function FiveQuestionsBlock() {
               <p className="font-mono">-{formatCurrency(data.breakEven.expensesMonthTotal)}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Agency a oggi</p>
+              <p className="text-xs text-muted-foreground">Resta a oggi</p>
               <p className="font-mono">{formatCurrency(data.breakEven.agencyToDate)}</p>
             </div>
           </div>
@@ -208,7 +208,7 @@ export function FiveQuestionsBlock() {
                 <p className="text-xs text-muted-foreground">Da fatturare netto questo mese</p>
                 <p className="font-mono font-bold text-2xl text-primary">{formatCurrency(data.breakEven.netToInvoice)}</p>
                 <p className="text-[10px] text-muted-foreground mt-0.5">
-                  per coprire {formatCurrency(data.breakEven.agencyMissing)} di agency mancanti
+                  per coprire {formatCurrency(data.breakEven.agencyMissing)} mancanti
                 </p>
               </>
             )}
@@ -230,7 +230,7 @@ export function FiveQuestionsBlock() {
           </div>
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div>
-              <p className="text-xs text-muted-foreground">Agency ricorrente</p>
+              <p className="text-xs text-muted-foreground">Resta dai ricorrenti</p>
               <p className="font-mono font-bold">{formatCurrency(data.recurring.recurringAgency)}</p>
               <p className="text-[10px] text-muted-foreground">su netto {formatCurrency(data.recurring.recurringIncomeNet)}</p>
             </div>

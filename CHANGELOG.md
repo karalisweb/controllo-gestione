@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.4.13] - 2026-05-02
+
+### Modificato
+- ux: rinomina label Cassa/Agency → Resta a {mese}/oggi nelle 5 card
+
+---
+
 ## [2.4.12] - 2026-05-02
 
 ### Modificato
