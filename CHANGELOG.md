@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.4.18] - 2026-05-02
+
+### Modificato
+- ux: storico AVG prima colonna, anni DESC, celle editabili (anche 2026), delta vs anno precedente
+
+---
+
 ## [2.4.17] - 2026-05-02
 
 ### Modificato

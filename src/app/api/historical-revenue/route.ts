@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { historicalRevenue, transactions } from "@/lib/db/schema";
-import { and, gte, isNull, lte, asc } from "drizzle-orm";
+import { historicalRevenue } from "@/lib/db/schema";
+import { and, asc, eq } from "drizzle-orm";
 
 /**
  * GET /api/historical-revenue
@@ -31,9 +31,10 @@ export async function GET() {
     const now = new Date();
     const currentYear = now.getFullYear();
     const currentMonthIdx = now.getMonth();
-    const todayStr = now.toISOString().slice(0, 10);
 
-    // 1. Carica storico (esclude anno corrente per evitare doppio conteggio)
+    // Carica TUTTI i dati storici. L'utente li inserisce a mano: il fatturato
+    // dichiarato non è derivabile dalle transactions (che includono versamenti
+    // e saldi vecchi che non sono ricavi).
     const historicRows = await db
       .select()
       .from(historicalRevenue)
@@ -46,38 +47,12 @@ export async function GET() {
       byYear.get(r.year)![r.month - 1] = r.amountCents;
     }
 
-    // 2. Anno corrente da transactions reali
-    const yearStart = `${currentYear}-01-01`;
-    const yearEnd = `${currentYear}-12-31`;
-    const txs = await db
-      .select({
-        date: transactions.date,
-        amount: transactions.amount,
-        isTransfer: transactions.isTransfer,
-        linkedTransactionId: transactions.linkedTransactionId,
-      })
-      .from(transactions)
-      .where(
-        and(
-          isNull(transactions.deletedAt),
-          gte(transactions.date, yearStart),
-          lte(transactions.date, yearEnd),
-        ),
-      );
-
-    const currentYearMonths: (number | null)[] = Array(12).fill(null);
-    for (const t of txs) {
-      if (t.isTransfer) continue;
-      if (t.linkedTransactionId != null) continue;
-      if (t.amount <= 0) continue;
-      // Solo incassi reali del passato (escludi futuri datati avanti)
-      if (t.date > todayStr) continue;
-      const monthIdx = parseInt(t.date.slice(5, 7), 10) - 1;
-      currentYearMonths[monthIdx] = (currentYearMonths[monthIdx] || 0) + t.amount;
+    // Assicura che l'anno corrente sia presente come riga (anche se ha 0 record)
+    if (!byYear.has(currentYear)) {
+      byYear.set(currentYear, Array(12).fill(null));
     }
-    byYear.set(currentYear, currentYearMonths);
 
-    // Anni ordinati ASC
+    // Anni ordinati ASC (poi il client invertirà DESC se vuole)
     const years = Array.from(byYear.keys()).sort((a, b) => a - b);
 
     // 3. Costruisci matrice mese × anno + AVG storico per mese
@@ -137,6 +112,57 @@ export async function GET() {
       currentYear,
       currentMonthIdx,
     });
+  } catch (error) {
+    return NextResponse.json({ error: String(error) }, { status: 500 });
+  }
+}
+
+/**
+ * POST /api/historical-revenue
+ * Body: { year, month, amountCents }
+ *
+ * Upsert di una cella della matrice. Se amountCents=0 → cancella la riga.
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const year = Number(body?.year);
+    const month = Number(body?.month);
+    const amountCents = Number(body?.amountCents);
+    if (!Number.isInteger(year) || year < 2000 || year > 2100) {
+      return NextResponse.json({ error: "Anno non valido" }, { status: 400 });
+    }
+    if (!Number.isInteger(month) || month < 1 || month > 12) {
+      return NextResponse.json({ error: "Mese non valido" }, { status: 400 });
+    }
+    if (!Number.isFinite(amountCents) || amountCents < 0) {
+      return NextResponse.json({ error: "Importo non valido" }, { status: 400 });
+    }
+    const cents = Math.round(amountCents);
+    const existing = await db
+      .select()
+      .from(historicalRevenue)
+      .where(and(eq(historicalRevenue.year, year), eq(historicalRevenue.month, month)))
+      .limit(1);
+    if (cents === 0) {
+      if (existing.length > 0) {
+        await db.delete(historicalRevenue).where(eq(historicalRevenue.id, existing[0].id));
+      }
+      return NextResponse.json({ action: "cleared" });
+    }
+    if (existing.length > 0) {
+      const [updated] = await db
+        .update(historicalRevenue)
+        .set({ amountCents: cents })
+        .where(eq(historicalRevenue.id, existing[0].id))
+        .returning();
+      return NextResponse.json({ action: "updated", row: updated });
+    }
+    const [created] = await db
+      .insert(historicalRevenue)
+      .values({ year, month, amountCents: cents })
+      .returning();
+    return NextResponse.json({ action: "created", row: created });
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }

@@ -13,9 +13,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { MobileHeader } from "@/components/MobileHeader";
-import { History, TrendingUp, TrendingDown, Trophy, RefreshCw, Loader2 } from "lucide-react";
+import { History, TrendingDown, Trophy, RefreshCw, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { formatCurrency } from "@/lib/utils/currency";
+import { formatCurrency, centsToEuros, eurosToCents } from "@/lib/utils/currency";
 
 interface MonthRow {
   month: number;
@@ -41,6 +41,35 @@ export default function StoricoPage() {
   const [data, setData] = useState<HistoricalResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [seeding, setSeeding] = useState(false);
+  const [editing, setEditing] = useState<{ year: number; month: number; value: string } | null>(null);
+
+  const commitCell = async () => {
+    if (!editing) return;
+    const raw = editing.value.trim().replace(",", ".");
+    const cur = editing;
+    setEditing(null);
+    if (raw === "") return;
+    const euros = Number(raw);
+    if (!Number.isFinite(euros) || euros < 0) {
+      toast.error("Importo non valido");
+      return;
+    }
+    const cents = eurosToCents(euros);
+    try {
+      const r = await fetch("/api/historical-revenue", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ year: cur.year, month: cur.month, amountCents: cents }),
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${r.status}`);
+      }
+      fetchData();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Errore");
+    }
+  };
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -169,20 +198,23 @@ export default function StoricoPage() {
               </Card>
             </div>
 
-            {/* Matrice mese × anno */}
+            {/* Matrice mese × anno — colonne: AVG poi anni DESC */}
+            {(() => {
+              const yearsDesc = [...data.years].sort((a, b) => b - a);
+              return (
             <Card>
               <CardContent className="p-0">
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="sticky left-0 bg-card z-10 font-semibold w-[100px]">Mese</TableHead>
-                        {data.years.map((y) => (
+                        <TableHead className="sticky left-0 bg-card z-10 font-semibold w-[90px]">Mese</TableHead>
+                        <TableHead className="text-right font-semibold bg-muted/30">AVG storico</TableHead>
+                        {yearsDesc.map((y) => (
                           <TableHead key={y} className={`text-right font-mono ${y === data.currentYear ? "text-primary font-bold" : ""}`}>
                             {y}
                           </TableHead>
                         ))}
-                        <TableHead className="text-right font-semibold bg-muted/30 sticky right-0 z-10">AVG storico</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -193,27 +225,53 @@ export default function StoricoPage() {
                             <TableCell className="sticky left-0 bg-card z-10 font-medium">
                               {row.label}
                             </TableCell>
-                            {data.years.map((y) => {
+                            <TableCell className="text-right font-mono font-semibold bg-muted/30">
+                              {row.avg > 0 ? formatCurrency(row.avg) : "—"}
+                            </TableCell>
+                            {yearsDesc.map((y) => {
                               const amount = row.byYear[y];
                               const isBest = data.bestMonth && data.bestMonth.year === y && data.bestMonth.month === row.month;
                               const isWorst = data.worstMonth && data.worstMonth.year === y && data.worstMonth.month === row.month;
                               const isCurrentCell = y === data.currentYear && isCurrentMonthRow;
                               const isFuture = y === data.currentYear && idx > data.currentMonthIdx;
+                              const isEditing = editing && editing.year === y && editing.month === row.month;
                               const cellClass = [
-                                "text-right font-mono",
+                                "text-right font-mono cursor-pointer hover:bg-amber-500/10",
                                 isBest ? "bg-green-500/10 text-green-600 font-bold" : "",
                                 isWorst ? "bg-red-500/10 text-red-600" : "",
                                 isCurrentCell ? "bg-primary/10 font-bold text-primary" : "",
                                 isFuture ? "text-muted-foreground/40" : "",
                               ].filter(Boolean).join(" ");
-                              // Delta vs AVG storico per la cella dell'anno corrente
+                              // Delta vs stesso mese ANNO PRECEDENTE
                               let delta: number | null = null;
-                              if (y === data.currentYear && amount != null && row.avg > 0 && !isFuture) {
-                                delta = Math.round(((amount - row.avg) / row.avg) * 100);
+                              const prevYearAmount = row.byYear[y - 1];
+                              if (amount != null && prevYearAmount != null && prevYearAmount > 0) {
+                                delta = Math.round(((amount - prevYearAmount) / prevYearAmount) * 100);
                               }
                               return (
-                                <TableCell key={y} className={cellClass}>
-                                  {amount == null
+                                <TableCell
+                                  key={y}
+                                  className={cellClass}
+                                  onClick={() => {
+                                    if (!isEditing) setEditing({ year: y, month: row.month, value: amount != null ? String(centsToEuros(amount)) : "" });
+                                  }}
+                                  title="Clicca per inserire/modificare"
+                                >
+                                  {isEditing ? (
+                                    <input
+                                      type="text"
+                                      inputMode="decimal"
+                                      value={editing!.value}
+                                      onChange={(e) => setEditing({ ...editing!, value: e.target.value })}
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") { e.preventDefault(); commitCell(); }
+                                        else if (e.key === "Escape") { e.preventDefault(); setEditing(null); }
+                                      }}
+                                      onBlur={commitCell}
+                                      autoFocus
+                                      className="h-6 px-1 text-xs rounded border border-primary/60 bg-background outline-none w-24 text-right font-mono"
+                                    />
+                                  ) : amount == null
                                     ? <span className="text-muted-foreground/40">—</span>
                                     : (
                                       <span className="inline-flex items-center justify-end gap-1">
@@ -229,44 +287,43 @@ export default function StoricoPage() {
                                 </TableCell>
                               );
                             })}
-                            <TableCell className="text-right font-mono font-semibold bg-muted/30 sticky right-0 z-10">
-                              {row.avg > 0 ? formatCurrency(row.avg) : "—"}
-                            </TableCell>
                           </TableRow>
                         );
                       })}
                       {/* TOTALI annui */}
                       <TableRow className="bg-muted/40 font-bold border-t-2">
                         <TableCell className="sticky left-0 bg-muted/40 z-10">Totale anno</TableCell>
-                        {data.years.map((y) => (
+                        <TableCell className="text-right font-mono bg-muted/30">—</TableCell>
+                        {yearsDesc.map((y) => (
                           <TableCell key={y} className={`text-right font-mono ${y === data.currentYear ? "text-primary" : ""}`}>
                             {formatCurrency(data.totalsByYear[y] || 0)}
                           </TableCell>
                         ))}
-                        <TableCell className="text-right font-mono bg-muted/40 sticky right-0 z-10">—</TableCell>
                       </TableRow>
                       {/* AVG mensile per anno */}
                       <TableRow className="bg-muted/20 italic text-muted-foreground">
                         <TableCell className="sticky left-0 bg-muted/20 z-10">Media mensile</TableCell>
-                        {data.years.map((y) => (
+                        <TableCell className="text-right font-mono bg-muted/30">—</TableCell>
+                        {yearsDesc.map((y) => (
                           <TableCell key={y} className="text-right font-mono">
                             {formatCurrency(data.avgByYear[y] || 0)}
                           </TableCell>
                         ))}
-                        <TableCell className="text-right font-mono bg-muted/20 sticky right-0 z-10">—</TableCell>
                       </TableRow>
                     </TableBody>
                   </Table>
                 </div>
               </CardContent>
             </Card>
+            );
+            })()}
 
             <div className="mt-4 flex flex-wrap gap-3 items-center text-[10px] text-muted-foreground">
               <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/40">cella verde</Badge> mese migliore di sempre
               <Badge variant="outline" className="bg-red-500/10 text-red-600 border-red-500/40">cella rossa</Badge> mese peggiore
               <Badge variant="outline" className="bg-primary/10 text-primary border-primary/40">cella oro</Badge> mese in corso
               <span className="ml-auto inline-flex items-center gap-1">
-                <TrendingUp className="h-3 w-3" /> il delta % sull&apos;anno corrente è il confronto con l&apos;AVG storico del mese
+                Click su una cella per inserire/modificare. Il delta % è vs stesso mese anno precedente.
               </span>
             </div>
           </>
