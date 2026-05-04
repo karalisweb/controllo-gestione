@@ -50,7 +50,7 @@ const navSections = [
       { href: "/debts", label: "Debiti", icon: CreditCard },
       { href: "/fondi", label: "Fondi", icon: PiggyBank },
       { href: "/sales", label: "Piano Commerciale", icon: Target },
-      { href: "/settings", label: "Piano Annuale", icon: Wallet },
+      { href: "/settings", label: "Previsionale", icon: Wallet },
     ],
   },
   {

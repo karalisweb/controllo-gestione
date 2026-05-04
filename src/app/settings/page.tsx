@@ -369,7 +369,7 @@ export default function SettingsPage() {
   if (loading) {
     return (
       <div className="min-h-screen">
-        <MobileHeader title="Piano Annuale" />
+        <MobileHeader title="Previsionale" />
         <div className="flex items-center justify-center h-64">
           <div className="text-muted-foreground">Caricamento...</div>
         </div>
@@ -384,7 +384,7 @@ export default function SettingsPage() {
       <div className="p-3 sm:p-4 lg:p-6 space-y-4">
         {/* Header */}
         <div>
-          <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-foreground">Piano Annuale</h1>
+          <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-foreground">Previsionale</h1>
           <p className="text-xs sm:text-sm text-muted-foreground">
             Gestisci spese, incassi e budget annuale
           </p>

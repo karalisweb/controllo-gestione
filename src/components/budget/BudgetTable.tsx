@@ -321,7 +321,7 @@ export function BudgetTable({
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle className="text-lg">Piano Annuale 2026</CardTitle>
+            <CardTitle className="text-lg">Previsionale 2026</CardTitle>
             <p className="text-sm text-muted-foreground">
               Cashflow reale: incassi netti, IVA, quote soci, spese e PDR
             </p>

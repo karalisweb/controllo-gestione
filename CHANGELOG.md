@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.4.23] - 2026-05-04
+
+### Modificato
+- mobile: bottom nav 4+1 link con bottom sheet Altro, rinomina Piano Annuale in Previsionale
+
+---
+
 ## [2.4.22] - 2026-05-02
 
 ### Modificato
