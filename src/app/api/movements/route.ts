@@ -138,11 +138,12 @@ export async function GET(request: NextRequest) {
     const balanceDate = balanceDateSetting?.value || "2026-01-01";
 
     // Somma transactions reali tra balanceDate (inclusivo) e firstOfMonth (esclusivo).
-    // ESCLUSE le righe figlie di split (isTransfer=true): vivono nel ledger come breakdown
-    // informativo dell'incasso padre, ma non incidono sul saldo cassa (il bonifico bancario
-    // reale arriverà come riga propria).
+    // ESCLUSE:
+    //   - righe figlie di split (isTransfer=true): vivono come breakdown informativo
+    //   - shadow transactions create da "Segna pagata" rate PDR (notes "[PDR-installment-...]"):
+    //     la fonte canonica del movimento è la rata PDR realized, non la transaction shadow
     const pastTxs = await db
-      .select({ amount: transactions.amount, isTransfer: transactions.isTransfer })
+      .select({ amount: transactions.amount, isTransfer: transactions.isTransfer, notes: transactions.notes })
       .from(transactions)
       .where(
         and(
@@ -151,7 +152,11 @@ export async function GET(request: NextRequest) {
           lt(transactions.date, firstOfMonth),
         ),
       );
-    const pastTxSum = pastTxs.reduce((s, t) => (t.isTransfer ? s : s + t.amount), 0);
+    const pastTxSum = pastTxs.reduce((s, t) => {
+      if (t.isTransfer) return s;
+      if (t.notes?.startsWith("[PDR-installment-")) return s;
+      return s + t.amount;
+    }, 0);
     let initialBalance = initialBalanceBase + pastTxSum;
 
     // ───── 1b. Aggiusta saldo iniziale per previsti residui (today ≤ data < firstOfMonth) ─────
@@ -583,18 +588,17 @@ export async function GET(request: NextRequest) {
     });
 
     // ───── 7. Calcola saldo running ─────
-    // Le righe ESCLUSE dal saldo:
+    // Regola: ogni riga visibile contribuisce al saldo per il suo amount.
+    // Eccezioni:
     //   - isTransfer=true (vecchie figlie split, breakdown informativo)
-    //   - rate PDR pagate (la realtà è già nelle transactions linkate, evita doppio conteggio)
-    //   - rate PDR scadute non pagate (date < today: coerenza con la regola "passato=solo realtà"
-    //     applicata ai previsti expected_*; il saldo iniziale del mese successivo non le include)
-    // Le righe expected_split (split virtuale di un previsto) INCIDONO sul saldo:
-    // mostrano la cassa "agenzia reale" prevista invece di quella lorda.
+    //   - shadow transactions create da "Segna pagata" rate PDR (notes "[PDR-installment-...]"):
+    //     la fonte canonica è la rata PDR realized, non la transaction shadow
+    //   - rate PDR scadute non pagate (passato=solo realtà, come per i previsti expected_*)
     let running = initialBalance;
     for (const row of all) {
-      const isPdrPaid = row.type === "pdr_installment" && row.status === "realized";
+      const isPdrShadowTx = row.type === "transaction" && row.notes?.startsWith("[PDR-installment-");
       const isPdrPastUnpaid = row.type === "pdr_installment" && row.status === "planned" && row.date < today;
-      const skipFromBalance = row.isTransfer || isPdrPaid || isPdrPastUnpaid;
+      const skipFromBalance = row.isTransfer || isPdrShadowTx || isPdrPastUnpaid;
       if (!skipFromBalance) {
         running += row.amount;
       }

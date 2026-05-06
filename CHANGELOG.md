@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.4.24] - 2026-05-06
+
+### Modificato
+- fix saldo running: rate PDR pagate ora contano, shadow tx escluse
+
+---
+
 ## [2.4.23] - 2026-05-04
 
 ### Modificato
