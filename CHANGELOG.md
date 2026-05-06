@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.4.25] - 2026-05-06
+
+### Modificato
+- rollback v2.4.25 (saldo iniziale rotto)
+
+---
+
 ## [2.4.24] - 2026-05-06
 
 ### Modificato
