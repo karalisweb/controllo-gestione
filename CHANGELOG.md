@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.4.27] - 2026-05-06
+
+### Modificato
+- fix QuickEntry: passa transactionId quando segna pagata una rata PDR (no più rate orfane)
+
+---
+
 ## [2.4.26] - 2026-05-06
 
 ### Modificato

@@ -149,7 +149,8 @@ export function QuickEntry({ onSuccess }: QuickEntryProps) {
       const amountCents = eurosToCents(parseFloat(amount));
       const finalAmount = entryType === "expense" ? -Math.abs(amountCents) : Math.abs(amountCents);
 
-      // 1. Registra in Consuntivo (transazione)
+      // 1. Registra in Consuntivo (transazione) — cattura l'id per linkarlo a una eventuale rata PDR
+      let createdTxId: number | null = null;
       if (addToConsuntivo) {
         const txRes = await fetch("/api/transactions/manual", {
           method: "POST",
@@ -165,9 +166,11 @@ export function QuickEntry({ onSuccess }: QuickEntryProps) {
         if (!txRes.ok) {
           throw new Error("Errore nel salvataggio transazione");
         }
+        const txJson = await txRes.json().catch(() => ({}));
+        createdTxId = txJson?.transaction?.id ?? null;
       }
 
-      // 2. Se è una rata PDR, segnala come pagata
+      // 2. Se è una rata PDR, segnala come pagata (linkata alla transaction se creata)
       if (selectedItem?.type === "pdr" && selectedItem.id && selectedItem.planId && updatePrevisionale) {
         const pdrRes = await fetch(`/api/payment-plans/${selectedItem.planId}/installments`, {
           method: "POST",
@@ -175,6 +178,7 @@ export function QuickEntry({ onSuccess }: QuickEntryProps) {
           body: JSON.stringify({
             installmentId: selectedItem.id,
             paidDate: date,
+            transactionId: createdTxId,
           }),
         });
 
