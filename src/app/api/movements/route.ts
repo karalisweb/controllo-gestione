@@ -152,26 +152,7 @@ export async function GET(request: NextRequest) {
         ),
       );
     const pastTxSum = pastTxs.reduce((s, t) => (t.isTransfer ? s : s + t.amount), 0);
-
-    // Rate PDR pagate "orfane" (senza transaction_id linkato) tra balanceDate e firstOfMonth.
-    // Caso: rata segnata pagata senza creare transaction shadow (es. dalla pagina PDR).
-    // Sotto la nuova logica la rata PDR pagata è la fonte canonica del movimento, quindi
-    // se è orfana va sommata qui per coerenza del saldo iniziale del mese visualizzato.
-    const orphanPaidPast = await db
-      .select({ amount: paymentPlanInstallments.amount, paidDate: paymentPlanInstallments.paidDate })
-      .from(paymentPlanInstallments)
-      .leftJoin(paymentPlans, eq(paymentPlanInstallments.paymentPlanId, paymentPlans.id))
-      .where(
-        and(
-          eq(paymentPlanInstallments.isPaid, true),
-          isNull(paymentPlanInstallments.transactionId),
-          gte(paymentPlanInstallments.paidDate, balanceDate),
-          lt(paymentPlanInstallments.paidDate, firstOfMonth),
-          isNull(paymentPlans.deletedAt),
-        ),
-      );
-    const orphanPaidPastSum = orphanPaidPast.reduce((s, r) => s - r.amount, 0);
-    let initialBalance = initialBalanceBase + pastTxSum + orphanPaidPastSum;
+    let initialBalance = initialBalanceBase + pastTxSum;
 
     // ───── 1b. Aggiusta saldo iniziale per previsti residui (today ≤ data < firstOfMonth) ─────
     // Caso: aprile aveva previsti per 28-30 che incidevano sul saldo finale aprile.
@@ -588,10 +569,7 @@ export async function GET(request: NextRequest) {
       pdr_installment: 3,
       transaction: 4,
     };
-    // Filtra le transactions "shadow" generate da "Segna pagata" rate PDR (notes "[PDR-installment-...]"):
-    // la rata PDR pagata è la fonte canonica visibile, la transaction è metadata e non va mostrata.
-    const all: MovementRow[] = [...plannedExpenseRows, ...plannedIncomeRows, ...pdrRows, ...txRows]
-      .filter((row) => !(row.type === "transaction" && row.notes?.startsWith("[PDR-installment-")));
+    const all: MovementRow[] = [...plannedExpenseRows, ...plannedIncomeRows, ...pdrRows, ...txRows];
     all.sort((a, b) => {
       if (a.date !== b.date) return a.date.localeCompare(b.date);
       const so = statusOrder[a.status] - statusOrder[b.status];
@@ -605,16 +583,18 @@ export async function GET(request: NextRequest) {
     });
 
     // ───── 7. Calcola saldo running ─────
-    // La rata PDR è ora la fonte canonica del movimento di pagamento (visibile + conta nel saldo).
-    // Le transactions shadow [PDR-installment-...] sono già state filtrate da `all` al passo 6.
     // Le righe ESCLUSE dal saldo:
     //   - isTransfer=true (vecchie figlie split, breakdown informativo)
+    //   - rate PDR pagate (la realtà è già nelle transactions linkate, evita doppio conteggio)
     //   - rate PDR scadute non pagate (date < today: coerenza con la regola "passato=solo realtà"
     //     applicata ai previsti expected_*; il saldo iniziale del mese successivo non le include)
+    // Le righe expected_split (split virtuale di un previsto) INCIDONO sul saldo:
+    // mostrano la cassa "agenzia reale" prevista invece di quella lorda.
     let running = initialBalance;
     for (const row of all) {
+      const isPdrPaid = row.type === "pdr_installment" && row.status === "realized";
       const isPdrPastUnpaid = row.type === "pdr_installment" && row.status === "planned" && row.date < today;
-      const skipFromBalance = row.isTransfer || isPdrPastUnpaid;
+      const skipFromBalance = row.isTransfer || isPdrPaid || isPdrPastUnpaid;
       if (!skipFromBalance) {
         running += row.amount;
       }
@@ -641,8 +621,6 @@ export async function GET(request: NextRequest) {
       if (t.isTransfer) continue;
       if (t.linkedTransactionId) continue;
       if (t.date > today) continue;
-      // Shadow transactions di rate PDR pagate: la fonte canonica è la rata, non la transaction.
-      if (t.notes?.startsWith("[PDR-installment-")) continue;
       if (t.amount > 0) {
         const name = t.revenueCenterId ? (revCenterById.get(t.revenueCenterId) || "Senza centro") : "Senza centro";
         incomeByCenterMap.set(name, (incomeByCenterMap.get(name) || 0) + t.amount);

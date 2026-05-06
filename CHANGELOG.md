@@ -7,13 +7,6 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
-## [2.4.25] - 2026-05-06
-
-### Modificato
-- fix rate PDR: rata pagata = fonte canonica, shadow tx nascosta dalla lista
-
----
-
 ## [2.4.24] - 2026-05-06
 
 ### Modificato
