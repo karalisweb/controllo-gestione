@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.4.26] - 2026-05-06
+
+### Modificato
+- rimuovo bottone Paga da Debiti: pagamento rate solo da Movimenti
+
+---
+
 ## [2.4.25] - 2026-05-06
 
 ### Modificato

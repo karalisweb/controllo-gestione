@@ -116,25 +116,6 @@ export default function PaymentPlansPage() {
     }
   };
 
-  const handlePayInstallment = async (
-    planId: number,
-    installmentId: number,
-    paidDate?: string
-  ) => {
-    const res = await fetch(`/api/payment-plans/${planId}/installments`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ installmentId, paidDate }),
-    });
-
-    if (!res.ok) {
-      throw new Error("Errore nel pagamento della rata");
-    }
-
-    await fetchPlans();
-    fetchSummary();
-  };
-
   const handleUnpayInstallment = async (
     planId: number,
     installmentId: number
@@ -380,7 +361,6 @@ export default function PaymentPlansPage() {
           <TabsContent value="active" className="mt-4">
             <PaymentPlanList
               plans={activePlans}
-              onPayInstallment={handlePayInstallment}
               onUnpayInstallment={handleUnpayInstallment}
               onDeletePlan={handleDeletePlan}
               onEditPlan={handleEditPlan}
@@ -394,7 +374,6 @@ export default function PaymentPlansPage() {
           <TabsContent value="suspended" className="mt-4">
             <PaymentPlanList
               plans={suspendedPlans}
-              onPayInstallment={handlePayInstallment}
               onUnpayInstallment={handleUnpayInstallment}
               onDeletePlan={handleDeletePlan}
               onEditPlan={handleEditPlan}
@@ -407,7 +386,6 @@ export default function PaymentPlansPage() {
           <TabsContent value="completed" className="mt-4">
             <PaymentPlanList
               plans={completedPlans}
-              onPayInstallment={handlePayInstallment}
               onUnpayInstallment={handleUnpayInstallment}
               onDeletePlan={handleDeletePlan}
               onEditPlan={handleEditPlan}

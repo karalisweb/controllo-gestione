@@ -32,7 +32,6 @@ import {
 
 interface PaymentPlanListProps {
   plans: PaymentPlan[];
-  onPayInstallment: (planId: number, installmentId: number, paidDate: string) => Promise<void>;
   onUnpayInstallment: (planId: number, installmentId: number) => Promise<void>;
   onDeletePlan: (planId: number) => Promise<void>;
   onEditPlan?: (plan: PaymentPlan) => void;
@@ -44,7 +43,6 @@ interface PaymentPlanListProps {
 
 export function PaymentPlanList({
   plans,
-  onPayInstallment,
   onUnpayInstallment,
   onDeletePlan,
   onEditPlan,
@@ -59,19 +57,6 @@ export function PaymentPlanList({
 
   const toggleExpand = (planId: number) => {
     setExpandedPlan(expandedPlan === planId ? null : planId);
-  };
-
-  const handlePayInstallment = async (
-    planId: number,
-    installmentId: number,
-    paidDate: string
-  ) => {
-    setLoading(`pay-${installmentId}`);
-    try {
-      await onPayInstallment(planId, installmentId, paidDate);
-    } finally {
-      setLoading(null);
-    }
   };
 
   const handleUnpayInstallment = async (
@@ -428,21 +413,9 @@ export function PaymentPlanList({
                                   Annulla
                                 </Button>
                               ) : (
-                                <Button
-                                  variant="default"
-                                  size="sm"
-                                  onClick={() =>
-                                    handlePayInstallment(
-                                      plan.id,
-                                      installment.id,
-                                      installment.dueDate
-                                    )
-                                  }
-                                  disabled={loading === `pay-${installment.id}`}
-                                >
-                                  <Check className="h-4 w-4 mr-1" />
-                                  Paga
-                                </Button>
+                                <span className="text-xs text-muted-foreground">
+                                  Paga da Movimenti
+                                </span>
                               )}
                             </TableCell>
                           </TableRow>
