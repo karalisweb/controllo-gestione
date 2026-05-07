@@ -173,7 +173,6 @@ interface TransactionWithCenters {
 
 interface TransactionListProps {
   transactions: TransactionWithCenters[];
-  categories: Category[];
   onDelete: (id: number) => Promise<void>;
   onUpdateCategory: (id: number, categoryId: number | null) => Promise<void>;
   onSplit: (transaction: TransactionWithCenters) => void;
@@ -181,7 +180,6 @@ interface TransactionListProps {
 
 export function TransactionList({
   transactions,
-  categories,
   onDelete,
   onUpdateCategory,
   onSplit,

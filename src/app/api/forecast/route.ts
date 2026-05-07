@@ -333,7 +333,7 @@ function generateOccurrences(
   const rEnd = new Date(rangeEnd);
 
   // Parti dal primo mese nel range
-  let current = new Date(Math.max(start.getTime(), rStart.getTime()));
+  const current = new Date(Math.max(start.getTime(), rStart.getTime()));
   current.setDate(1); // Inizia dal primo del mese
 
   while (current <= rEnd && current <= end) {

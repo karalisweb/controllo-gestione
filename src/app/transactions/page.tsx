@@ -241,7 +241,6 @@ function TransactionsContent() {
           <TabsContent value={activeTab} className="mt-4">
             <TransactionList
               transactions={filteredTransactions}
-              categories={categories}
               onDelete={handleDelete}
               onUpdateCategory={handleUpdateCategory}
               onSplit={(tx) => setSplitTransaction(tx)}

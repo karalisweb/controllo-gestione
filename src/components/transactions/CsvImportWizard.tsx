@@ -13,9 +13,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import {
   ArrowLeft,
   Upload,
-  FileText,
   Check,
-  X,
   AlertTriangle,
   ArrowRightLeft,
   Link2,
@@ -315,7 +313,7 @@ export function CsvImportWizard({
 
         {/* Scrollable rows */}
         <div className="max-h-[400px] overflow-y-auto space-y-2 pr-1">
-          {importableRows.map((row, globalIndex) => {
+          {importableRows.map((row) => {
             const realIndex = rows.indexOf(row);
             return (
               <div

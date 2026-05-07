@@ -5,7 +5,7 @@
 
 import { db } from "@/lib/db";
 import { forecastItems } from "@/lib/db/schema";
-import { eq, and, isNull, gte, lte } from "drizzle-orm";
+import { eq, and, isNull, gte } from "drizzle-orm";
 
 // Periodo di default per la generazione: da oggi a fine anno prossimo
 function getDefaultDateRange(): { startDate: string; endDate: string } {
@@ -33,7 +33,7 @@ function generateOccurrences(
   const rEnd = new Date(rangeEnd);
 
   // Parti dal primo mese nel range
-  let current = new Date(Math.max(start.getTime(), rStart.getTime()));
+  const current = new Date(Math.max(start.getTime(), rStart.getTime()));
   current.setDate(1);
 
   while (current <= rEnd && current <= end) {
@@ -222,7 +222,7 @@ export async function syncForecastFromIncome(income: ExpectedIncomeData): Promis
  * (aggiorna importo, descrizione, ecc. ma non le date)
  */
 export async function updateForecastFromExpense(expense: ExpectedExpenseData): Promise<number> {
-  const result = await db
+  await db
     .update(forecastItems)
     .set({
       description: expense.name,
@@ -240,7 +240,7 @@ export async function updateForecastFromExpense(expense: ExpectedExpenseData): P
       )
     );
 
-  return 0; // Drizzle non restituisce count per update senza returning
+  return 0;
 }
 
 /**

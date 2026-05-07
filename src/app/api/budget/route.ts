@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
   const year = parseInt(searchParams.get("year") || "2026");
   const month = searchParams.get("month") ? parseInt(searchParams.get("month")!) : null;
 
-  let query = db
+  const query = db
     .select({
       id: budgetItems.id,
       categoryId: budgetItems.categoryId,

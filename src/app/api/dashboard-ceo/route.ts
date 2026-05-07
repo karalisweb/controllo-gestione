@@ -170,7 +170,7 @@ export async function GET(request: NextRequest) {
     const balanceSetting = await db.select().from(settings).where(eq(settings.key, "initial_balance")).limit(1);
     const balanceDateSetting = await db.select().from(settings).where(eq(settings.key, "balance_date")).limit(1);
 
-    let initialBalance = balanceSetting[0] ? parseInt(balanceSetting[0].value) : 0;
+    const initialBalance = balanceSetting[0] ? parseInt(balanceSetting[0].value) : 0;
     const balanceDate = balanceDateSetting[0]?.value || todayStr;
 
     // Transazioni dal balance_date a oggi

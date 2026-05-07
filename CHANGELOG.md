@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.4.28] - 2026-05-07
+
+### Modificato
+- cleanup: rimossi 8 componenti orfani, 2 API endpoint dead, 12 unused vars/imports
+
+---
+
 ## [2.4.27] - 2026-05-06
 
 ### Modificato

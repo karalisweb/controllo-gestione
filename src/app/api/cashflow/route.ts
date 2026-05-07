@@ -161,7 +161,7 @@ export async function GET(request: NextRequest) {
       .where(eq(settings.key, "balance_date"))
       .limit(1);
 
-    let initialBalance = balanceSetting[0]
+    const initialBalance = balanceSetting[0]
       ? parseInt(balanceSetting[0].value)
       : 0;
     const balanceDate = balanceDateSetting[0]?.value || todayStr;

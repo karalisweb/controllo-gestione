@@ -158,7 +158,7 @@ export function generateOccurrences(
   const rStart = new Date(rangeStart);
   const rEnd = new Date(rangeEnd);
 
-  let current = new Date(Math.max(start.getTime(), rStart.getTime()));
+  const current = new Date(Math.max(start.getTime(), rStart.getTime()));
   current.setDate(1);
 
   while (current <= rEnd && current <= end) {
