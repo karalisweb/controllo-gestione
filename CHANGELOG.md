@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.4.29] - 2026-05-19
+
+### Modificato
+- Previsti scaduti del mese corrente restano visibili nel ledger con badge Scaduto
+
+---
+
 ## [2.4.28] - 2026-05-07
 
 ### Modificato

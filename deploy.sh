@@ -5,7 +5,7 @@
 # ╠══════════════════════════════════════════════════════════════╣
 # ║ App:              KW Cashflow                                ║
 # ║ Versione:         (da package.json)                          ║
-# ║ Ultimo update:    2026-05-07                                 ║
+# ║ Ultimo update:    2026-05-19                                 ║
 # ║                                                              ║
 # ║ Cartella locale:  ~/Desktop/Sviluppo App Claude Code/       ║
 # ║                   CashFlow/kw-cashflow                       ║

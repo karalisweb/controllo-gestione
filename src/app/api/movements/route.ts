@@ -65,6 +65,8 @@ interface MovementRow {
   autoSplit?: boolean;
   // Per expected_income: variante "split no-IVA" per fatture estere/reverse charge
   autoSplitNoVat?: boolean;
+  // True se è un previsto del mese corrente con data < oggi (non confermato né saltato)
+  isOverdue?: boolean;
 }
 
 // Calcola se il mese (1-12) di un dato anno è "coperto" da una expected_expense/income
@@ -122,13 +124,17 @@ export async function GET(request: NextRequest) {
     const lastDayDate = new Date(Date.UTC(year, month, 0));
     const lastOfMonth = `${year}-${pad2(month)}-${pad2(lastDayDate.getUTCDate())}`;
 
-    // "Oggi" — i previsti con data strettamente PRIMA di oggi vengono nascosti dal ledger
-    // (saranno gestiti separatamente via scheda cliente / mesi passati = solo realtà).
+    // "Oggi" — per i mesi passati i previsti con data < oggi restano nascosti (mesi
+    // passati = solo realtà). Per il mese corrente invece restano visibili come
+    // "scaduti" (isOverdue=true) così l'utente può gestirli anche dopo giorni di
+    // assenza dall'app, senza che spariscano dal ledger.
     // Override con ?today=YYYY-MM-DD per test/debug.
     const todayParam = searchParams.get("today");
     const today = todayParam && /^\d{4}-\d{2}-\d{2}$/.test(todayParam)
       ? todayParam
       : new Date().toISOString().slice(0, 10);
+    const [todayY, todayM] = today.split("-").map(Number);
+    const isCurrentMonth = year === todayY && month === todayM;
 
     // ───── 1. Saldo iniziale: settings.initial_balance + transactions con date < firstOfMonth ─────
     const settingsRows = await db.select().from(settings);
@@ -159,7 +165,6 @@ export async function GET(request: NextRequest) {
     // Il saldo iniziale di maggio (oggi calcolato come base + transactions reali) NON li include
     // → discrepanza. Rimedio: somma anche i previsti residui per coerenza fra mesi.
     if (today < firstOfMonth) {
-      const [todayY, todayM] = today.split("-").map(Number);
       const startYm = todayY * 12 + (todayM - 1);
       const targetYm = year * 12 + (month - 1);
 
@@ -313,8 +318,11 @@ export async function GET(request: NextRequest) {
       const dayBase = ov?.day ?? e.expectedDay ?? 1;
       const day = Math.min(Math.max(dayBase, 1), lastDayDate.getUTCDate());
       const date = `${year}-${pad2(month)}-${pad2(day)}`;
-      // Skip previsti con data < oggi (passato già "successo" — vedi solo la realtà)
-      if (date < today) continue;
+      // Mesi passati: skip previsti con data < oggi (passato = solo realtà).
+      // Mese corrente: i previsti con data < oggi restano visibili come "scaduti"
+      // così non spariscono se l'utente non apre l'app per qualche giorno.
+      const isOverdue = date < today;
+      if (isOverdue && !isCurrentMonth) continue;
       const amount = ov ? ov.amount : e.amount;
       // Skip override esplicitamente saltati (amount=0)
       if (amount === 0) continue;
@@ -329,6 +337,7 @@ export async function GET(request: NextRequest) {
         sourceId: e.id,
         categoryName: e.costCenterId ? costCenterById.get(e.costCenterId) || null : null,
         isOverride: !!ov,
+        isOverdue,
       });
     }
 
@@ -381,8 +390,10 @@ export async function GET(request: NextRequest) {
       const dayBase = ov?.day ?? i.expectedDay ?? 1;
       const day = Math.min(Math.max(dayBase, 1), lastDayDate.getUTCDate());
       const date = `${year}-${pad2(month)}-${pad2(day)}`;
-      // Skip previsti con data < oggi (passato già "successo" — vedi solo la realtà)
-      if (date < today) continue;
+      // Stessa regola delle expected_expenses: mesi passati skip, mese corrente
+      // mostra come "scaduto" (isOverdue=true) per non far sparire le righe.
+      const isOverdue = date < today;
+      if (isOverdue && !isCurrentMonth) continue;
       const amount = ov ? ov.amount : i.amount;
       // Skip override esplicitamente saltati (amount=0)
       if (amount === 0) continue;
@@ -399,6 +410,7 @@ export async function GET(request: NextRequest) {
         isOverride: !!ov,
         autoSplit: i.autoSplit ?? false,
         autoSplitNoVat: i.autoSplitNoVat ?? false,
+        isOverdue,
       });
 
       // Se autoSplit=true: genera riga split virtuale + aggrega Valori previsti.
@@ -425,6 +437,7 @@ export async function GET(request: NextRequest) {
               daniela: split.danielaAmount,
               agency: split.agencyAmount,
             },
+            isOverdue,
           });
         }
         plannedValuesIva += split.vatAmount;

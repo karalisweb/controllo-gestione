@@ -44,6 +44,7 @@ interface MovementRow {
   autoSplit?: boolean;
   autoSplitNoVat?: boolean;
   splitDetail?: SplitDetailLite | null;
+  isOverdue?: boolean;
 }
 
 interface Contact {
@@ -745,9 +746,15 @@ export default function MovimentiPage() {
                               <Badge variant="outline" className="text-xs px-1.5 py-0">{row.categoryName}</Badge>
                             )}
                             {row.status === "planned" && (
-                              <Badge variant="outline" className="text-xs px-1.5 py-0 bg-amber-500/10 text-amber-500 border-amber-500/40">
-                                <Clock className="h-2.5 w-2.5 mr-0.5" />previsto
-                              </Badge>
+                              row.isOverdue ? (
+                                <Badge variant="outline" className="text-xs px-1.5 py-0 bg-red-500/15 text-red-400 border-red-500/50">
+                                  <Clock className="h-2.5 w-2.5 mr-0.5" />Scaduto
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-xs px-1.5 py-0 bg-amber-500/10 text-amber-500 border-amber-500/40">
+                                  <Clock className="h-2.5 w-2.5 mr-0.5" />previsto
+                                </Badge>
+                              )
                             )}
                             {row.isOverride && (
                               <Badge variant="outline" className="text-xs px-1.5 py-0 bg-amber-500/15 text-amber-500 border-amber-500/40">★</Badge>
@@ -971,9 +978,15 @@ export default function MovimentiPage() {
                         <TableCell className="text-sm text-muted-foreground">{row.categoryName || "—"}</TableCell>
                         <TableCell className="text-center">
                           {row.status === "planned" ? (
-                            <Badge variant="outline" className="text-xs px-1.5 py-0 bg-amber-500/10 text-amber-500 border-amber-500/40" title={TYPE_LABELS[row.type]}>
-                              <Clock className="h-2.5 w-2.5 mr-0.5" />previsto
-                            </Badge>
+                            row.isOverdue ? (
+                              <Badge variant="outline" className="text-xs px-1.5 py-0 bg-red-500/15 text-red-400 border-red-500/50" title={`${TYPE_LABELS[row.type]} scaduto — conferma o salta`}>
+                                <Clock className="h-2.5 w-2.5 mr-0.5" />Scaduto
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-xs px-1.5 py-0 bg-amber-500/10 text-amber-500 border-amber-500/40" title={TYPE_LABELS[row.type]}>
+                                <Clock className="h-2.5 w-2.5 mr-0.5" />previsto
+                              </Badge>
+                            )
                           ) : (
                             <Badge variant="outline" className="text-xs px-1.5 py-0 bg-green-500/10 text-green-500 border-green-500/40" title={TYPE_LABELS[row.type]}>
                               <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" />pagato
