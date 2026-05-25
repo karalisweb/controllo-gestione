@@ -503,13 +503,26 @@ export default function MovimentiPage() {
           </div>
         </div>
 
-        {/* Saldi iniziale, finale, disavanzo, obiettivo */}
-        {data && (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
+        {/* Saldi: iniziale | attuale | finale previsto | disavanzo (a oggi) | gap vendite */}
+        {data && (() => {
+          // Delta "a oggi" basato su realtà accaduta del mese (coerente coi box per centro).
+          // totalExpense è in valore assoluto positivo (backend usa Math.abs).
+          const totalIncomeNow = data.totals?.incomeByCenter.reduce((s, i) => s + i.amount, 0) ?? 0;
+          const totalExpenseNow = data.totals?.expenseByCenter.reduce((s, i) => s + i.amount, 0) ?? 0;
+          const currentBalance = data.initialBalance + totalIncomeNow - totalExpenseNow;
+          const deltaNow = totalIncomeNow - totalExpenseNow;
+          return (
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-4">
             <Card className="p-3 sm:p-4">
               <p className="text-xs text-muted-foreground mb-1">Saldo a inizio mese</p>
               <p className={`text-base sm:text-xl font-bold font-mono ${data.initialBalance >= 0 ? "text-foreground" : "text-red-500"}`}>
                 {formatCurrency(data.initialBalance)}
+              </p>
+            </Card>
+            <Card className="p-3 sm:p-4 border-primary/40">
+              <p className="text-xs text-muted-foreground mb-1">Saldo attuale</p>
+              <p className={`text-base sm:text-xl font-bold font-mono ${currentBalance >= 0 ? "text-foreground" : "text-red-500"}`}>
+                {formatCurrency(currentBalance)}
               </p>
             </Card>
             <Card className="p-3 sm:p-4">
@@ -518,20 +531,20 @@ export default function MovimentiPage() {
                 {formatCurrency(data.finalBalance)}
               </p>
             </Card>
-            <Card className={`p-3 sm:p-4 ${data.finalBalance - data.initialBalance >= 0 ? "border-green-500/40" : "border-red-500/40"}`}>
+            <Card className={`p-3 sm:p-4 ${deltaNow >= 0 ? "border-green-500/40" : "border-red-500/40"}`}>
               <p className="text-xs text-muted-foreground mb-1">
-                {data.finalBalance - data.initialBalance >= 0 ? "Surplus del mese" : "Disavanzo del mese"}
+                {deltaNow >= 0 ? "Surplus del mese" : "Disavanzo del mese"}
               </p>
-              <p className={`text-base sm:text-xl font-bold font-mono ${data.finalBalance - data.initialBalance >= 0 ? "text-green-500" : "text-red-500"}`}>
-                {data.finalBalance - data.initialBalance >= 0 ? "+" : ""}{formatCurrency(data.finalBalance - data.initialBalance)}
+              <p className={`text-base sm:text-xl font-bold font-mono ${deltaNow >= 0 ? "text-green-500" : "text-red-500"}`}>
+                {deltaNow >= 0 ? "+" : ""}{formatCurrency(deltaNow)}
               </p>
             </Card>
             <Card className={`p-3 sm:p-4 ${monthTarget && monthTarget.gap === 0 ? "border-green-500/40" : "border-amber-500/40"}`}>
-              <p className="text-xs text-muted-foreground mb-1">Obiettivo vendite</p>
+              <p className="text-xs text-muted-foreground mb-1">Gap vendite</p>
               {monthTarget ? (
                 <>
                   <p className={`text-base sm:text-xl font-bold font-mono ${monthTarget.gap === 0 ? "text-green-500" : "text-amber-500"}`}>
-                    {monthTarget.gap === 0 ? "✓ Raggiunto" : `Gap ${formatCurrency(monthTarget.gap)}`}
+                    {monthTarget.gap === 0 ? "✓ Raggiunto" : formatCurrency(monthTarget.gap)}
                   </p>
                   <p className="text-[10px] text-muted-foreground mt-0.5 font-mono">
                     {formatCurrency(monthTarget.revenuePrev)} / {formatCurrency(monthTarget.target)}
@@ -542,7 +555,8 @@ export default function MovimentiPage() {
               )}
             </Card>
           </div>
-        )}
+          );
+        })()}
 
         {/* 3 box aggregati (Excel-style header) — collassati di default, click per espandere */}
         {data?.totals && (() => {

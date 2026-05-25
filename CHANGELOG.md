@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.4.31] - 2026-05-25
+
+### Modificato
+- feat: 5 card top movimenti (Saldo attuale + Disavanzo a oggi + Gap vendite)
+
+---
+
 ## [2.4.30] - 2026-05-25
 
 ### Modificato
