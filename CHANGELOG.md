@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.4.32] - 2026-05-25
+
+### Modificato
+- fix: saldo attuale e disavanzo usano running balance reale (includono [SPLIT-TOTAL])
+
+---
+
 ## [2.4.31] - 2026-05-25
 
 ### Modificato

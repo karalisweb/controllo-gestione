@@ -505,12 +505,19 @@ export default function MovimentiPage() {
 
         {/* Saldi: iniziale | attuale | finale previsto | disavanzo (a oggi) | gap vendite */}
         {data && (() => {
-          // Delta "a oggi" basato su realtà accaduta del mese (coerente coi box per centro).
-          // totalExpense è in valore assoluto positivo (backend usa Math.abs).
-          const totalIncomeNow = data.totals?.incomeByCenter.reduce((s, i) => s + i.amount, 0) ?? 0;
-          const totalExpenseNow = data.totals?.expenseByCenter.reduce((s, i) => s + i.amount, 0) ?? 0;
-          const currentBalance = data.initialBalance + totalIncomeNow - totalExpenseNow;
-          const deltaNow = totalIncomeNow - totalExpenseNow;
+          // Saldo attuale = runningBalance del backend dell'ultima riga con date <= oggi.
+          // Il running esclude correttamente isTransfer + PDR già contate altrove, e
+          // INCLUDE le uscite "[SPLIT-TOTAL]" (bonifici soci+IVA) che sono cassa reale
+          // ma vengono escluse dai box "Uscite per centro" (scelta UX). Per questo non
+          // si può ricavare il saldo attuale dai box; bisogna leggere il running vero.
+          let currentBalance = data.initialBalance;
+          for (const row of (data.rows ?? [])) {
+            if (row.date > todayStr) break;
+            if (typeof row.runningBalance === "number") {
+              currentBalance = row.runningBalance;
+            }
+          }
+          const deltaNow = currentBalance - data.initialBalance;
           return (
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-4">
             <Card className="p-3 sm:p-4">
