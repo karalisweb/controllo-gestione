@@ -9,8 +9,9 @@ import {
   paymentPlanInstallments,
   salesOpportunities,
   settings,
+  transactions,
 } from "@/lib/db/schema";
-import { and, eq, isNull, lte, gte, or, inArray } from "drizzle-orm";
+import { and, eq, isNull, lte, gte, or, inArray, gt } from "drizzle-orm";
 import { calculateSplit } from "@/lib/utils/splits";
 import { getSplitConfig } from "@/lib/utils/settings-server";
 
@@ -139,6 +140,27 @@ export async function GET(request: NextRequest) {
         ),
       );
 
+    // Incassi reali (transactions con amount > 0) nel range — escludendo
+    // giroconti/split (isTransfer) e righe collegate a un padre (linkedTransactionId,
+    // tipico delle figlie split). Senza questo, revenuePrev del mese corrente/passato
+    // ignora gli incassi già accaduti e il gap risulta gonfiato.
+    const allRealIncomes = await db
+      .select({
+        amount: transactions.amount,
+        date: transactions.date,
+      })
+      .from(transactions)
+      .where(
+        and(
+          isNull(transactions.deletedAt),
+          gt(transactions.amount, 0),
+          or(eq(transactions.isTransfer, false), isNull(transactions.isTransfer)),
+          isNull(transactions.linkedTransactionId),
+          gte(transactions.date, firstOfFirstMonth),
+          lte(transactions.date, lastDateOfRange),
+        ),
+      );
+
     // Rate PDR non pagate dei piani attivi
     const allInstallments = await db
       .select({
@@ -175,6 +197,12 @@ export async function GET(request: NextRequest) {
         if (s.year !== year || s.month !== month) continue;
         if (s.status !== "won" && s.status !== "opportunity") continue;
         revenuePrev += s.totalAmount;
+      }
+      // Incassi reali del mese: realtà già accaduta. Per mesi futuri di norma
+      // è 0 (nessuno registra tx con data nel futuro), quindi non altera il forecast.
+      for (const t of allRealIncomes) {
+        if (t.date < firstOfMonth || t.date > lastOfMonth) continue;
+        revenuePrev += t.amount;
       }
 
       // Spese previste: expected_expenses (con override) + rate PDR non pagate (piani attivi)

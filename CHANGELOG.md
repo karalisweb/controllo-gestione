@@ -7,6 +7,13 @@ Versionamento: [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.4.30] - 2026-05-25
+
+### Modificato
+- fix: gap obiettivo vendite include ora incassi reali del mese
+
+---
+
 ## [2.4.29] - 2026-05-19
 
 ### Modificato
